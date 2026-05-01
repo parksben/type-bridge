@@ -196,6 +196,13 @@ pub fn get_history<R: Runtime>(app: AppHandle<R>) -> Vec<crate::history::History
 }
 
 #[tauri::command]
+pub fn get_history_dir() -> String {
+    crate::history::typebridge_dir()
+        .to_string_lossy()
+        .to_string()
+}
+
+#[tauri::command]
 pub fn delete_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> bool {
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
     let removed = ctx.history.delete(&id).is_some();

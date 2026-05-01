@@ -25,6 +25,7 @@ pub fn run() {
             sidecar::start_feishu,
             sidecar::stop_feishu,
             sidecar::get_history,
+            sidecar::get_history_dir,
             sidecar::delete_history_message,
             sidecar::retry_history_message,
             sidecar::confirm_pending_message,
