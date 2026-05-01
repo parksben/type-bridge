@@ -116,7 +116,6 @@ pub enum SidecarEvent {
 
 /// 应用共享上下文 — 用 tauri::Manager::manage 注入，每个 field 自行并发控制
 pub struct AppContext {
-    pub confirm_before_inject: Arc<Mutex<bool>>,
     pub submit_config: Arc<Mutex<SubmitConfig>>,
     pub history: Arc<HistoryStore>,
     pub injector: Arc<Injector>,
@@ -144,33 +143,25 @@ impl Default for SubmitConfig {
 impl AppContext {
     pub fn new<R: Runtime>(
         app: AppHandle<R>,
-        initial_confirm: bool,
         initial_submit: SubmitConfig,
     ) -> Arc<Self> {
         let history = HistoryStore::open();
-        let confirm_flag = Arc::new(Mutex::new(initial_confirm));
         let submit_config = Arc::new(Mutex::new(initial_submit));
         let bridge: Arc<SidecarBridge> = Arc::new(SidecarBridge::default());
         let injector = Injector::spawn(
             app.clone(),
             history.clone(),
-            confirm_flag.clone(),
             submit_config.clone(),
             bridge.clone(),
         );
 
         Arc::new(Self {
-            confirm_before_inject: confirm_flag,
             submit_config,
             history,
             injector,
             bridge,
             pending_selftest: Arc::new(TokioMutex::new(None)),
         })
-    }
-
-    pub fn set_confirm_before_inject(&self, value: bool) {
-        *self.confirm_before_inject.lock().unwrap() = value;
     }
 
     pub fn set_submit_config(&self, auto_submit: bool, submit_key: crate::store::SubmitKey) {
@@ -452,18 +443,6 @@ pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Resul
     Ok(())
 }
 
-#[tauri::command]
-pub async fn confirm_pending_message<R: Runtime>(
-    app: AppHandle<R>,
-    id: String,
-    accept: bool,
-) -> Result<(), String> {
-    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
-    ctx.injector.resolve_pending_confirm(&id, accept).await
-}
-
-/// 手动触发一次自检：Rust → Go stdin 发 selftest 命令，等 Go 用 Im.Chat.List
-/// ping 飞书 API 后 stdout 回执 selftest_result 事件。10s 超时。
 #[tauri::command]
 pub async fn run_selftest<R: Runtime>(app: AppHandle<R>) -> Result<SelftestResult, String> {
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();

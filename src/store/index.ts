@@ -47,7 +47,6 @@ export const DEFAULT_SUBMIT_KEY: SubmitKey = {
 
 interface AppStore {
   connected: boolean;
-  confirmBeforeInject: boolean;
   autoSubmit: boolean;
   submitKey: SubmitKey;
   logs: LogEntry[];
@@ -56,7 +55,6 @@ interface AppStore {
   activeTab: TabId;
 
   setConnected: (v: boolean) => void;
-  setConfirmBeforeInject: (v: boolean) => void;
   setAutoSubmit: (v: boolean) => void;
   setSubmitKey: (k: SubmitKey) => void;
   setActiveTab: (tab: TabId) => void;
@@ -71,7 +69,6 @@ interface AppStore {
 
 export const useAppStore = create<AppStore>((set) => ({
   connected: false,
-  confirmBeforeInject: false,
   autoSubmit: true,
   submitKey: DEFAULT_SUBMIT_KEY,
   logs: [],
@@ -80,7 +77,6 @@ export const useAppStore = create<AppStore>((set) => ({
   activeTab: "connection",
 
   setConnected: (connected) => set({ connected }),
-  setConfirmBeforeInject: (confirmBeforeInject) => set({ confirmBeforeInject }),
   setAutoSubmit: (autoSubmit) => set({ autoSubmit }),
   setSubmitKey: (submitKey) => set({ submitKey }),
   setActiveTab: (activeTab) => set({ activeTab }),

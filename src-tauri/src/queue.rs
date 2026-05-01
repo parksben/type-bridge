@@ -5,18 +5,16 @@
 //
 // Worker responsibilities per message:
 //   1. status → Processing, emit feishu://message-status
-//   2. if confirm_before_inject enabled: emit feishu://confirm-request,
-//      await one-shot decision via confirm_pending_message command
-//   3. perform injection (text + optional image)
-//   4. status → Sent / Failed, emit feishu://message-status + feishu://inject-result
-//   5. send reaction (DONE/CRY) + optional thread reply to Go sidecar
+//   2. perform injection (text + optional image) + auto-submit key
+//   3. status → Sent / Failed, emit feishu://message-status + feishu://inject-result
+//   4. send reaction (DONE/CRY) + failure thread reply to Go sidecar
 
 use crate::history::{HistoryMessage, HistoryStore, MessageStatus};
 use crate::sidecar::{SidecarBridge, SidecarCommand, SubmitConfig};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime};
-use tokio::sync::{mpsc, oneshot, Mutex};
+use tokio::sync::mpsc;
 
 // 飞书 reaction emoji_type 常量。值由用户提供并在实际环境验证过；
 // 如某个环境下仍被拒（code 231001 "reaction type is invalid"），在此
@@ -37,15 +35,9 @@ pub struct QueuedMessage {
     pub image_mime: Option<String>,
 }
 
-/// 注入服务：队列 sender + 唯一的待确认 oneshot
+/// 注入服务：队列 sender
 pub struct Injector {
     tx: mpsc::UnboundedSender<QueuedMessage>,
-    pending_confirm: Arc<Mutex<Option<PendingConfirm>>>,
-}
-
-struct PendingConfirm {
-    id: String,
-    sender: oneshot::Sender<bool>,
 }
 
 #[derive(Serialize, Clone)]
@@ -60,25 +52,18 @@ impl Injector {
     pub fn spawn<R: Runtime>(
         app: AppHandle<R>,
         history: Arc<HistoryStore>,
-        confirm_flag: Arc<std::sync::Mutex<bool>>,
         submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
         bridge: Arc<SidecarBridge>,
     ) -> Arc<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
-        let pending_confirm: Arc<Mutex<Option<PendingConfirm>>> = Arc::new(Mutex::new(None));
 
-        let injector = Arc::new(Self {
-            tx,
-            pending_confirm: pending_confirm.clone(),
-        });
+        let injector = Arc::new(Self { tx });
 
         tauri::async_runtime::spawn(worker_loop(
             rx,
             app,
             history,
-            confirm_flag,
             submit_config,
-            pending_confirm,
             bridge,
         ));
 
@@ -88,41 +73,17 @@ impl Injector {
     pub fn enqueue(&self, msg: QueuedMessage) -> Result<(), String> {
         self.tx.send(msg).map_err(|e| format!("queue closed: {}", e))
     }
-
-    pub async fn resolve_pending_confirm(&self, id: &str, accept: bool) -> Result<(), String> {
-        let mut guard = self.pending_confirm.lock().await;
-        if let Some(p) = guard.as_ref() {
-            if p.id != id {
-                return Err(format!("pending confirm id mismatch: expect {}, got {}", p.id, id));
-            }
-        } else {
-            return Err("no pending confirm".into());
-        }
-        let p = guard.take().unwrap();
-        p.sender.send(accept).map_err(|_| "confirm receiver dropped".to_string())
-    }
 }
 
 async fn worker_loop<R: Runtime>(
     mut rx: mpsc::UnboundedReceiver<QueuedMessage>,
     app: AppHandle<R>,
     history: Arc<HistoryStore>,
-    confirm_flag: Arc<std::sync::Mutex<bool>>,
     submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
-    pending_confirm: Arc<Mutex<Option<PendingConfirm>>>,
     bridge: Arc<SidecarBridge>,
 ) {
     while let Some(msg) = rx.recv().await {
-        process_one(
-            &app,
-            &history,
-            &confirm_flag,
-            &submit_config,
-            &pending_confirm,
-            &bridge,
-            msg,
-        )
-        .await;
+        process_one(&app, &history, &submit_config, &bridge, msg).await;
     }
     tracing::info!("[queue] worker loop exited");
 }
@@ -130,9 +91,7 @@ async fn worker_loop<R: Runtime>(
 async fn process_one<R: Runtime>(
     app: &AppHandle<R>,
     history: &Arc<HistoryStore>,
-    confirm_flag: &Arc<std::sync::Mutex<bool>>,
     submit_config: &Arc<std::sync::Mutex<SubmitConfig>>,
-    pending_confirm: &Arc<Mutex<Option<PendingConfirm>>>,
     bridge: &Arc<SidecarBridge>,
     msg: QueuedMessage,
 ) {
@@ -140,35 +99,7 @@ async fn process_one<R: Runtime>(
     history.update_status(&msg.id, MessageStatus::Processing, None);
     emit_status(app, &msg.id, "processing", None);
 
-    // 2. 可选：等待用户确认
-    let confirm_enabled = *confirm_flag.lock().unwrap();
-    if confirm_enabled {
-        let hist_msg = history.find(&msg.id);
-        let payload = serde_json::json!({
-            "id": msg.id,
-            "sender": hist_msg.as_ref().map(|m| m.sender.clone()).unwrap_or_default(),
-            "text": msg.text.clone(),
-            "image_path": msg.image_path.clone(),
-        });
-        let _ = app.emit("feishu://confirm-request", payload);
-
-        let (tx, rx) = oneshot::channel::<bool>();
-        {
-            let mut slot = pending_confirm.lock().await;
-            *slot = Some(PendingConfirm {
-                id: msg.id.clone(),
-                sender: tx,
-            });
-        }
-
-        let accepted = rx.await.unwrap_or(false);
-        if !accepted {
-            fail(app, history, bridge, &msg, "用户取消");
-            return;
-        }
-    }
-
-    // 3. 注入文本 + 图片
+    // 2. 注入文本 + 图片
     let text_ok = if msg.text.is_empty() {
         Ok(())
     } else {
@@ -188,7 +119,7 @@ async fn process_one<R: Runtime>(
         }
     }
 
-    // 4. Sent
+    // 3. Sent
     history.update_status(&msg.id, MessageStatus::Sent, None);
     emit_status(app, &msg.id, "sent", None);
     let _ = app.emit(
@@ -197,7 +128,7 @@ async fn process_one<R: Runtime>(
     );
     send_reaction(bridge, &msg.id, REACT_SENT);
 
-    // 5. 自动提交（可选）：注入完成后模拟"提交按键"
+    // 4. 自动提交（可选）：注入完成后模拟"提交按键"
     //    快照读一次配置，避免在 spawn_blocking 里再拿锁
     let (auto_submit, submit_key) = {
         let g = submit_config.lock().unwrap();
