@@ -1,5 +1,5 @@
 use core_foundation::base::{CFTypeRef, TCFType};
-use core_foundation::string::CFString;
+use core_foundation::string::{CFString, CFStringRef};
 
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
@@ -100,7 +100,7 @@ pub fn get_focused_element() -> Result<FocusedElement, String> {
             return Err("系统当前无焦点元素（可能聚焦在桌面或不可访问的应用）".to_string());
         }
 
-        // 读 AXRole 做一次基本校验
+        // 读 AXRole 做可写入性校验
         let role_attr = CFString::from_static_string("AXRole");
         let mut role_val: CFTypeRef = std::ptr::null();
         let role_result = AXUIElementCopyAttributeValue(
@@ -122,7 +122,27 @@ pub fn get_focused_element() -> Result<FocusedElement, String> {
             return Err("焦点元素不暴露 AXRole 属性（非标准 UI 组件）".to_string());
         }
 
+        // 把 CFStringRef 解到 Rust String，做白名单校验
+        let role_str = {
+            let cfs = CFString::wrap_under_get_rule(role_val as CFStringRef);
+            cfs.to_string()
+        };
         CFRelease(role_val as *mut std::ffi::c_void);
+
+        const WRITABLE_ROLES: &[&str] = &[
+            "AXTextField",
+            "AXTextArea",
+            "AXSearchField",
+            "AXComboBox",
+        ];
+        if !WRITABLE_ROLES.contains(&role_str.as_str()) {
+            CFRelease(focused as *mut std::ffi::c_void);
+            return Err(format!(
+                "焦点元素角色为 {}，不是可输入的文本框（需要 AXTextField / AXTextArea / AXSearchField / AXComboBox）",
+                role_str
+            ));
+        }
+
         Ok(FocusedElement(focused as *mut std::ffi::c_void))
     }
 }
