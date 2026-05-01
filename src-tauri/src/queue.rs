@@ -20,9 +20,9 @@ use tokio::sync::{mpsc, oneshot, Mutex};
 
 // 飞书 reaction emoji_type 常量。值由用户提供并在实际环境验证过；
 // 如某个环境下仍被拒（code 231001 "reaction type is invalid"），在此
-// 一处替换即可——候选集：GET / DONE / CRY / SMILE / LAUGH / OK /
+// 一处替换即可——候选集：Get / DONE / CRY / SMILE / LAUGH / OK /
 // HEART / FIRE / THUMBSUP / SAD / SADFACE / BLUSH。
-pub const REACT_RECEIVED: &str = "GET";  // 已收到消息
+pub const REACT_RECEIVED: &str = "Get";  // 已收到消息
 pub const REACT_SENT: &str = "DONE";     // ✅ 已成功输入
 pub const REACT_FAILED: &str = "CRY";    // 😢 失败
 
