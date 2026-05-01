@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAppStore, DEFAULT_SUBMIT_KEY, type SubmitKey } from "../../store";
 import KeyBindInput from "../KeyBindInput";
+import AccessibilityBanner from "../AccessibilityBanner";
 
 interface Settings {
   feishu_app_id: string;
@@ -177,6 +178,8 @@ export default function ConnectionTab() {
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
       <div className="max-w-md mx-auto flex flex-col gap-5">
+        <AccessibilityBanner />
+
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <KeyRound size={12} strokeWidth={1.75} />
