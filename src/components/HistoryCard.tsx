@@ -90,7 +90,7 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete, onRetry 
         <div className="flex items-start gap-1.5 text-[11.5px] font-mono mb-2" style={{ color: "var(--accent)" }}>
           <AlertCircle size={12} strokeWidth={1.75} className="shrink-0 mt-0.5" />
           <span>
-            <span className="font-sans">本地注入失败：</span>
+            <span className="font-sans">本地输入失败：</span>
             {message.failure_reason}
           </span>
         </div>
