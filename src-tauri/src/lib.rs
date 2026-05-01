@@ -30,6 +30,8 @@ pub fn run() {
             sidecar::delete_history_message,
             sidecar::retry_history_message,
             sidecar::confirm_pending_message,
+            sidecar::copy_text_to_clipboard,
+            sidecar::copy_image_to_clipboard,
             injector::check_accessibility,
             injector::request_accessibility,
             injector::inject_text_direct,

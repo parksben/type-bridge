@@ -390,6 +390,46 @@ pub fn delete_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> bool
     removed
 }
 
+/// 纯文本复制到系统剪贴板，用于消息历史卡片的"复制"按钮
+#[tauri::command]
+pub fn copy_text_to_clipboard(text: String) -> Result<(), String> {
+    use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
+    use objc2_foundation::NSString;
+    unsafe {
+        let pasteboard = NSPasteboard::generalPasteboard();
+        pasteboard.clearContents();
+        let ns_string = NSString::from_str(&text);
+        let ok = pasteboard.setString_forType(&ns_string, NSPasteboardTypeString);
+        if !ok {
+            return Err("剪贴板写入文本失败".into());
+        }
+    }
+    Ok(())
+}
+
+/// 把历史记录里的图片文件写入剪贴板（PNG），供后续粘贴使用
+#[tauri::command]
+pub fn copy_image_to_clipboard<R: Runtime>(
+    app: AppHandle<R>,
+    rel_path: String,
+) -> Result<(), String> {
+    use objc2_app_kit::{NSPasteboard, NSPasteboardTypePNG};
+    use objc2_foundation::NSData;
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    let abs = ctx.history.abs_image_path(&rel_path);
+    let bytes = std::fs::read(&abs).map_err(|e| format!("读取图片失败: {}", e))?;
+    unsafe {
+        let pasteboard = NSPasteboard::generalPasteboard();
+        pasteboard.clearContents();
+        let data = NSData::with_bytes(&bytes);
+        let ok = pasteboard.setData_forType(Some(&data), NSPasteboardTypePNG);
+        if !ok {
+            return Err("剪贴板写入图片失败".into());
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();

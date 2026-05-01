@@ -1,12 +1,14 @@
+import { useState } from "react";
 import {
   AlertCircle,
+  Check,
+  Copy,
   ExternalLink,
   Image as ImageIcon,
-  RotateCw,
   ShieldAlert,
   Trash2,
 } from "lucide-react";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type { HistoryMessage } from "../store";
 import StatusTag from "./StatusTag";
 
@@ -14,7 +16,6 @@ interface Props {
   message: HistoryMessage;
   imagesBaseDir: string;
   onDelete: (id: string) => void;
-  onRetry: (id: string) => void;
 }
 
 function formatRelative(ts: number): string {
@@ -33,10 +34,27 @@ function formatRelative(ts: number): string {
   return isSameYear ? `${m}-${day} ${hh}:${mm}` : `${d.getFullYear()}-${m}-${day}`;
 }
 
-export default function HistoryCard({ message, imagesBaseDir, onDelete, onRetry }: Props) {
-  const canRetry = message.status === "sent" || message.status === "failed";
+export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props) {
   const hasLeftRail = message.status === "failed";
   const imageUrl = message.image_path ? convertFileSrc(`${imagesBaseDir}/${message.image_path}`) : null;
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      // 优先复制文本；纯图片消息复制图片字节
+      if (message.text && message.text.trim().length > 0) {
+        await invoke("copy_text_to_clipboard", { text: message.text });
+      } else if (message.image_path) {
+        await invoke("copy_image_to_clipboard", { relPath: message.image_path });
+      } else {
+        return;
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      console.error("copy failed:", e);
+    }
+  }
 
   return (
     <div
@@ -99,15 +117,24 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete, onRetry 
       {message.feedback_error && <FeedbackBanner err={message.feedback_error} />}
 
       <div className="flex items-center justify-end gap-2">
-        {canRetry && (
-          <button
-            onClick={() => onRetry(message.id)}
-            className="tb-btn-ghost flex items-center gap-1"
-          >
-            <RotateCw size={11} strokeWidth={1.75} />
-            重发
-          </button>
-        )}
+        <button
+          onClick={handleCopy}
+          className="tb-btn-ghost flex items-center gap-1"
+          title="复制到剪贴板"
+          disabled={copied}
+        >
+          {copied ? (
+            <>
+              <Check size={11} strokeWidth={2} className="text-success" />
+              <span className="text-success">已复制</span>
+            </>
+          ) : (
+            <>
+              <Copy size={11} strokeWidth={1.75} />
+              复制
+            </>
+          )}
+        </button>
         <button
           onClick={() => onDelete(message.id)}
           className="tb-btn-ghost flex items-center gap-1"
