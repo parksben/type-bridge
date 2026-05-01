@@ -24,6 +24,7 @@ pub fn run() {
             store::save_settings,
             sidecar::start_feishu,
             sidecar::stop_feishu,
+            sidecar::run_selftest,
             sidecar::get_history,
             sidecar::get_history_dir,
             sidecar::delete_history_message,

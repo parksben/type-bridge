@@ -11,6 +11,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
+use tokio::sync::{oneshot, Mutex as TokioMutex};
 
 /// Rust → Go 命令（通过 sidecar stdin 发送，JSON Lines）
 #[derive(Debug, Clone, Serialize)]
@@ -18,6 +19,15 @@ use tauri_plugin_shell::ShellExt;
 pub enum SidecarCommand {
     Reaction { message_id: String, emoji_type: String },
     Reply { message_id: String, text: String },
+    Selftest,
+}
+
+/// selftest 执行结果（Go 返回，Rust 传给前端 invoke 调用者）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SelftestResult {
+    pub ok: bool,
+    #[serde(default)]
+    pub reason: String,
 }
 
 /// 包装 Go sidecar 子进程，允许随时写入命令（stdin）
@@ -35,6 +45,10 @@ impl SidecarBridge {
     pub fn clear(&self) {
         let mut g = self.child.lock().unwrap();
         *g = None;
+    }
+
+    pub fn is_connected(&self) -> bool {
+        self.child.lock().unwrap().is_some()
     }
 
     pub fn send(&self, cmd: &SidecarCommand) {
@@ -83,6 +97,11 @@ pub enum SidecarEvent {
         text: String,
     },
     Error { msg: String },
+    SelftestResult {
+        ok: bool,
+        #[serde(default)]
+        reason: String,
+    },
 }
 
 /// 应用共享上下文 — 用 tauri::Manager::manage 注入，每个 field 自行并发控制
@@ -92,6 +111,8 @@ pub struct AppContext {
     pub history: Arc<HistoryStore>,
     pub injector: Arc<Injector>,
     pub bridge: Arc<SidecarBridge>,
+    /// 等待中的 selftest 回执 sender。selftest 每次最多一个在途。
+    pub pending_selftest: Arc<TokioMutex<Option<oneshot::Sender<SelftestResult>>>>,
 }
 
 /// "输入后自动提交"相关配置（auto_submit + 目标按键），集中在一把 Mutex 里
@@ -134,6 +155,7 @@ impl AppContext {
             history,
             injector,
             bridge,
+            pending_selftest: Arc::new(TokioMutex::new(None)),
         })
     }
 
@@ -274,6 +296,20 @@ fn dispatch_event<R: Runtime>(
                 SidecarEvent::Status { connected: false },
             );
         }
+        SidecarEvent::SelftestResult { ok, reason } => {
+            // 唤醒正在等待的 run_selftest command
+            let result = SelftestResult {
+                ok: *ok,
+                reason: reason.clone(),
+            };
+            let pending = ctx.pending_selftest.clone();
+            tauri::async_runtime::spawn(async move {
+                let mut guard = pending.lock().await;
+                if let Some(sender) = guard.take() {
+                    let _ = sender.send(result);
+                }
+            });
+        }
     }
 }
 
@@ -340,6 +376,38 @@ pub async fn confirm_pending_message<R: Runtime>(
 ) -> Result<(), String> {
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
     ctx.injector.resolve_pending_confirm(&id, accept).await
+}
+
+/// 手动触发一次自检：Rust → Go stdin 发 selftest 命令，等 Go 用 Im.Chat.List
+/// ping 飞书 API 后 stdout 回执 selftest_result 事件。10s 超时。
+#[tauri::command]
+pub async fn run_selftest<R: Runtime>(app: AppHandle<R>) -> Result<SelftestResult, String> {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+
+    // 若 sidecar 未启动，直接返回明确错误
+    if !ctx.bridge.is_connected() {
+        return Err("长连接尚未建立，请先点击「启动长连接」".into());
+    }
+
+    let (tx, rx) = oneshot::channel::<SelftestResult>();
+    {
+        let mut slot = ctx.pending_selftest.lock().await;
+        // 如有遗留的旧 sender，直接丢弃（前一次请求已超时或结果丢失）
+        *slot = Some(tx);
+    }
+
+    ctx.bridge.send(&SidecarCommand::Selftest);
+
+    match tokio::time::timeout(Duration::from_secs(10), rx).await {
+        Ok(Ok(result)) => Ok(result),
+        Ok(Err(_)) => Err("selftest 通道被释放".into()),
+        Err(_) => {
+            // 超时：把 pending 清掉，避免后续结果灌进来被错配给下一次请求
+            let mut slot = ctx.pending_selftest.lock().await;
+            *slot = None;
+            Err("selftest 超时（10s），请检查网络或 sidecar 进程状态".into())
+        }
+    }
 }
 
 // --- base64 decode (kept local, Go side emits standard base64) ---
