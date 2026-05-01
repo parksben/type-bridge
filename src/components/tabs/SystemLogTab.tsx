@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { AlertCircle, Bell, Cable, ExternalLink, Terminal } from "lucide-react";
+import { AlertCircle, Bell, Cable, Eraser, ExternalLink, Terminal } from "lucide-react";
 import { useAppStore, LogEntry } from "../../store";
 
 // 系统日志 tab 只展示运维/系统事件，不含 message / inject（这些归消息历史 tab）
@@ -32,6 +32,7 @@ const kindClass: Record<LogEntry["kind"], string> = {
 
 export default function SystemLogTab() {
   const allLogs = useAppStore((s) => s.logs);
+  const clearLogs = useAppStore((s) => s.clearLogs);
   const logs = allLogs.filter((l) => systemKinds.has(l.kind));
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -54,10 +55,22 @@ export default function SystemLogTab() {
             {logs.length} 条记录
           </span>
         </div>
-        <button onClick={openLogDir} className="tb-btn-ghost flex items-center gap-1.5">
-          在访达中显示
-          <ExternalLink size={12} strokeWidth={1.75} />
-        </button>
+        <div className="flex items-center gap-1">
+          {logs.length > 0 && (
+            <button
+              onClick={clearLogs}
+              className="tb-btn-ghost flex items-center gap-1.5"
+              title="清空当前 UI 显示，不影响文件日志"
+            >
+              <Eraser size={12} strokeWidth={1.75} />
+              清空
+            </button>
+          )}
+          <button onClick={openLogDir} className="tb-btn-ghost flex items-center gap-1.5">
+            在访达中显示
+            <ExternalLink size={12} strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto thin-scroll px-6 py-4">
