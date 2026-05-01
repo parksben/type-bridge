@@ -1,4 +1,4 @@
-import { Image as ImageIcon, RotateCw, Trash2 } from "lucide-react";
+import { ExternalLink, Image as ImageIcon, RotateCw, ShieldAlert, Trash2 } from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { HistoryMessage } from "../store";
 import StatusTag from "./StatusTag";
@@ -85,6 +85,8 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete, onRetry 
         </div>
       )}
 
+      {message.feedback_error && <FeedbackBanner err={message.feedback_error} />}
+
       <div className="flex items-center justify-end gap-2">
         {canRetry && (
           <button
@@ -102,6 +104,46 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete, onRetry 
           <Trash2 size={11} strokeWidth={1.75} />
           删除
         </button>
+      </div>
+    </div>
+  );
+}
+
+/// 机器人向飞书发表情 / thread 回复被拒时的提示，独立于注入状态。
+function FeedbackBanner({ err }: { err: NonNullable<HistoryMessage["feedback_error"]> }) {
+  const title =
+    err.kind === "reply" ? "机器人回复被拒" : err.kind === "reaction" ? "机器人表情被拒" : "机器人回调被拒";
+
+  async function openHelp() {
+    if (!err.help_url) return;
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(err.help_url).catch(() => {});
+  }
+
+  return (
+    <div
+      className="flex items-start gap-2 rounded-md px-2.5 py-2 text-[11.5px] leading-relaxed mb-2"
+      style={{
+        background: "rgba(220, 38, 38, 0.08)",
+        border: "1px solid rgba(220, 38, 38, 0.25)",
+      }}
+    >
+      <ShieldAlert size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-error" />
+      <div className="flex-1 min-w-0">
+        <div className="text-error font-medium mb-0.5">
+          {title}
+          <span className="ml-1.5 text-subtle font-mono text-[10.5px]">code={err.code}</span>
+        </div>
+        <div className="text-muted font-mono break-all">{err.msg}</div>
+        {err.help_url && (
+          <button
+            onClick={openHelp}
+            className="mt-1 inline-flex items-center gap-1 text-accent hover:underline text-[11.5px]"
+          >
+            去飞书后台开通权限
+            <ExternalLink size={10} strokeWidth={2} />
+          </button>
+        )}
       </div>
     </div>
   );
