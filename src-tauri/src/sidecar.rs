@@ -82,14 +82,18 @@ pub enum SidecarEvent {
     Message {
         #[serde(default)]
         message_id: Option<String>,
+        #[serde(default)]
         sender: String,
+        #[serde(default)]
         text: String,
         #[serde(default)]
         ts: String,
     },
     Image {
         message_id: String,
+        #[serde(default)]
         data: String,
+        #[serde(default)]
         mime: String,
         #[serde(default)]
         sender: String,
@@ -199,8 +203,15 @@ pub async fn start_feishu<R: Runtime>(
                     let text = String::from_utf8_lossy(&line);
                     tracing::info!("[sidecar] {}", text.trim());
 
-                    if let Ok(evt) = serde_json::from_str::<SidecarEvent>(text.trim()) {
-                        dispatch_event(&app_handle, &evt, &mut retry_delay);
+                    match serde_json::from_str::<SidecarEvent>(text.trim()) {
+                        Ok(evt) => dispatch_event(&app_handle, &evt, &mut retry_delay),
+                        Err(e) => {
+                            tracing::warn!(
+                                "[sidecar] failed to parse event: {} | raw: {}",
+                                e,
+                                text.trim()
+                            );
+                        }
                     }
                 }
                 CommandEvent::Stderr(line) => {
