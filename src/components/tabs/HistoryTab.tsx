@@ -96,8 +96,8 @@ export default function HistoryTab() {
         {history.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-subtle">
             <History size={32} strokeWidth={1.25} className="mb-3 opacity-60" />
-            <div className="font-display italic text-2xl mb-1.5">awaiting messages</div>
-            <div className="text-[12px] font-mono max-w-xs">
+            <div className="text-[15px] text-muted mb-1.5">暂无消息记录</div>
+            <div className="text-[12px] max-w-xs">
               连接飞书后，机器人收到的消息将进入队列并在这里展示
             </div>
           </div>
