@@ -5,17 +5,17 @@ import { useAppStore, LogEntry } from "../store";
 const kindLabel: Record<LogEntry["kind"], string> = {
   connect: "连接",
   message: "消息",
-  inject: "注入",
+  inject: "输入",
   error: "错误",
   notify: "通知",
 };
 
-const kindColor: Record<LogEntry["kind"], string> = {
-  connect: "text-blue-500",
-  message: "text-gray-700",
-  inject: "text-green-600",
-  error: "text-red-500",
-  notify: "text-yellow-600",
+const kindClass: Record<LogEntry["kind"], string> = {
+  connect: "text-accent",
+  message: "text-text",
+  inject: "text-success",
+  error: "text-error",
+  notify: "text-muted",
 };
 
 export default function LogWindow() {
@@ -28,41 +28,52 @@ export default function LogWindow() {
 
   async function openLogDir() {
     const dir = await invoke<string>("get_log_dir");
-    const { open } = await import("@tauri-apps/plugin-opener");
-    await open(dir);
+    const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
+    await revealItemInDir(dir);
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-        <span className="font-semibold text-gray-800">消息日志</span>
-        <button
-          onClick={openLogDir}
-          className="text-sm text-blue-600 hover:text-blue-700"
-        >
-          在访达中显示
+    <div className="relative h-screen w-full flex flex-col animate-enter">
+      {/* Header */}
+      <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          <span className="font-display text-[22px] text-text leading-none">日志</span>
+          <span className="text-[11px] font-mono text-subtle uppercase tracking-[0.12em]">
+            {logs.length} 条记录
+          </span>
+        </div>
+        <button onClick={openLogDir} className="tb-btn-ghost">
+          在访达中显示 →
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto font-mono text-xs px-4 py-3 space-y-1">
-        {logs.length === 0 && (
-          <div className="text-gray-400 mt-4 text-center text-sm">暂无日志</div>
-        )}
-        {logs.map((log, i) => (
-          <div key={i} className="flex gap-2">
-            <span className="text-gray-400 shrink-0">{log.time}</span>
-            <span className={`shrink-0 font-medium ${kindColor[log.kind]}`}>
-              [{kindLabel[log.kind]}]
-            </span>
-            <span className="text-gray-700 break-all">{log.text}</span>
+      {/* Log list */}
+      <div className="relative z-10 flex-1 overflow-y-auto thin-scroll px-6 py-4">
+        {logs.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center">
+            <div className="font-display italic text-2xl text-subtle mb-2">awaiting messages</div>
+            <div className="text-[12px] text-subtle font-mono">连接飞书后，消息将出现在这里</div>
           </div>
-        ))}
-        <div ref={bottomRef} />
+        ) : (
+          <div className="font-mono text-[12px] space-y-1.5">
+            {logs.map((log, i) => (
+              <div key={i} className="flex gap-3 leading-relaxed">
+                <span className="text-subtle shrink-0 tabular-nums">{log.time}</span>
+                <span className={`shrink-0 font-medium ${kindClass[log.kind]}`}>
+                  {kindLabel[log.kind]}
+                </span>
+                <span className="text-text break-all">{log.text}</span>
+              </div>
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        )}
       </div>
 
-      <div className="px-4 py-2 border-t border-gray-100">
-        <span className="text-xs text-gray-400">
-          日志文件：~/Library/Logs/TypeBridge/
+      {/* Footer */}
+      <div className="relative z-10 px-6 py-2.5 border-t border-border">
+        <span className="text-[11px] font-mono text-subtle">
+          ~/Library/Logs/TypeBridge/
         </span>
       </div>
     </div>

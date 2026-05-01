@@ -10,16 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "label": "config",
-        "title": "TypeBridge",
-        "width": 400,
-        "height": 440,
-        "resizable": false,
-        "center": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     },

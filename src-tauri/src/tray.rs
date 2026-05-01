@@ -1,7 +1,7 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    App, Manager, Runtime,
+    App, Manager, Runtime, WindowEvent,
 };
 
 pub fn setup_tray<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
@@ -38,6 +38,32 @@ pub fn setup_tray<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
         })
         .build(app)?;
 
+    // 启动时创建一次配置窗口（隐藏的实例），后续关闭/再次唤出都复用这一个实例
+    if app.get_webview_window("config").is_none() {
+        let _ = build_config_window(app);
+    }
+
+    Ok(())
+}
+
+fn build_config_window<R: Runtime, M: Manager<R>>(app: &M) -> tauri::Result<()> {
+    let win = tauri::WebviewWindowBuilder::new(app, "config", tauri::WebviewUrl::App("/".into()))
+        .title("TypeBridge")
+        .inner_size(420.0, 500.0)
+        .resizable(false)
+        .center()
+        .visible(true)
+        .build()?;
+
+    // 拦截关闭事件：隐藏到托盘而非销毁，保留 React state 与已填入的凭据
+    let win_clone = win.clone();
+    win.on_window_event(move |event| {
+        if let WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+            let _ = win_clone.hide();
+        }
+    });
+
     Ok(())
 }
 
@@ -46,12 +72,7 @@ fn show_or_create_config_window<R: Runtime>(app: &tauri::AppHandle<R>) {
         let _ = win.show();
         let _ = win.set_focus();
     } else {
-        let _ = tauri::WebviewWindowBuilder::new(app, "config", tauri::WebviewUrl::App("/".into()))
-            .title("TypeBridge")
-            .inner_size(400.0, 440.0)
-            .resizable(false)
-            .center()
-            .build();
+        let _ = build_config_window(app);
     }
 }
 
@@ -60,12 +81,20 @@ pub fn show_or_create_log_window<R: Runtime>(app: &tauri::AppHandle<R>) {
         let _ = win.show();
         let _ = win.set_focus();
     } else {
-        let _ =
-            tauri::WebviewWindowBuilder::new(app, "log", tauri::WebviewUrl::App("/log".into()))
-                .title("消息日志 — TypeBridge")
-                .inner_size(600.0, 500.0)
-                .resizable(true)
-                .center()
-                .build();
+        let win = tauri::WebviewWindowBuilder::new(app, "log", tauri::WebviewUrl::App("/log".into()))
+            .title("消息日志 — TypeBridge")
+            .inner_size(720.0, 520.0)
+            .resizable(true)
+            .center()
+            .build();
+        if let Ok(win) = win {
+            let win_clone = win.clone();
+            win.on_window_event(move |event| {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = win_clone.hide();
+                }
+            });
+        }
     }
 }
