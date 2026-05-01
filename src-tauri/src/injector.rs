@@ -21,11 +21,6 @@ extern "C" {
         key_down: bool,
     ) -> *mut std::ffi::c_void;
     fn CGEventPost(tap: u32, event: *mut std::ffi::c_void);
-    fn CGEventKeyboardSetUnicodeString(
-        event: *mut std::ffi::c_void,
-        string_length: usize,
-        unicode_string: *const u16,
-    );
     fn CFRelease(cf: *mut std::ffi::c_void);
 }
 
@@ -186,37 +181,56 @@ pub fn inject_text_direct(text: String) -> Result<(), String> {
     inject_text(&text)
 }
 
-pub fn inject_text(text: &str) -> Result<(), String> {
-    for ch in text.chars() {
-        let utf16: Vec<u16> = {
-            let mut buf = [0u16; 2];
-            let len = ch.encode_utf16(&mut buf).len();
-            buf[..len].to_vec()
-        };
-        unsafe {
-            let key_down = CGEventCreateKeyboardEvent(std::ptr::null_mut(), 0, true);
-            if key_down.is_null() {
-                return Err("CGEventCreateKeyboardEvent failed".to_string());
+/// 当前前台应用的 bundle identifier 是否就是我们自己。
+/// 用来拦截"焦点仍在 TypeBridge 自己的窗口"这种场景——如果不拦截，
+/// CGEventPost 的按键会打回自己身上，粘贴命令也会粘到自己的 webview。
+pub fn is_frontmost_self() -> bool {
+    use objc2_app_kit::NSWorkspace;
+    unsafe {
+        let ws = NSWorkspace::sharedWorkspace();
+        if let Some(app) = ws.frontmostApplication() {
+            if let Some(bid) = app.bundleIdentifier() {
+                return bid.to_string() == "com.typebridge.app";
             }
-            CGEventKeyboardSetUnicodeString(key_down, utf16.len(), utf16.as_ptr());
-            CGEventPost(0, key_down); // kCGHIDEventTap = 0
-
-            let key_up = CGEventCreateKeyboardEvent(std::ptr::null_mut(), 0, false);
-            if !key_up.is_null() {
-                CGEventKeyboardSetUnicodeString(key_up, utf16.len(), utf16.as_ptr());
-                CGEventPost(0, key_up);
-                CFRelease(key_up);
-            }
-            CFRelease(key_down);
         }
-        std::thread::sleep(std::time::Duration::from_millis(8));
+        false
     }
+}
+
+/// 向前台应用写入文本：NSPasteboard 放文本 → 模拟 Cmd+V。
+/// 该方案兼容性好（包括 VSCode / Slack / Discord 等 Electron 应用），
+/// 原 AX 焦点查询方案在这些应用上会失败。
+pub fn inject_text(text: &str) -> Result<(), String> {
+    use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
+    use objc2_foundation::NSString;
+
+    if is_frontmost_self() {
+        return Err("当前前台是 TypeBridge 自己，请先切换到目标应用窗口".to_string());
+    }
+
+    unsafe {
+        let pasteboard = NSPasteboard::generalPasteboard();
+        pasteboard.clearContents();
+        let ns_string = NSString::from_str(text);
+        let ok = pasteboard.setString_forType(&ns_string, NSPasteboardTypeString);
+        if !ok {
+            return Err("NSPasteboard 写入文本失败".to_string());
+        }
+    }
+
+    // 给前台应用一点时间感知剪贴板变化，再触发粘贴
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    simulate_cmd_v()?;
     Ok(())
 }
 
 pub fn inject_image(png_bytes: &[u8], _mime: &str) -> Result<(), String> {
     use objc2_app_kit::{NSPasteboard, NSPasteboardTypePNG};
     use objc2_foundation::NSData;
+
+    if is_frontmost_self() {
+        return Err("当前前台是 TypeBridge 自己，请先切换到目标应用窗口".to_string());
+    }
 
     unsafe {
         let pasteboard = NSPasteboard::generalPasteboard();

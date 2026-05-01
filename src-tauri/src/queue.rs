@@ -217,12 +217,11 @@ async fn process_one<R: Runtime>(
 async fn inject_text_blocking(text: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         use crate::injector;
-        // 先确认权限：未授予时不调任何 AX API，避免 macOS TCC 弹窗 / 半授予态下的 CFStringRef 段错误
         if !injector::check_accessibility() {
             return Err("辅助功能权限未授予".to_string());
         }
-        // 获取焦点失败时把 AXError 细节直接上报，不再笼统报"无焦点输入框"
-        injector::get_focused_element()?;
+        // 新策略：走剪贴板 + Cmd+V，inject_text 内部自己做前台应用
+        // bundle ID 保护；不再依赖 AX 焦点查询，Electron 类应用也支持
         injector::inject_text(&text)
     })
     .await
@@ -236,7 +235,6 @@ async fn inject_image_blocking(abs_path: std::path::PathBuf, mime: String) -> Re
             return Err("辅助功能权限未授予".to_string());
         }
         let bytes = std::fs::read(&abs_path).map_err(|e| format!("读取图片失败: {}", e))?;
-        injector::get_focused_element()?;
         injector::inject_image(&bytes, &mime)
     })
     .await
