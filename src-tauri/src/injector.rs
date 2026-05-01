@@ -1,16 +1,16 @@
-use core_foundation::base::{CFTypeRef, TCFType};
-use core_foundation::string::{CFString, CFStringRef};
+// Rust 向前台应用"写入文本/图片"的核心实现。
+//
+// 策略：NSPasteboard 放内容 → 模拟 Cmd+V 触发粘贴。
+// 该方案覆盖 Electron / webview 类应用（VSCode / Slack / Discord 等）——
+// 这些应用的 AX 焦点查询不稳定，之前的逐字符 CGEventPost 方案会失败。
+//
+// 权限：NSPasteboard 本身不需要任何权限；CGEventPost（模拟 Cmd+V
+// 和自动提交按键）在 macOS 上仍需"辅助功能"权限，TCC 会拦截未授权
+// 的应用跨进程发按键事件。
 
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
     fn AXIsProcessTrustedWithOptions(options: *const std::ffi::c_void) -> bool;
-    fn AXUIElementCreateSystemWide() -> *mut std::ffi::c_void;
-    fn AXUIElementCopyAttributeValue(
-        element: *mut std::ffi::c_void,
-        // CFStringRef（对象指针），不是 C 字符串
-        attribute: CFTypeRef,
-        value: *mut CFTypeRef,
-    ) -> i32;
 }
 
 #[link(name = "CoreGraphics", kind = "framework")]
@@ -21,21 +21,15 @@ extern "C" {
         key_down: bool,
     ) -> *mut std::ffi::c_void;
     fn CGEventPost(tap: u32, event: *mut std::ffi::c_void);
+    fn CGEventSetFlags(event: *mut std::ffi::c_void, flags: u64);
     fn CFRelease(cf: *mut std::ffi::c_void);
 }
 
-pub struct FocusedElement(*mut std::ffi::c_void);
-
-unsafe impl Send for FocusedElement {}
-unsafe impl Sync for FocusedElement {}
-
-impl Drop for FocusedElement {
-    fn drop(&mut self) {
-        if !self.0.is_null() {
-            unsafe { CFRelease(self.0) };
-        }
-    }
+unsafe fn set_event_flags(event: *mut std::ffi::c_void, flags: u64) {
+    CGEventSetFlags(event, flags);
 }
+
+// ─── 辅助功能权限 ─────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn check_accessibility() -> bool {
@@ -46,8 +40,6 @@ pub fn check_accessibility() -> bool {
 }
 
 /// 打开系统设置 → 隐私与安全性 → 辅助功能 面板。
-/// 与 `check_accessibility` 严格分离：只有用户显式点击 UI 按钮时才调
-/// 用，避免每次注入都弹系统窗口抢焦点。
 #[tauri::command]
 pub fn request_accessibility() {
     let _ = std::process::Command::new("open")
@@ -55,131 +47,7 @@ pub fn request_accessibility() {
         .spawn();
 }
 
-/// 兼容保留旧名字（未被外部调用，仅内部代码可能用到）
-pub fn request_accessibility_with_prompt() {
-    request_accessibility();
-}
-
-pub fn get_focused_element() -> Result<FocusedElement, String> {
-    // 前置：权限未授予时立刻返回错误，不再调 AX API（之前在这里
-    // 直接弹系统设置是错的——重复弹窗 + 权限半授予状态下可能触发
-    // CFStringRef 段错误）
-    if !check_accessibility() {
-        return Err("辅助功能权限未授予".to_string());
-    }
-
-    unsafe {
-        let system = AXUIElementCreateSystemWide();
-        if system.is_null() {
-            return Err("AX system-wide element 不可用".to_string());
-        }
-
-        // AXFocusedUIElement 属性名：必须是真正的 CFStringRef，不是 C 字节指针
-        let focused_attr = CFString::from_static_string("AXFocusedUIElement");
-        let mut focused: CFTypeRef = std::ptr::null();
-        let result = AXUIElementCopyAttributeValue(
-            system,
-            focused_attr.as_concrete_TypeRef() as CFTypeRef,
-            &mut focused,
-        );
-        CFRelease(system);
-
-        if result != 0 {
-            return Err(format!(
-                "获取焦点元素失败 {}（{}）",
-                ax_error_name(result),
-                ax_error_hint(result),
-            ));
-        }
-        if focused.is_null() {
-            return Err("系统当前无焦点元素（可能聚焦在桌面或不可访问的应用）".to_string());
-        }
-
-        // 读 AXRole 做可写入性校验
-        let role_attr = CFString::from_static_string("AXRole");
-        let mut role_val: CFTypeRef = std::ptr::null();
-        let role_result = AXUIElementCopyAttributeValue(
-            focused as *mut std::ffi::c_void,
-            role_attr.as_concrete_TypeRef() as CFTypeRef,
-            &mut role_val,
-        );
-
-        if role_result != 0 {
-            CFRelease(focused as *mut std::ffi::c_void);
-            return Err(format!(
-                "读取焦点元素角色失败 {}（{}）",
-                ax_error_name(role_result),
-                ax_error_hint(role_result),
-            ));
-        }
-        if role_val.is_null() {
-            CFRelease(focused as *mut std::ffi::c_void);
-            return Err("焦点元素不暴露 AXRole 属性（非标准 UI 组件）".to_string());
-        }
-
-        // 把 CFStringRef 解到 Rust String，做白名单校验
-        let role_str = {
-            let cfs = CFString::wrap_under_get_rule(role_val as CFStringRef);
-            cfs.to_string()
-        };
-        CFRelease(role_val as *mut std::ffi::c_void);
-
-        const WRITABLE_ROLES: &[&str] = &[
-            "AXTextField",
-            "AXTextArea",
-            "AXSearchField",
-            "AXComboBox",
-        ];
-        if !WRITABLE_ROLES.contains(&role_str.as_str()) {
-            CFRelease(focused as *mut std::ffi::c_void);
-            return Err(format!(
-                "焦点元素角色为 {}，不是可输入的文本框（需要 AXTextField / AXTextArea / AXSearchField / AXComboBox）",
-                role_str
-            ));
-        }
-
-        Ok(FocusedElement(focused as *mut std::ffi::c_void))
-    }
-}
-
-/// AXError 数值 → 可读名称
-fn ax_error_name(code: i32) -> String {
-    let name = match code {
-        -25200 => "Failure",
-        -25201 => "IllegalArgument",
-        -25202 => "InvalidUIElement",
-        -25203 => "InvalidUIElementObserver",
-        -25204 => "CannotComplete",
-        -25205 => "AttributeUnsupported",
-        -25206 => "ActionUnsupported",
-        -25207 => "NotificationUnsupported",
-        -25208 => "NotImplemented",
-        -25209 => "NotificationAlreadyRegistered",
-        -25210 => "NotificationNotRegistered",
-        -25211 => "APIDisabled",
-        -25212 => "NoValue",
-        -25213 => "ParameterizedAttributeUnsupported",
-        -25214 => "NotEnoughPrecision",
-        _ => "Unknown",
-    };
-    format!("AXError={} {}", code, name)
-}
-
-/// 根据 AXError 给出用户可操作的诊断建议
-fn ax_error_hint(code: i32) -> &'static str {
-    match code {
-        -25211 => "TCC 缓存失效；请到系统设置 → 隐私与安全性 → 辅助功能，将 TypeBridge 移除后重新勾选",
-        -25204 => "目标应用未响应 AX 调用；切到其他可输入应用再试，若仍失败请重新授权",
-        -25202 => "焦点元素已失效；用户可能正在切换窗口",
-        -25205 => "该元素不支持请求的属性",
-        _ => "请检查辅助功能授权状态或目标应用是否支持 AX",
-    }
-}
-
-#[tauri::command]
-pub fn inject_text_direct(text: String) -> Result<(), String> {
-    inject_text(&text)
-}
+// ─── 前台应用自我保护 ────────────────────────────────────────────
 
 /// 当前前台应用的 bundle identifier 是否就是我们自己。
 /// 用来拦截"焦点仍在 TypeBridge 自己的窗口"这种场景——如果不拦截，
@@ -197,9 +65,14 @@ pub fn is_frontmost_self() -> bool {
     }
 }
 
+// ─── 文本 / 图片写入 ─────────────────────────────────────────────
+
+#[tauri::command]
+pub fn inject_text_direct(text: String) -> Result<(), String> {
+    inject_text(&text)
+}
+
 /// 向前台应用写入文本：NSPasteboard 放文本 → 模拟 Cmd+V。
-/// 该方案兼容性好（包括 VSCode / Slack / Discord 等 Electron 应用），
-/// 原 AX 焦点查询方案在这些应用上会失败。
 pub fn inject_text(text: &str) -> Result<(), String> {
     use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
     use objc2_foundation::NSString;
@@ -239,33 +112,35 @@ pub fn inject_image(png_bytes: &[u8], _mime: &str) -> Result<(), String> {
         let data = NSData::with_bytes(png_bytes);
         let ok = pasteboard.setData_forType(Some(&data), NSPasteboardTypePNG);
         if !ok {
-            return Err("NSPasteboard setData failed".to_string());
+            return Err("NSPasteboard 写入图片失败".to_string());
         }
     }
 
-    // Simulate Cmd+V
     simulate_cmd_v()?;
     Ok(())
 }
 
+// ─── 键盘事件模拟 ─────────────────────────────────────────────────
+
+const CG_FLAG_COMMAND: u64 = 0x00100000;
+const CG_FLAG_SHIFT: u64 = 0x00020000;
+const CG_FLAG_CONTROL: u64 = 0x00040000;
+const CG_FLAG_OPTION: u64 = 0x00080000;
+
 fn simulate_cmd_v() -> Result<(), String> {
     const V_KEYCODE: u16 = 0x09;
-    const K_CG_EVENT_FLAG_MASK_COMMAND: u64 = 0x00100000;
 
     unsafe {
         let key_down = CGEventCreateKeyboardEvent(std::ptr::null_mut(), V_KEYCODE, true);
         if key_down.is_null() {
             return Err("CGEventCreateKeyboardEvent failed".to_string());
         }
-
-        // Set Command modifier via CGEventSetFlags (we use raw pointer trick)
-        // CGEventSetFlags is in CoreGraphics but not always linked by name — use raw setter
-        set_event_flags(key_down, K_CG_EVENT_FLAG_MASK_COMMAND);
+        set_event_flags(key_down, CG_FLAG_COMMAND);
         CGEventPost(0, key_down);
 
         let key_up = CGEventCreateKeyboardEvent(std::ptr::null_mut(), V_KEYCODE, false);
         if !key_up.is_null() {
-            set_event_flags(key_up, K_CG_EVENT_FLAG_MASK_COMMAND);
+            set_event_flags(key_up, CG_FLAG_COMMAND);
             CGEventPost(0, key_up);
             CFRelease(key_up);
         }
@@ -274,32 +149,24 @@ fn simulate_cmd_v() -> Result<(), String> {
     Ok(())
 }
 
-#[link(name = "CoreGraphics", kind = "framework")]
-extern "C" {
-    fn CGEventSetFlags(event: *mut std::ffi::c_void, flags: u64);
-}
-
-unsafe fn set_event_flags(event: *mut std::ffi::c_void, flags: u64) {
-    CGEventSetFlags(event, flags);
-}
-
-// ─── 自动提交：按键模拟 ─────────────────────────────────────────────
-
-const CG_FLAG_COMMAND: u64 = 0x00100000;
-const CG_FLAG_SHIFT:   u64 = 0x00020000;
-const CG_FLAG_CONTROL: u64 = 0x00040000;
-const CG_FLAG_OPTION:  u64 = 0x00080000;
-
 /// 根据用户配置的 SubmitKey 模拟一次按键（down + up）用于消息提交。
 pub fn simulate_submit(sk: &crate::store::SubmitKey) -> Result<(), String> {
     let keycode = ecode_to_macos_keycode(&sk.key)
         .ok_or_else(|| format!("unsupported key: {}", sk.key))?;
 
     let mut flags: u64 = 0;
-    if sk.cmd { flags |= CG_FLAG_COMMAND; }
-    if sk.shift { flags |= CG_FLAG_SHIFT; }
-    if sk.option { flags |= CG_FLAG_OPTION; }
-    if sk.ctrl { flags |= CG_FLAG_CONTROL; }
+    if sk.cmd {
+        flags |= CG_FLAG_COMMAND;
+    }
+    if sk.shift {
+        flags |= CG_FLAG_SHIFT;
+    }
+    if sk.option {
+        flags |= CG_FLAG_OPTION;
+    }
+    if sk.ctrl {
+        flags |= CG_FLAG_CONTROL;
+    }
 
     unsafe {
         let key_down = CGEventCreateKeyboardEvent(std::ptr::null_mut(), keycode, true);
