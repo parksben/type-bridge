@@ -9,13 +9,20 @@
 //      await one-shot decision via confirm_pending_message command
 //   3. perform injection (text + optional image)
 //   4. status → Sent / Failed, emit feishu://message-status + feishu://inject-result
-//   5. TODO (stage 5): send reaction/reply to Go sidecar
+//   5. send reaction (DONE/CRY) + optional thread reply to Go sidecar
 
 use crate::history::{HistoryMessage, HistoryStore, MessageStatus};
+use crate::sidecar::{SidecarBridge, SidecarCommand};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::{mpsc, oneshot, Mutex};
+
+// 飞书 reaction emoji_type 常量（对照 open.feishu.cn 文档枚举；
+// 如具体项目环境里某个值不被接受，改这里即可）
+pub const REACT_RECEIVED: &str = "EYES"; // 收到消息
+pub const REACT_SENT: &str = "DONE";     // 已成功输入
+pub const REACT_FAILED: &str = "CRY";    // 失败
 
 #[derive(Debug, Clone)]
 pub struct QueuedMessage {
@@ -49,6 +56,7 @@ impl Injector {
         app: AppHandle<R>,
         history: Arc<HistoryStore>,
         confirm_flag: Arc<std::sync::Mutex<bool>>,
+        bridge: Arc<SidecarBridge>,
     ) -> Arc<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
         let pending_confirm: Arc<Mutex<Option<PendingConfirm>>> = Arc::new(Mutex::new(None));
@@ -64,6 +72,7 @@ impl Injector {
             history,
             confirm_flag,
             pending_confirm,
+            bridge,
         ));
 
         injector
@@ -93,9 +102,10 @@ async fn worker_loop<R: Runtime>(
     history: Arc<HistoryStore>,
     confirm_flag: Arc<std::sync::Mutex<bool>>,
     pending_confirm: Arc<Mutex<Option<PendingConfirm>>>,
+    bridge: Arc<SidecarBridge>,
 ) {
     while let Some(msg) = rx.recv().await {
-        process_one(&app, &history, &confirm_flag, &pending_confirm, msg).await;
+        process_one(&app, &history, &confirm_flag, &pending_confirm, &bridge, msg).await;
     }
     tracing::info!("[queue] worker loop exited");
 }
@@ -105,6 +115,7 @@ async fn process_one<R: Runtime>(
     history: &Arc<HistoryStore>,
     confirm_flag: &Arc<std::sync::Mutex<bool>>,
     pending_confirm: &Arc<Mutex<Option<PendingConfirm>>>,
+    bridge: &Arc<SidecarBridge>,
     msg: QueuedMessage,
 ) {
     // 1. Processing
@@ -134,7 +145,7 @@ async fn process_one<R: Runtime>(
 
         let accepted = rx.await.unwrap_or(false);
         if !accepted {
-            fail(app, history, &msg.id, "用户取消");
+            fail(app, history, bridge, &msg, "用户取消");
             return;
         }
     }
@@ -147,14 +158,14 @@ async fn process_one<R: Runtime>(
     };
 
     if let Err(reason) = text_ok {
-        fail(app, history, &msg.id, &reason);
+        fail(app, history, bridge, &msg, &reason);
         return;
     }
 
     if let (Some(rel), Some(mime)) = (&msg.image_path, &msg.image_mime) {
         let abs = history.abs_image_path(rel);
         if let Err(reason) = inject_image_blocking(abs, mime.clone()).await {
-            fail(app, history, &msg.id, &reason);
+            fail(app, history, bridge, &msg, &reason);
             return;
         }
     }
@@ -166,6 +177,7 @@ async fn process_one<R: Runtime>(
         "feishu://inject-result",
         serde_json::json!({"success": true}),
     );
+    send_reaction(bridge, &msg.id, REACT_SENT);
 }
 
 async fn inject_text_blocking(text: String) -> Result<(), String> {
@@ -196,20 +208,28 @@ async fn inject_image_blocking(abs_path: std::path::PathBuf, mime: String) -> Re
 fn fail<R: Runtime>(
     app: &AppHandle<R>,
     history: &Arc<HistoryStore>,
-    id: &str,
+    bridge: &Arc<SidecarBridge>,
+    msg: &QueuedMessage,
     reason: &str,
 ) {
     history.update_status(
-        id,
+        &msg.id,
         MessageStatus::Failed {
             reason: reason.to_string(),
         },
     );
-    emit_status(app, id, "failed", Some(reason.to_string()));
+    emit_status(app, &msg.id, "failed", Some(reason.to_string()));
     let _ = app.emit(
         "feishu://inject-result",
         serde_json::json!({"success": false, "reason": reason}),
     );
+
+    // 仅在失败时同步发送表情 + thread 文字说明
+    send_reaction(bridge, &msg.id, REACT_FAILED);
+    bridge.send(&SidecarCommand::Reply {
+        message_id: msg.id.clone(),
+        text: format!("❌ 输入失败：{}", reason),
+    });
 }
 
 fn emit_status<R: Runtime>(app: &AppHandle<R>, id: &str, status: &str, reason: Option<String>) {
@@ -223,11 +243,24 @@ fn emit_status<R: Runtime>(app: &AppHandle<R>, id: &str, status: &str, reason: O
     );
 }
 
-/// Helper: 刚到的 Feishu 消息入队流程（写历史 + enqueue）
+fn send_reaction(bridge: &Arc<SidecarBridge>, message_id: &str, emoji_type: &str) {
+    // 本地/合成 id（retry_history_message 里 "local-*"）不是真实飞书 message_id，
+    // 跳过发送以免无意义的 API 报错
+    if message_id.starts_with("local-") {
+        return;
+    }
+    bridge.send(&SidecarCommand::Reaction {
+        message_id: message_id.to_string(),
+        emoji_type: emoji_type.to_string(),
+    });
+}
+
+/// Helper: 刚到的 Feishu 消息入队流程（写历史 + 发 EYES + enqueue）
 pub fn ingest_message<R: Runtime>(
     app: &AppHandle<R>,
     history: &Arc<HistoryStore>,
     injector: &Arc<Injector>,
+    bridge: &Arc<SidecarBridge>,
     id: String,
     sender: String,
     text: String,
@@ -248,6 +281,9 @@ pub fn ingest_message<R: Runtime>(
     history.append(msg);
     let _ = app.emit("feishu://history-update", ());
     emit_status(app, &id, "queued", None);
+
+    // 给用户一个"已看到"的表情反馈
+    send_reaction(bridge, &id, REACT_RECEIVED);
 
     if let Err(e) = injector.enqueue(QueuedMessage {
         id,

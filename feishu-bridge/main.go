@@ -28,6 +28,9 @@ func main() {
 
 	emitStatus(false)
 
+	// 启动 stdin 命令读取协程：Rust → Go 单向命令通道（reaction / reply）
+	go startCommandLoop(client)
+
 	ctx := context.Background()
 	if err := wsClient.Start(ctx); err != nil {
 		emitError(fmt.Sprintf("ws start failed: %v", err))

@@ -67,10 +67,11 @@ func handleMessage(ctx context.Context, client *lark.Client, event *larkim.P2Mes
 	case "text":
 		text := extractText(content)
 		out, _ := json.Marshal(MessageOut{
-			Type:   "message",
-			Sender: sender,
-			Text:   text,
-			Ts:     ts,
+			Type:      "message",
+			MessageID: msgID,
+			Sender:    sender,
+			Text:      text,
+			Ts:        ts,
 		})
 		fmt.Println(string(out))
 
@@ -87,6 +88,7 @@ func handleMessage(ctx context.Context, client *lark.Client, event *larkim.P2Mes
 		out, _ := json.Marshal(MessageOut{
 			Type:      "image",
 			MessageID: msgID,
+			Sender:    sender,
 			Data:      data,
 			Mime:      mime,
 			Text:      "",
@@ -97,10 +99,11 @@ func handleMessage(ctx context.Context, client *lark.Client, event *larkim.P2Mes
 		text, imageKeys := extractPost(content)
 		if text != "" {
 			out, _ := json.Marshal(MessageOut{
-				Type:   "message",
-				Sender: sender,
-				Text:   text,
-				Ts:     ts,
+				Type:      "message",
+				MessageID: msgID,
+				Sender:    sender,
+				Text:      text,
+				Ts:        ts,
 			})
 			fmt.Println(string(out))
 		}
@@ -113,6 +116,7 @@ func handleMessage(ctx context.Context, client *lark.Client, event *larkim.P2Mes
 			out, _ := json.Marshal(MessageOut{
 				Type:      "image",
 				MessageID: msgID,
+				Sender:    sender,
 				Data:      data,
 				Mime:      mime,
 				Text:      "",
