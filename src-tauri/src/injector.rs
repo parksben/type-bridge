@@ -94,6 +94,8 @@ pub fn inject_text(text: &str) -> Result<(), String> {
     // 给前台应用一点时间感知剪贴板变化，再触发粘贴
     std::thread::sleep(std::time::Duration::from_millis(50));
     simulate_cmd_v()?;
+    // 让前台应用把粘贴事件流处理完，再让调用方继续发后续按键（如 Enter）
+    std::thread::sleep(std::time::Duration::from_millis(150));
     Ok(())
 }
 
@@ -117,6 +119,7 @@ pub fn inject_image(png_bytes: &[u8], _mime: &str) -> Result<(), String> {
     }
 
     simulate_cmd_v()?;
+    std::thread::sleep(std::time::Duration::from_millis(150));
     Ok(())
 }
 
