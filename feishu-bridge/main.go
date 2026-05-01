@@ -78,3 +78,16 @@ func emitError(msg string) {
 	b, _ := json.Marshal(map[string]interface{}{"type": "error", "msg": msg})
 	fmt.Println(string(b))
 }
+
+// emitFeedbackError 发送结构化的回调（reaction / reply）失败事件。
+// Rust 侧据此更新对应消息的历史条目，而不是把它当成全局连接错误处理。
+func emitFeedbackError(msgID, kind string, code int, msg string) {
+	b, _ := json.Marshal(map[string]interface{}{
+		"type":       "feedback_error",
+		"message_id": msgID,
+		"kind":       kind,
+		"code":       code,
+		"msg":        msg,
+	})
+	fmt.Println(string(b))
+}

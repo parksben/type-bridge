@@ -41,12 +41,20 @@ func startCommandLoop(client *lark.Client) {
 		switch cmd.Cmd {
 		case "reaction":
 			if err := addReaction(ctx, client, cmd.MessageID, cmd.EmojiType); err != nil {
-				emitError(fmt.Sprintf("reaction(%s) on %s failed: %v", cmd.EmojiType, cmd.MessageID, err))
+				if fe, ok := err.(*apiFailure); ok {
+					emitFeedbackError(cmd.MessageID, "reaction", fe.code, fe.msg)
+				} else {
+					emitError(fmt.Sprintf("reaction(%s) on %s failed: %v", cmd.EmojiType, cmd.MessageID, err))
+				}
 			}
 
 		case "reply":
 			if err := replyInThread(ctx, client, cmd.MessageID, cmd.Text); err != nil {
-				emitError(fmt.Sprintf("reply on %s failed: %v", cmd.MessageID, err))
+				if fe, ok := err.(*apiFailure); ok {
+					emitFeedbackError(cmd.MessageID, "reply", fe.code, fe.msg)
+				} else {
+					emitError(fmt.Sprintf("reply on %s failed: %v", cmd.MessageID, err))
+				}
 			}
 
 		case "selftest":
@@ -57,6 +65,17 @@ func startCommandLoop(client *lark.Client) {
 			emitError(fmt.Sprintf("unknown command: %s", cmd.Cmd))
 		}
 	}
+}
+
+// apiFailure 代表飞书 API 返回的业务错误（resp.Success() == false），
+// 区别于网络错误等。用类型断言让上层把它映射成 feedback_error 事件。
+type apiFailure struct {
+	code int
+	msg  string
+}
+
+func (e *apiFailure) Error() string {
+	return fmt.Sprintf("api error code=%d msg=%s", e.code, e.msg)
 }
 
 // runSelftest 调用 Im.Chat.List 作为"上行能力 ping"——走通意味着：
@@ -106,7 +125,7 @@ func addReaction(ctx context.Context, client *lark.Client, msgID, emojiType stri
 		return err
 	}
 	if !resp.Success() {
-		return fmt.Errorf("api error code=%d msg=%s", resp.Code, resp.Msg)
+		return &apiFailure{code: resp.Code, msg: resp.Msg}
 	}
 	return nil
 }
@@ -137,7 +156,7 @@ func replyInThread(ctx context.Context, client *lark.Client, msgID, text string)
 		if strings.Contains(resp.Msg, "thread") || resp.Code == 230020 {
 			return replyDirect(ctx, client, msgID, text)
 		}
-		return fmt.Errorf("api error code=%d msg=%s", resp.Code, resp.Msg)
+		return &apiFailure{code: resp.Code, msg: resp.Msg}
 	}
 	return nil
 }
@@ -159,7 +178,7 @@ func replyDirect(ctx context.Context, client *lark.Client, msgID, text string) e
 		return err
 	}
 	if !resp.Success() {
-		return fmt.Errorf("api error code=%d msg=%s", resp.Code, resp.Msg)
+		return &apiFailure{code: resp.Code, msg: resp.Msg}
 	}
 	return nil
 }

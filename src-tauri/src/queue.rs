@@ -312,6 +312,7 @@ pub fn ingest_message<R: Runtime>(
         image_path: image_path.clone(),
         status: MessageStatus::Queued,
         failure_reason: None,
+        feedback_error: None,
     };
     history.append(msg);
     let _ = app.emit("feishu://history-update", ());

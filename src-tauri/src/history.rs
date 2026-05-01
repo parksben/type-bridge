@@ -40,6 +40,16 @@ impl MessageStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FeedbackError {
+    /// "reaction" | "reply"
+    pub kind: String,
+    pub code: i64,
+    pub msg: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub help_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryMessage {
     pub id: String,
     pub received_at: i64,
@@ -50,6 +60,10 @@ pub struct HistoryMessage {
     pub status: MessageStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure_reason: Option<String>,
+    /// 机器人给该消息发表情/thread 回复时被飞书拒的结构化错误（权限不足等）。
+    /// 与 status 独立——消息可能已成功注入，仅双向反馈失败。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feedback_error: Option<FeedbackError>,
 }
 
 pub struct HistoryStore {
@@ -149,6 +163,46 @@ impl HistoryStore {
             self.flush();
         }
         removed
+    }
+
+    /// 把 Go sidecar 回传的 feedback_error 落到对应消息上。
+    /// 若找不到消息（可能已被淘汰）直接忽略。
+    pub fn attach_feedback_error(&self, id: &str, err: FeedbackError) -> bool {
+        let mut changed = false;
+        {
+            let mut guard = self.messages.write().unwrap();
+            if let Some(msg) = guard.iter_mut().find(|m| m.id == id) {
+                msg.feedback_error = Some(err);
+                msg.updated_at = now_secs();
+                changed = true;
+            }
+        }
+        if changed {
+            self.flush();
+        }
+        changed
+    }
+
+    /// 创建新消息时调用，清掉可能存在的旧 feedback_error（比如消息 id
+    /// 复用或 retry 场景）。内部在 append / update_status 都隐式处理了，
+    /// 这里留作显式 API。
+    #[allow(dead_code)]
+    pub fn clear_feedback_error(&self, id: &str) -> bool {
+        let mut changed = false;
+        {
+            let mut guard = self.messages.write().unwrap();
+            if let Some(msg) = guard.iter_mut().find(|m| m.id == id) {
+                if msg.feedback_error.is_some() {
+                    msg.feedback_error = None;
+                    msg.updated_at = now_secs();
+                    changed = true;
+                }
+            }
+        }
+        if changed {
+            self.flush();
+        }
+        changed
     }
 
     pub fn find(&self, id: &str) -> Option<HistoryMessage> {
