@@ -65,18 +65,18 @@ pub fn request_accessibility_with_prompt() {
     request_accessibility();
 }
 
-pub fn get_focused_element() -> Option<FocusedElement> {
-    // 前置：权限未授予时立刻返回 None，不再调 AX API（之前在这里
+pub fn get_focused_element() -> Result<FocusedElement, String> {
+    // 前置：权限未授予时立刻返回错误，不再调 AX API（之前在这里
     // 直接弹系统设置是错的——重复弹窗 + 权限半授予状态下可能触发
     // CFStringRef 段错误）
     if !check_accessibility() {
-        return None;
+        return Err("辅助功能权限未授予".to_string());
     }
 
     unsafe {
         let system = AXUIElementCreateSystemWide();
         if system.is_null() {
-            return None;
+            return Err("AX system-wide element 不可用".to_string());
         }
 
         // AXFocusedUIElement 属性名：必须是真正的 CFStringRef，不是 C 字节指针
@@ -89,11 +89,18 @@ pub fn get_focused_element() -> Option<FocusedElement> {
         );
         CFRelease(system);
 
-        if result != 0 || focused.is_null() {
-            return None;
+        if result != 0 {
+            return Err(format!(
+                "获取焦点元素失败 {}（{}）",
+                ax_error_name(result),
+                ax_error_hint(result),
+            ));
+        }
+        if focused.is_null() {
+            return Err("系统当前无焦点元素（可能聚焦在桌面或不可访问的应用）".to_string());
         }
 
-        // 读 AXRole 做一次基本校验；不通过就释放并返回 None
+        // 读 AXRole 做一次基本校验
         let role_attr = CFString::from_static_string("AXRole");
         let mut role_val: CFTypeRef = std::ptr::null();
         let role_result = AXUIElementCopyAttributeValue(
@@ -102,13 +109,55 @@ pub fn get_focused_element() -> Option<FocusedElement> {
             &mut role_val,
         );
 
-        if role_result != 0 || role_val.is_null() {
+        if role_result != 0 {
             CFRelease(focused as *mut std::ffi::c_void);
-            return None;
+            return Err(format!(
+                "读取焦点元素角色失败 {}（{}）",
+                ax_error_name(role_result),
+                ax_error_hint(role_result),
+            ));
+        }
+        if role_val.is_null() {
+            CFRelease(focused as *mut std::ffi::c_void);
+            return Err("焦点元素不暴露 AXRole 属性（非标准 UI 组件）".to_string());
         }
 
         CFRelease(role_val as *mut std::ffi::c_void);
-        Some(FocusedElement(focused as *mut std::ffi::c_void))
+        Ok(FocusedElement(focused as *mut std::ffi::c_void))
+    }
+}
+
+/// AXError 数值 → 可读名称
+fn ax_error_name(code: i32) -> String {
+    let name = match code {
+        -25200 => "Failure",
+        -25201 => "IllegalArgument",
+        -25202 => "InvalidUIElement",
+        -25203 => "InvalidUIElementObserver",
+        -25204 => "CannotComplete",
+        -25205 => "AttributeUnsupported",
+        -25206 => "ActionUnsupported",
+        -25207 => "NotificationUnsupported",
+        -25208 => "NotImplemented",
+        -25209 => "NotificationAlreadyRegistered",
+        -25210 => "NotificationNotRegistered",
+        -25211 => "APIDisabled",
+        -25212 => "NoValue",
+        -25213 => "ParameterizedAttributeUnsupported",
+        -25214 => "NotEnoughPrecision",
+        _ => "Unknown",
+    };
+    format!("AXError={} {}", code, name)
+}
+
+/// 根据 AXError 给出用户可操作的诊断建议
+fn ax_error_hint(code: i32) -> &'static str {
+    match code {
+        -25211 => "TCC 缓存失效；请到系统设置 → 隐私与安全性 → 辅助功能，将 TypeBridge 移除后重新勾选",
+        -25204 => "目标应用未响应 AX 调用；切到其他可输入应用再试，若仍失败请重新授权",
+        -25202 => "焦点元素已失效；用户可能正在切换窗口",
+        -25205 => "该元素不支持请求的属性",
+        _ => "请检查辅助功能授权状态或目标应用是否支持 AX",
     }
 }
 
