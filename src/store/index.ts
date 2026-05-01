@@ -8,6 +8,13 @@ export interface LogEntry {
 
 export type MessageStatus = "queued" | "processing" | "sent" | "failed";
 
+export interface FeedbackError {
+  kind: string;     // "reaction" | "reply"
+  code: number;
+  msg: string;
+  help_url?: string | null;
+}
+
 export interface HistoryMessage {
   id: string;
   received_at: number;  // Unix seconds
@@ -17,6 +24,7 @@ export interface HistoryMessage {
   image_path: string | null;
   status: MessageStatus;
   failure_reason?: string | null;
+  feedback_error?: FeedbackError | null;
 }
 
 export type TabId = "connection" | "history" | "logs";
