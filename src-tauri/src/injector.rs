@@ -1,11 +1,15 @@
+use core_foundation::base::{CFTypeRef, TCFType};
+use core_foundation::string::CFString;
+
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
     fn AXIsProcessTrustedWithOptions(options: *const std::ffi::c_void) -> bool;
     fn AXUIElementCreateSystemWide() -> *mut std::ffi::c_void;
     fn AXUIElementCopyAttributeValue(
         element: *mut std::ffi::c_void,
-        attribute: *const std::ffi::c_char,
-        value: *mut *mut std::ffi::c_void,
+        // CFStringRef（对象指针），不是 C 字符串
+        attribute: CFTypeRef,
+        value: *mut CFTypeRef,
     ) -> i32;
 }
 
@@ -41,23 +45,31 @@ impl Drop for FocusedElement {
 #[tauri::command]
 pub fn check_accessibility() -> bool {
     unsafe {
-        // Build CFDictionary with kAXTrustedCheckOptionPrompt = kCFBooleanTrue
-        // For simplicity we call without prompt option first
+        // 传 NULL options：仅查询当前信任状态，不触发系统 UI 提示
         AXIsProcessTrustedWithOptions(std::ptr::null())
     }
 }
 
-pub fn request_accessibility_with_prompt() {
-    // Trigger system accessibility permission prompt by opening the prefs pane
-    // The simplest approach on macOS 13+: open the accessibility prefs pane
+/// 打开系统设置 → 隐私与安全性 → 辅助功能 面板。
+/// 与 `check_accessibility` 严格分离：只有用户显式点击 UI 按钮时才调
+/// 用，避免每次注入都弹系统窗口抢焦点。
+#[tauri::command]
+pub fn request_accessibility() {
     let _ = std::process::Command::new("open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         .spawn();
 }
 
+/// 兼容保留旧名字（未被外部调用，仅内部代码可能用到）
+pub fn request_accessibility_with_prompt() {
+    request_accessibility();
+}
+
 pub fn get_focused_element() -> Option<FocusedElement> {
+    // 前置：权限未授予时立刻返回 None，不再调 AX API（之前在这里
+    // 直接弹系统设置是错的——重复弹窗 + 权限半授予状态下可能触发
+    // CFStringRef 段错误）
     if !check_accessibility() {
-        request_accessibility_with_prompt();
         return None;
     }
 
@@ -67,11 +79,12 @@ pub fn get_focused_element() -> Option<FocusedElement> {
             return None;
         }
 
-        let attr = b"AXFocusedUIElement\0";
-        let mut focused: *mut std::ffi::c_void = std::ptr::null_mut();
+        // AXFocusedUIElement 属性名：必须是真正的 CFStringRef，不是 C 字节指针
+        let focused_attr = CFString::from_static_string("AXFocusedUIElement");
+        let mut focused: CFTypeRef = std::ptr::null();
         let result = AXUIElementCopyAttributeValue(
             system,
-            attr.as_ptr() as *const std::ffi::c_char,
+            focused_attr.as_concrete_TypeRef() as CFTypeRef,
             &mut focused,
         );
         CFRelease(system);
@@ -80,24 +93,22 @@ pub fn get_focused_element() -> Option<FocusedElement> {
             return None;
         }
 
-        // Check role is editable
-        let role_attr = b"AXRole\0";
-        let mut role_val: *mut std::ffi::c_void = std::ptr::null_mut();
+        // 读 AXRole 做一次基本校验；不通过就释放并返回 None
+        let role_attr = CFString::from_static_string("AXRole");
+        let mut role_val: CFTypeRef = std::ptr::null();
         let role_result = AXUIElementCopyAttributeValue(
-            focused,
-            role_attr.as_ptr() as *const std::ffi::c_char,
+            focused as *mut std::ffi::c_void,
+            role_attr.as_concrete_TypeRef() as CFTypeRef,
             &mut role_val,
         );
 
         if role_result != 0 || role_val.is_null() {
-            CFRelease(focused);
+            CFRelease(focused as *mut std::ffi::c_void);
             return None;
         }
 
-        // We accept any focused element that has AXRole (all editable elements do)
-        // Stricter checking can be added here if needed
-        CFRelease(role_val);
-        Some(FocusedElement(focused))
+        CFRelease(role_val as *mut std::ffi::c_void);
+        Some(FocusedElement(focused as *mut std::ffi::c_void))
     }
 }
 

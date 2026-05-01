@@ -8,7 +8,7 @@ pub mod store;
 pub mod tray;
 
 use sidecar::AppContext;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +31,7 @@ pub fn run() {
             sidecar::retry_history_message,
             sidecar::confirm_pending_message,
             injector::check_accessibility,
+            injector::request_accessibility,
             injector::inject_text_direct,
             logger::get_log_dir,
         ])
@@ -69,6 +70,13 @@ pub fn run() {
                 use tauri_plugin_notification::NotificationExt;
                 let _ = app.notification().request_permission();
             }
+
+            // 启动后广播一次辅助功能权限状态，前端 ConnectionTab 据此决定是否
+            // 展示 banner；前端后续会每 3s 主动 check_accessibility 轮询直到授予
+            let granted = injector::check_accessibility();
+            let _ = app
+                .handle()
+                .emit("typebridge://accessibility", serde_json::json!({ "granted": granted }));
 
             Ok(())
         })
