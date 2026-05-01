@@ -1,3 +1,10 @@
+// Sidecar 进程管理 + Go stdout 事件分发。
+//
+// 本模块职责：启动 Go sidecar、读取其 stdout 的 JSON Lines、转交给
+// history + queue 进行入队处理；不再直接执行注入（那是 queue.rs 的事）。
+
+use crate::history::HistoryStore;
+use crate::queue::{ingest_message, Injector};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -9,22 +16,49 @@ use tauri_plugin_shell::ShellExt;
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SidecarEvent {
     Status { connected: bool },
-    Message { sender: String, text: String, ts: String },
-    Image { message_id: String, data: String, mime: String, text: String },
+    Message {
+        #[serde(default)]
+        message_id: Option<String>,
+        sender: String,
+        text: String,
+        #[serde(default)]
+        ts: String,
+    },
+    Image {
+        message_id: String,
+        data: String,
+        mime: String,
+        #[serde(default)]
+        sender: String,
+        #[serde(default)]
+        text: String,
+    },
     Error { msg: String },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PendingMessage {
-    pub text: Option<String>,
-    pub image_data: Option<String>,
-    pub image_mime: Option<String>,
+/// 应用共享上下文 — 用 tauri::Manager::manage 注入，每个 field 自行并发控制
+pub struct AppContext {
+    pub confirm_before_inject: Arc<Mutex<bool>>,
+    pub history: Arc<HistoryStore>,
+    pub injector: Arc<Injector>,
 }
 
-#[derive(Default)]
-pub struct AppState {
-    pub confirm_before_inject: bool,
-    pub pending: Option<PendingMessage>,
+impl AppContext {
+    pub fn new<R: Runtime>(app: AppHandle<R>, initial_confirm: bool) -> Arc<Self> {
+        let history = HistoryStore::open();
+        let confirm_flag = Arc::new(Mutex::new(initial_confirm));
+        let injector = Injector::spawn(app.clone(), history.clone(), confirm_flag.clone());
+
+        Arc::new(Self {
+            confirm_before_inject: confirm_flag,
+            history,
+            injector,
+        })
+    }
+
+    pub fn set_confirm_before_inject(&self, value: bool) {
+        *self.confirm_before_inject.lock().unwrap() = value;
+    }
 }
 
 #[tauri::command]
@@ -33,8 +67,6 @@ pub async fn start_feishu<R: Runtime>(
     app_id: String,
     app_secret: String,
 ) -> Result<(), String> {
-    let state: Arc<Mutex<AppState>> = app.state::<Arc<Mutex<AppState>>>().inner().clone();
-
     let shell = app.shell();
     let (mut rx, _child) = shell
         .sidecar("feishu-bridge")
@@ -55,37 +87,7 @@ pub async fn start_feishu<R: Runtime>(
                     tracing::info!("[sidecar] {}", text.trim());
 
                     if let Ok(evt) = serde_json::from_str::<SidecarEvent>(text.trim()) {
-                        match &evt {
-                            SidecarEvent::Status { connected } => {
-                                if *connected { retry_delay = 2; }
-                                let _ = app_handle.emit("feishu://status", &evt);
-                            }
-                            SidecarEvent::Message { text: msg_text, .. } => {
-                                let confirm = {
-                                    let s = state.lock().unwrap();
-                                    s.confirm_before_inject
-                                };
-
-                                if confirm {
-                                    let _ = app_handle.emit("feishu://confirm-request", &evt);
-                                } else {
-                                    handle_text_inject(&app_handle, msg_text);
-                                }
-
-                                let _ = app_handle.emit("feishu://message", &evt);
-                            }
-                            SidecarEvent::Image { data, mime, text: img_text, .. } => {
-                                if !img_text.is_empty() {
-                                    handle_text_inject(&app_handle, img_text);
-                                }
-                                handle_image_inject(&app_handle, data, mime, &state);
-                                let _ = app_handle.emit("feishu://image", &evt);
-                            }
-                            SidecarEvent::Error { msg } => {
-                                tracing::error!("[feishu] {}", msg);
-                                let _ = app_handle.emit("feishu://status", SidecarEvent::Status { connected: false });
-                            }
-                        }
+                        dispatch_event(&app_handle, &evt, &mut retry_delay);
                     }
                 }
                 CommandEvent::Stderr(line) => {
@@ -93,7 +95,10 @@ pub async fn start_feishu<R: Runtime>(
                 }
                 CommandEvent::Terminated(_) => {
                     tracing::warn!("[sidecar] terminated, retrying in {}s", retry_delay);
-                    let _ = app_handle.emit("feishu://status", SidecarEvent::Status { connected: false });
+                    let _ = app_handle.emit(
+                        "feishu://status",
+                        SidecarEvent::Status { connected: false },
+                    );
                     tokio::time::sleep(Duration::from_secs(retry_delay)).await;
                     retry_delay = (retry_delay * 2).min(60);
                 }
@@ -105,97 +110,135 @@ pub async fn start_feishu<R: Runtime>(
     Ok(())
 }
 
+fn dispatch_event<R: Runtime>(
+    app: &AppHandle<R>,
+    evt: &SidecarEvent,
+    retry_delay: &mut u64,
+) {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+
+    match evt {
+        SidecarEvent::Status { connected } => {
+            if *connected {
+                *retry_delay = 2;
+            }
+            let _ = app.emit("feishu://status", evt);
+        }
+        SidecarEvent::Message { message_id, sender, text, .. } => {
+            let id = message_id
+                .clone()
+                .unwrap_or_else(|| format!("local-{}", uuid::Uuid::new_v4()));
+            let _ = app.emit("feishu://message", evt);
+            ingest_message(
+                app,
+                &ctx.history,
+                &ctx.injector,
+                id,
+                sender.clone(),
+                text.clone(),
+                None,
+                None,
+            );
+        }
+        SidecarEvent::Image { message_id, data, mime, sender, text } => {
+            let _ = app.emit("feishu://image", evt);
+
+            // base64 → 保存到 images dir → 入队
+            let bytes = match base64_decode(data) {
+                Ok(b) => b,
+                Err(e) => {
+                    tracing::error!("[sidecar] base64 decode failed: {}", e);
+                    return;
+                }
+            };
+            let rel = match ctx.history.save_image(message_id, mime, &bytes) {
+                Ok(p) => p,
+                Err(e) => {
+                    tracing::error!("[sidecar] save image failed: {}", e);
+                    return;
+                }
+            };
+            ingest_message(
+                app,
+                &ctx.history,
+                &ctx.injector,
+                message_id.clone(),
+                sender.clone(),
+                text.clone(),
+                Some(rel),
+                Some(mime.clone()),
+            );
+        }
+        SidecarEvent::Error { msg } => {
+            tracing::error!("[feishu] {}", msg);
+            let _ = app.emit(
+                "feishu://status",
+                SidecarEvent::Status { connected: false },
+            );
+        }
+    }
+}
+
 #[tauri::command]
 pub fn stop_feishu<R: Runtime>(app: AppHandle<R>) {
-    let _ = app.emit("feishu://status", SidecarEvent::Status { connected: false });
+    let _ = app.emit(
+        "feishu://status",
+        SidecarEvent::Status { connected: false },
+    );
+}
+
+// --- Commands for history/queue ---
+
+#[tauri::command]
+pub fn get_history<R: Runtime>(app: AppHandle<R>) -> Vec<crate::history::HistoryMessage> {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    ctx.history.all_desc()
 }
 
 #[tauri::command]
-pub fn inject_pending<R: Runtime>(app: AppHandle<R>) {
-    let state: Arc<Mutex<AppState>> = app.state::<Arc<Mutex<AppState>>>().inner().clone();
-    let pending = {
-        let mut s = state.lock().unwrap();
-        s.pending.take()
-    };
-    if let Some(msg) = pending {
-        if let Some(text) = &msg.text {
-            handle_text_inject(&app, text);
-        }
-        if let (Some(data), Some(mime)) = (&msg.image_data, &msg.image_mime) {
-            handle_image_inject(&app, data, mime, &state);
-        }
+pub fn delete_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> bool {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    let removed = ctx.history.delete(&id).is_some();
+    if removed {
+        let _ = app.emit("feishu://history-update", ());
     }
+    removed
 }
 
-fn handle_text_inject<R: Runtime>(app: &AppHandle<R>, text: &str) {
-    use crate::injector;
-    use crate::notification;
+#[tauri::command]
+pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), String> {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    let msg = ctx.history.find(&id).ok_or_else(|| "消息不存在".to_string())?;
 
-    match injector::get_focused_element() {
-        Some(_) => {
-            if let Err(e) = injector::inject_text(text) {
-                tracing::error!("[inject] text failed: {}", e);
-                let _ = app.emit("feishu://inject-result", serde_json::json!({"success": false, "reason": e}));
-            } else {
-                tracing::info!("[inject] text ok ({} chars)", text.chars().count());
-                let _ = app.emit("feishu://inject-result", serde_json::json!({"success": true}));
-            }
-        }
-        None => {
-            tracing::warn!("[inject] no focused element, storing pending message");
-            notification::notify_no_focus(app);
-            let state: Arc<Mutex<AppState>> = app.state::<Arc<Mutex<AppState>>>().inner().clone();
-            let mut s = state.lock().unwrap();
-            s.pending = Some(PendingMessage {
-                text: Some(text.to_string()),
-                image_data: None,
-                image_mime: None,
-            });
-        }
+    use crate::history::MessageStatus;
+    if matches!(msg.status, MessageStatus::Queued | MessageStatus::Processing) {
+        return Err("当前状态不允许重发".to_string());
     }
+
+    ctx.history.update_status(&id, MessageStatus::Queued);
+    let _ = app.emit("feishu://history-update", ());
+
+    ctx.injector.enqueue(crate::queue::QueuedMessage {
+        id,
+        text: msg.text,
+        image_path: msg.image_path.clone(),
+        image_mime: msg.image_path.as_ref().map(|_| "image/png".to_string()),
+    })?;
+    Ok(())
 }
 
-fn handle_image_inject<R: Runtime>(
-    app: &AppHandle<R>,
-    data: &str,
-    mime: &str,
-    state: &Arc<Mutex<AppState>>,
-) {
-    use crate::injector;
-    use crate::notification;
-
-    let bytes = match base64_decode(data) {
-        Ok(b) => b,
-        Err(e) => {
-            tracing::error!("[inject] base64 decode failed: {}", e);
-            return;
-        }
-    };
-
-    match injector::get_focused_element() {
-        Some(_) => {
-            if let Err(e) = injector::inject_image(&bytes, mime) {
-                tracing::warn!("[inject] image paste failed: {}", e);
-                let _ = app.emit("feishu://inject-result", serde_json::json!({"success": false, "reason": e}));
-            } else {
-                tracing::info!("[inject] image ok");
-            }
-        }
-        None => {
-            notification::notify_no_focus(app);
-            let mut s = state.lock().unwrap();
-            s.pending = Some(PendingMessage {
-                text: None,
-                image_data: Some(data.to_string()),
-                image_mime: Some(mime.to_string()),
-            });
-        }
-    }
+#[tauri::command]
+pub async fn confirm_pending_message<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    accept: bool,
+) -> Result<(), String> {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    ctx.injector.resolve_pending_confirm(&id, accept).await
 }
 
+// --- base64 decode (kept local, Go side emits standard base64) ---
 fn base64_decode(s: &str) -> Result<Vec<u8>, String> {
-    // simple base64 decode using std
-    // we rely on the Go side to emit valid standard base64
     let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let table: Vec<u8> = {
         let mut t = vec![255u8; 128];
@@ -204,7 +247,10 @@ fn base64_decode(s: &str) -> Result<Vec<u8>, String> {
         }
         t
     };
-    let input: Vec<u8> = s.bytes().filter(|&b| b != b'=' && (b as usize) < 128 && table[b as usize] != 255).collect();
+    let input: Vec<u8> = s
+        .bytes()
+        .filter(|&b| b != b'=' && (b as usize) < 128 && table[b as usize] != 255)
+        .collect();
     let mut out = Vec::with_capacity(input.len() * 3 / 4);
     for chunk in input.chunks(4) {
         let vals: Vec<u8> = chunk.iter().map(|&b| table[b as usize]).collect();
