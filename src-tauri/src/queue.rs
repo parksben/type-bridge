@@ -132,7 +132,7 @@ async fn process_one<R: Runtime>(
     msg: QueuedMessage,
 ) {
     // 1. Processing
-    history.update_status(&msg.id, MessageStatus::Processing);
+    history.update_status(&msg.id, MessageStatus::Processing, None);
     emit_status(app, &msg.id, "processing", None);
 
     // 2. 可选：等待用户确认
@@ -184,7 +184,7 @@ async fn process_one<R: Runtime>(
     }
 
     // 4. Sent
-    history.update_status(&msg.id, MessageStatus::Sent);
+    history.update_status(&msg.id, MessageStatus::Sent, None);
     emit_status(app, &msg.id, "sent", None);
     let _ = app.emit(
         "feishu://inject-result",
@@ -250,9 +250,8 @@ fn fail<R: Runtime>(
 ) {
     history.update_status(
         &msg.id,
-        MessageStatus::Failed {
-            reason: reason.to_string(),
-        },
+        MessageStatus::Failed,
+        Some(reason.to_string()),
     );
     emit_status(app, &msg.id, "failed", Some(reason.to_string()));
     let _ = app.emit(

@@ -16,12 +16,16 @@ use std::sync::{Arc, RwLock};
 pub const HISTORY_MAX: usize = 500;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum MessageStatus {
     Queued,
     Processing,
     Sent,
-    Failed { reason: String },
+    /// 失败的原因写到 HistoryMessage.failure_reason 字段，不放进 enum。
+    /// 保持 status 序列化为纯字符串 "failed" / "sent" / ...，与前端
+    /// `type MessageStatus = "queued" | ...` 对齐，避免前端 CONFIG[status]
+    /// 取到 undefined 崩溃。
+    Failed,
 }
 
 impl MessageStatus {
@@ -30,7 +34,7 @@ impl MessageStatus {
             MessageStatus::Queued => "queued",
             MessageStatus::Processing => "processing",
             MessageStatus::Sent => "sent",
-            MessageStatus::Failed { .. } => "failed",
+            MessageStatus::Failed => "failed",
         }
     }
 }
@@ -111,15 +115,16 @@ impl HistoryStore {
         self.flush();
     }
 
-    pub fn update_status(&self, id: &str, status: MessageStatus) -> bool {
+    /// 更新状态。成功类状态清空 failure_reason；failed 时 reason 必填。
+    pub fn update_status(&self, id: &str, status: MessageStatus, reason: Option<String>) -> bool {
         let mut changed = false;
         {
             let mut guard = self.messages.write().unwrap();
             if let Some(msg) = guard.iter_mut().find(|m| m.id == id) {
                 msg.status = status.clone();
                 msg.updated_at = now_secs();
-                msg.failure_reason = match &status {
-                    MessageStatus::Failed { reason } => Some(reason.clone()),
+                msg.failure_reason = match status {
+                    MessageStatus::Failed => reason,
                     _ => None,
                 };
                 changed = true;

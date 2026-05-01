@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../store";
 import TabBar from "./TabBar";
+import ErrorBoundary from "./ErrorBoundary";
 import ConnectionTab from "./tabs/ConnectionTab";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
@@ -40,9 +41,21 @@ export default function MainWindow() {
     <div className="h-screen w-full flex flex-col animate-enter">
       <TabBar />
       <div className="flex-1 overflow-hidden">
-        {activeTab === "connection" && <ConnectionTab />}
-        {activeTab === "history" && <HistoryTab />}
-        {activeTab === "logs" && <SystemLogTab />}
+        {activeTab === "connection" && (
+          <ErrorBoundary label="连接 tab">
+            <ConnectionTab />
+          </ErrorBoundary>
+        )}
+        {activeTab === "history" && (
+          <ErrorBoundary label="消息历史 tab">
+            <HistoryTab />
+          </ErrorBoundary>
+        )}
+        {activeTab === "logs" && (
+          <ErrorBoundary label="系统日志 tab">
+            <SystemLogTab />
+          </ErrorBoundary>
+        )}
       </div>
     </div>
   );
