@@ -106,6 +106,12 @@ pub enum SidecarEvent {
         #[serde(default)]
         reason: String,
     },
+    FeedbackError {
+        message_id: String,
+        kind: String,
+        code: i64,
+        msg: String,
+    },
 }
 
 /// 应用共享上下文 — 用 tauri::Manager::manage 注入，每个 field 自行并发控制
@@ -302,10 +308,8 @@ fn dispatch_event<R: Runtime>(
         }
         SidecarEvent::Error { msg } => {
             tracing::error!("[feishu] {}", msg);
-            let _ = app.emit(
-                "feishu://status",
-                SidecarEvent::Status { connected: false },
-            );
+            // 注意：不再 emit feishu://status {connected:false}
+            // 一次 API 业务错不等于长连接断开；连接状态由 Status 事件独占。
         }
         SidecarEvent::SelftestResult { ok, reason } => {
             // 唤醒正在等待的 run_selftest command
@@ -321,7 +325,36 @@ fn dispatch_event<R: Runtime>(
                 }
             });
         }
+        SidecarEvent::FeedbackError { message_id, kind, code, msg } => {
+            tracing::warn!(
+                "[feishu feedback] {} on {} failed: code={} msg={}",
+                kind, message_id, code, msg
+            );
+            let help_url = extract_help_url(msg);
+            let err = crate::history::FeedbackError {
+                kind: kind.clone(),
+                code: *code,
+                msg: msg.clone(),
+                help_url,
+            };
+            if ctx.history.attach_feedback_error(message_id, err) {
+                let _ = app.emit("feishu://history-update", ());
+            }
+        }
     }
+}
+
+/// 从飞书错误文案里抠 URL；现在官方错误大都会附带一个
+/// https://open.feishu.cn/app/xxx/auth?... 的 deep link，直接让 UI
+/// 点击跳转即可。
+fn extract_help_url(msg: &str) -> Option<String> {
+    // 最简朴的 URL 提取：在 "https://" 之后一路取到空白或中文
+    let start = msg.find("https://")?;
+    let tail = &msg[start..];
+    let end = tail
+        .find(|c: char| c.is_whitespace() || (c as u32) > 0x7F)
+        .unwrap_or(tail.len());
+    Some(tail[..end].trim_end_matches(|c: char| matches!(c, '.' | ',' | '。' | '，' | ')' | '）')).to_string())
 }
 
 #[tauri::command]
