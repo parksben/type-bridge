@@ -72,11 +72,9 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
       )}
 
       <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-1.5 text-[11.5px] text-muted font-mono">
-          <span className="text-text font-medium">@{message.sender || "unknown"}</span>
-          <span>·</span>
-          <span>{formatRelative(message.received_at)}</span>
-        </div>
+        <span className="text-[11.5px] text-muted font-mono">
+          {formatRelative(message.received_at)}
+        </span>
         <StatusTag status={message.status} />
       </div>
 
