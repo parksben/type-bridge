@@ -1,4 +1,11 @@
-import { ExternalLink, Image as ImageIcon, RotateCw, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  ExternalLink,
+  Image as ImageIcon,
+  RotateCw,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { HistoryMessage } from "../store";
 import StatusTag from "./StatusTag";
@@ -80,8 +87,12 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete, onRetry 
       )}
 
       {message.status === "failed" && message.failure_reason && (
-        <div className="text-[11.5px] text-error font-mono mb-2">
-          原因：{message.failure_reason}
+        <div className="flex items-start gap-1.5 text-[11.5px] font-mono mb-2" style={{ color: "var(--accent)" }}>
+          <AlertCircle size={12} strokeWidth={1.75} className="shrink-0 mt-0.5" />
+          <span>
+            <span className="font-sans">本地注入失败：</span>
+            {message.failure_reason}
+          </span>
         </div>
       )}
 
