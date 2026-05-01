@@ -29,7 +29,6 @@ pub fn run() {
             sidecar::get_history_dir,
             sidecar::delete_history_message,
             sidecar::retry_history_message,
-            sidecar::confirm_pending_message,
             sidecar::copy_text_to_clipboard,
             sidecar::copy_image_to_clipboard,
             injector::check_accessibility,
@@ -41,16 +40,12 @@ pub fn run() {
             tray::setup_tray(app)?;
             logger::cleanup_old_logs();
 
-            // 构造共享 AppContext（含 history + injector worker + confirm + submit 配置）
-            let settings = {
+            // 构造共享 AppContext（含 history + injector worker + submit 配置）
+            let submit_config = {
                 use tauri_plugin_store::StoreExt;
                 let store = app.store("config.json").ok();
                 match store {
                     Some(s) => {
-                        let confirm = s
-                            .get("confirm_before_inject")
-                            .and_then(|v| v.as_bool())
-                            .unwrap_or(false);
                         let auto_submit = s
                             .get("auto_submit")
                             .and_then(|v| v.as_bool())
@@ -59,12 +54,12 @@ pub fn run() {
                             .get("submit_key")
                             .and_then(|v| serde_json::from_value::<store::SubmitKey>(v).ok())
                             .unwrap_or_default();
-                        (confirm, sidecar::SubmitConfig { auto_submit, submit_key })
+                        sidecar::SubmitConfig { auto_submit, submit_key }
                     }
-                    None => (false, sidecar::SubmitConfig::default()),
+                    None => sidecar::SubmitConfig::default(),
                 }
             };
-            let ctx = AppContext::new(app.handle().clone(), settings.0, settings.1);
+            let ctx = AppContext::new(app.handle().clone(), submit_config);
             app.manage(ctx);
 
             #[cfg(target_os = "macos")]

@@ -42,8 +42,6 @@ pub struct Settings {
     pub feishu_app_id: String,
     #[serde(default)]
     pub feishu_app_secret: String,
-    #[serde(default)]
-    pub confirm_before_inject: bool,
     /// 输入后自动提交。默认开启。
     #[serde(default = "default_true")]
     pub auto_submit: bool,
@@ -57,7 +55,6 @@ impl Default for Settings {
         Self {
             feishu_app_id: String::new(),
             feishu_app_secret: String::new(),
-            confirm_before_inject: false,
             auto_submit: true,
             submit_key: SubmitKey::default(),
         }
@@ -84,10 +81,6 @@ pub fn get_settings(app: tauri::AppHandle<Wry>) -> Settings {
             .get("feishu_app_secret")
             .and_then(|v| v.as_str().map(String::from))
             .unwrap_or_default(),
-        confirm_before_inject: store
-            .get("confirm_before_inject")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false),
         auto_submit: store
             .get("auto_submit")
             .and_then(|v| v.as_bool())
@@ -101,7 +94,6 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
     let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
     store.set("feishu_app_id", settings.feishu_app_id);
     store.set("feishu_app_secret", settings.feishu_app_secret);
-    store.set("confirm_before_inject", settings.confirm_before_inject);
     store.set("auto_submit", settings.auto_submit);
     store.set(
         "submit_key",
@@ -110,7 +102,6 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
     store.save().map_err(|e| e.to_string())?;
 
     if let Some(ctx) = app.try_state::<Arc<AppContext>>() {
-        ctx.set_confirm_before_inject(settings.confirm_before_inject);
         ctx.set_submit_config(settings.auto_submit, settings.submit_key);
     }
 

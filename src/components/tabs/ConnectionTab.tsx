@@ -17,7 +17,6 @@ import AccessibilityBanner from "../AccessibilityBanner";
 interface Settings {
   feishu_app_id: string;
   feishu_app_secret: string;
-  confirm_before_inject: boolean;
   auto_submit: boolean;
   submit_key: SubmitKey;
 }
@@ -63,10 +62,8 @@ export default function ConnectionTab() {
 
   const {
     connected,
-    confirmBeforeInject,
     autoSubmit,
     submitKey,
-    setConfirmBeforeInject,
     setAutoSubmit,
     setSubmitKey,
     addLog,
@@ -78,7 +75,6 @@ export default function ConnectionTab() {
     invoke<Settings>("get_settings").then((s) => {
       setAppId(s.feishu_app_id);
       setAppSecret(s.feishu_app_secret);
-      setConfirmBeforeInject(s.confirm_before_inject);
       setAutoSubmit(s.auto_submit);
       setSubmitKey(s.submit_key ?? DEFAULT_SUBMIT_KEY);
       setHydrated(true);
@@ -93,14 +89,13 @@ export default function ConnectionTab() {
         settings: {
           feishu_app_id: appId.trim(),
           feishu_app_secret: appSecret.trim(),
-          confirm_before_inject: confirmBeforeInject,
           auto_submit: autoSubmit,
           submit_key: submitKey,
         },
       }).catch(() => {});
     }, 500);
     return () => clearTimeout(id);
-  }, [appId, appSecret, confirmBeforeInject, autoSubmit, submitKey, hydrated]);
+  }, [appId, appSecret, autoSubmit, submitKey, hydrated]);
 
   useEffect(() => {
     if (connected) setStarting(false);
@@ -345,22 +340,6 @@ export default function ConnectionTab() {
         )}
 
         <div className="h-px bg-border my-1" />
-
-        {/* 输入前确认 */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[13px] text-text">输入前确认</span>
-            <span className="text-[11px] text-subtle mt-0.5">
-              开启后，每条消息先弹浮层确认
-            </span>
-          </div>
-          <button
-            className="tb-toggle"
-            data-on={confirmBeforeInject}
-            onClick={() => setConfirmBeforeInject(!confirmBeforeInject)}
-            aria-label="切换输入前确认"
-          />
-        </div>
 
         {/* 输入后自动提交 */}
         <div className="flex items-center justify-between">

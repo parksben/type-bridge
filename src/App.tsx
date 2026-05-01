@@ -1,13 +1,7 @@
 import MainWindow from "./components/MainWindow";
-import ConfirmOverlay from "./components/ConfirmOverlay";
 
 function App() {
-  return (
-    <>
-      <MainWindow />
-      <ConfirmOverlay />
-    </>
-  );
+  return <MainWindow />;
 }
 
 export default App;
