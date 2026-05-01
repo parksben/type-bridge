@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../store";
@@ -9,14 +9,18 @@ interface Settings {
   confirm_before_inject: boolean;
 }
 
+type ConnState = "idle" | "connecting" | "connected";
+
 export default function ConfigWindow() {
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   const { connected, confirmBeforeInject, setConnected, setConfirmBeforeInject, addLog } =
     useAppStore();
+
+  const [connecting, setConnecting] = useState(false);
+  const connState: ConnState = connected ? "connected" : connecting ? "connecting" : "idle";
 
   // Load saved settings on mount
   useEffect(() => {
@@ -24,13 +28,30 @@ export default function ConfigWindow() {
       setAppId(s.feishu_app_id);
       setAppSecret(s.feishu_app_secret);
       setConfirmBeforeInject(s.confirm_before_inject);
+      setHydrated(true);
     });
   }, []);
 
-  // Listen for connection status from Rust
+  // 凭据变更时，去抖持久化（500ms）
+  useEffect(() => {
+    if (!hydrated) return;
+    const id = setTimeout(() => {
+      invoke("save_settings", {
+        settings: {
+          feishu_app_id: appId.trim(),
+          feishu_app_secret: appSecret.trim(),
+          confirm_before_inject: confirmBeforeInject,
+        },
+      }).catch(() => {});
+    }, 500);
+    return () => clearTimeout(id);
+  }, [appId, appSecret, confirmBeforeInject, hydrated]);
+
+  // Connection status
   useEffect(() => {
     const unlisten = listen<{ connected: boolean }>("feishu://status", (e) => {
       setConnected(e.payload.connected);
+      setConnecting(false);
       addLog({
         kind: "connect",
         text: e.payload.connected ? "飞书长连接已建立" : "飞书连接断开",
@@ -39,23 +60,21 @@ export default function ConfigWindow() {
     return () => { unlisten.then((f) => f()); };
   }, []);
 
-  // Listen for inject results
+  // Inject results
   useEffect(() => {
     const unlisten = listen<{ success: boolean; reason?: string }>(
       "feishu://inject-result",
       (e) => {
         addLog({
           kind: "inject",
-          text: e.payload.success
-            ? "注入成功"
-            : `注入失败: ${e.payload.reason ?? "未知原因"}`,
+          text: e.payload.success ? "输入成功" : `输入失败: ${e.payload.reason ?? "未知原因"}`,
         });
       }
     );
     return () => { unlisten.then((f) => f()); };
   }, []);
 
-  // Listen for incoming messages (for log only)
+  // Incoming messages → log
   useEffect(() => {
     const unlisten = listen<{ sender: string; text: string }>(
       "feishu://message",
@@ -68,117 +87,113 @@ export default function ConfigWindow() {
 
   async function handleConnect() {
     if (!appId.trim() || !appSecret.trim()) return;
-    setTesting(true);
+    setConnecting(true);
     try {
       await invoke("start_feishu", { appId: appId.trim(), appSecret: appSecret.trim() });
       addLog({ kind: "connect", text: "正在连接飞书..." });
     } catch (e) {
+      setConnecting(false);
       addLog({ kind: "error", text: `连接失败: ${e}` });
-    } finally {
-      setTesting(false);
     }
   }
 
-  async function handleSave() {
-    await invoke("save_settings", {
-      settings: {
-        feishu_app_id: appId.trim(),
-        feishu_app_secret: appSecret.trim(),
-        confirm_before_inject: confirmBeforeInject,
-      },
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  async function handleSaveAndHide() {
-    await handleSave();
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    await getCurrentWindow().hide();
-  }
+  const canConnect = appId.trim().length > 0 && appSecret.trim().length > 0 && !connecting;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 p-5 select-none">
-      <div className="flex items-center gap-2 mb-5">
-        <span className="text-xl font-semibold text-gray-800">TypeBridge</span>
-      </div>
+    <div className="relative h-screen w-full flex flex-col px-7 py-6 select-none animate-enter">
+      {/* Brand 区 */}
+      <header className="relative z-10 mb-7">
+        <h1 className="text-[40px] leading-[1.05] tracking-tight text-text">
+          <span className="font-display">Type</span>
+          <span className="font-display text-accent">Bridge</span>
+        </h1>
+        <p className="mt-1.5 text-[12px] text-muted font-mono tracking-wide">
+          messages → keyboard
+        </p>
+      </header>
 
-      <div className="flex flex-col gap-3 flex-1">
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">App ID</label>
+      {/* Form */}
+      <div className="relative z-10 flex flex-col gap-4 flex-1">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+            App ID
+          </label>
           <input
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white"
+            className="tb-input"
             placeholder="cli_xxxxxxxxxxxxxxxx"
             value={appId}
             onChange={(e) => setAppId(e.target.value)}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">App Secret</label>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+            App Secret
+          </label>
           <input
             type="password"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white"
-            placeholder="••••••••••••••••"
+            className="tb-input"
+            placeholder="••••••••••••••••••••"
             value={appSecret}
             onChange={(e) => setAppSecret(e.target.value)}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
           />
         </div>
 
         <button
           onClick={handleConnect}
-          disabled={testing || !appId.trim() || !appSecret.trim()}
-          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition-colors"
+          disabled={!canConnect}
+          className="tb-btn-primary mt-1"
         >
-          {testing ? "连接中..." : "测试连接"}
+          {connecting ? "连接中…" : connected ? "重新连接" : "测试连接"}
         </button>
 
-        <div className="flex items-center gap-2 py-1">
-          <div
-            className={`w-2.5 h-2.5 rounded-full ${
-              connected ? "bg-green-500" : "bg-gray-400"
+        {/* 连接状态 */}
+        <div className="flex items-center gap-2.5 px-0.5 py-1">
+          <span
+            className={`inline-block w-2.5 h-2.5 rounded-full ${
+              connState === "connected"
+                ? "dot-connected"
+                : connState === "connecting"
+                ? "dot-connecting"
+                : "dot-idle"
             }`}
           />
-          <span className="text-sm text-gray-600">
-            {connected ? "已连接" : "未连接"}
+          <span className="text-[12.5px] text-muted">
+            {connState === "connected" ? "已连接" : connState === "connecting" ? "连接中" : "未连接"}
           </span>
         </div>
 
-        <hr className="border-gray-200" />
+        {/* 分隔线 */}
+        <div className="h-px bg-border my-1" />
 
+        {/* 输入前确认 toggle */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-700">注入前确认</span>
+          <div className="flex flex-col">
+            <span className="text-[13px] text-text">输入前确认</span>
+            <span className="text-[11px] text-subtle mt-0.5">
+              开启后，每条消息先弹浮层确认
+            </span>
+          </div>
           <button
-            onClick={() => {
-              const next = !confirmBeforeInject;
-              setConfirmBeforeInject(next);
-              invoke("save_settings", {
-                settings: {
-                  feishu_app_id: appId.trim(),
-                  feishu_app_secret: appSecret.trim(),
-                  confirm_before_inject: next,
-                },
-              });
-            }}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              confirmBeforeInject ? "bg-blue-600" : "bg-gray-300"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                confirmBeforeInject ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
+            className="tb-toggle"
+            data-on={confirmBeforeInject}
+            onClick={() => setConfirmBeforeInject(!confirmBeforeInject)}
+            aria-label="切换输入前确认"
+          />
         </div>
       </div>
 
-      <button
-        onClick={handleSaveAndHide}
-        className="w-full py-2.5 bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium rounded-lg transition-colors mt-3"
-      >
-        {saved ? "已保存 ✓" : "保存并最小化到托盘"}
-      </button>
+      {/* 底部 */}
+      <footer className="relative z-10 mt-5 flex items-center justify-between text-[10.5px] text-subtle font-mono">
+        <span>v0.1.0</span>
+        <span>关闭即最小化到托盘</span>
+      </footer>
     </div>
   );
 }

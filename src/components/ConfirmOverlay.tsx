@@ -41,21 +41,39 @@ export default function ConfirmOverlay() {
     : "";
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
-      <div className="text-xs text-gray-500 mb-1">
-        来自 {request.sender ? `@${request.sender}` : "飞书机器人"}
+    <div
+      className="fixed bottom-4 right-4 z-50 w-[300px] animate-enter"
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "12px",
+        boxShadow: "var(--shadow-lg)",
+        padding: "14px 16px",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent" />
+        <span className="text-[11px] uppercase tracking-[0.12em] text-muted font-medium">
+          来自 {request.sender ? `@${request.sender}` : "飞书"}
+        </span>
       </div>
-      <div className="text-sm text-gray-800 mb-3 break-all line-clamp-3">{preview}</div>
+      <div className="text-[13px] text-text leading-relaxed mb-3 break-all line-clamp-3">
+        {preview}
+      </div>
       <div className="flex gap-2">
         <button
           onClick={handleInject}
-          className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+          className="tb-btn-primary"
+          style={{ padding: "7px 12px", fontSize: "12.5px" }}
         >
-          注入
+          输入
         </button>
         <button
           onClick={handleIgnore}
-          className="flex-1 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
+          className="flex-1 text-[12.5px] text-muted py-[7px] rounded-lg transition-colors"
+          style={{ background: "var(--surface-2)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--border)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
         >
           忽略
         </button>
