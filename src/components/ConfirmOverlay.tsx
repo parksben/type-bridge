@@ -4,11 +4,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { Bot, Check, X } from "lucide-react";
 
 interface ConfirmRequest {
-  type: string;
+  id: string;
   sender?: string;
   text?: string;
-  data?: string;
-  mime?: string;
+  image_path?: string | null;
 }
 
 export default function ConfirmOverlay() {
@@ -23,21 +22,21 @@ export default function ConfirmOverlay() {
 
   if (!request) return null;
 
-  async function handleInject() {
+  async function handleAccept() {
     if (!request) return;
-    if (request.text) {
-      await invoke("inject_text_direct", { text: request.text }).catch(() => {});
-    }
+    await invoke("confirm_pending_message", { id: request.id, accept: true }).catch(() => {});
     setRequest(null);
   }
 
-  function handleIgnore() {
+  async function handleIgnore() {
+    if (!request) return;
+    await invoke("confirm_pending_message", { id: request.id, accept: false }).catch(() => {});
     setRequest(null);
   }
 
   const preview = request.text
     ? request.text.slice(0, 80) + (request.text.length > 80 ? "…" : "")
-    : request.mime?.startsWith("image/")
+    : request.image_path
     ? "[图片]"
     : "";
 
@@ -63,7 +62,7 @@ export default function ConfirmOverlay() {
       </div>
       <div className="flex gap-2">
         <button
-          onClick={handleInject}
+          onClick={handleAccept}
           className="tb-btn-primary flex items-center justify-center gap-1.5"
           style={{ padding: "7px 12px", fontSize: "12.5px" }}
         >
