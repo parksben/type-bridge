@@ -88,25 +88,49 @@ pub enum SidecarEvent {
 /// 应用共享上下文 — 用 tauri::Manager::manage 注入，每个 field 自行并发控制
 pub struct AppContext {
     pub confirm_before_inject: Arc<Mutex<bool>>,
+    pub submit_config: Arc<Mutex<SubmitConfig>>,
     pub history: Arc<HistoryStore>,
     pub injector: Arc<Injector>,
     pub bridge: Arc<SidecarBridge>,
 }
 
+/// "输入后自动提交"相关配置（auto_submit + 目标按键），集中在一把 Mutex 里
+/// 读写频次低，锁竞争可忽略。
+pub struct SubmitConfig {
+    pub auto_submit: bool,
+    pub submit_key: crate::store::SubmitKey,
+}
+
+impl Default for SubmitConfig {
+    fn default() -> Self {
+        Self {
+            auto_submit: true,
+            submit_key: crate::store::SubmitKey::default(),
+        }
+    }
+}
+
 impl AppContext {
-    pub fn new<R: Runtime>(app: AppHandle<R>, initial_confirm: bool) -> Arc<Self> {
+    pub fn new<R: Runtime>(
+        app: AppHandle<R>,
+        initial_confirm: bool,
+        initial_submit: SubmitConfig,
+    ) -> Arc<Self> {
         let history = HistoryStore::open();
         let confirm_flag = Arc::new(Mutex::new(initial_confirm));
+        let submit_config = Arc::new(Mutex::new(initial_submit));
         let bridge: Arc<SidecarBridge> = Arc::new(SidecarBridge::default());
         let injector = Injector::spawn(
             app.clone(),
             history.clone(),
             confirm_flag.clone(),
+            submit_config.clone(),
             bridge.clone(),
         );
 
         Arc::new(Self {
             confirm_before_inject: confirm_flag,
+            submit_config,
             history,
             injector,
             bridge,
@@ -115,6 +139,12 @@ impl AppContext {
 
     pub fn set_confirm_before_inject(&self, value: bool) {
         *self.confirm_before_inject.lock().unwrap() = value;
+    }
+
+    pub fn set_submit_config(&self, auto_submit: bool, submit_key: crate::store::SubmitKey) {
+        let mut g = self.submit_config.lock().unwrap();
+        g.auto_submit = auto_submit;
+        g.submit_key = submit_key;
     }
 }
 

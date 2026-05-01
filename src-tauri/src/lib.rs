@@ -37,15 +37,30 @@ pub fn run() {
             tray::setup_tray(app)?;
             logger::cleanup_old_logs();
 
-            // 构造共享 AppContext（包含 history + injector worker + confirm flag）
-            let initial_confirm = {
+            // 构造共享 AppContext（含 history + injector worker + confirm + submit 配置）
+            let settings = {
                 use tauri_plugin_store::StoreExt;
-                app.store("config.json")
-                    .ok()
-                    .and_then(|s| s.get("confirm_before_inject").and_then(|v| v.as_bool()))
-                    .unwrap_or(false)
+                let store = app.store("config.json").ok();
+                match store {
+                    Some(s) => {
+                        let confirm = s
+                            .get("confirm_before_inject")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        let auto_submit = s
+                            .get("auto_submit")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true);
+                        let submit_key = s
+                            .get("submit_key")
+                            .and_then(|v| serde_json::from_value::<store::SubmitKey>(v).ok())
+                            .unwrap_or_default();
+                        (confirm, sidecar::SubmitConfig { auto_submit, submit_key })
+                    }
+                    None => (false, sidecar::SubmitConfig::default()),
+                }
             };
-            let ctx = AppContext::new(app.handle().clone(), initial_confirm);
+            let ctx = AppContext::new(app.handle().clone(), settings.0, settings.1);
             app.manage(ctx);
 
             #[cfg(target_os = "macos")]

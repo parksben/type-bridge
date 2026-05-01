@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { KeyRound, Lock, Plug, RotateCw } from "lucide-react";
-import { useAppStore } from "../../store";
+import { useAppStore, DEFAULT_SUBMIT_KEY, type SubmitKey } from "../../store";
+import KeyBindInput from "../KeyBindInput";
 
 interface Settings {
   feishu_app_id: string;
   feishu_app_secret: string;
   confirm_before_inject: boolean;
+  auto_submit: boolean;
+  submit_key: SubmitKey;
 }
 
 type ConnState = "idle" | "connecting" | "connected";
@@ -16,7 +19,16 @@ export default function ConnectionTab() {
   const [appSecret, setAppSecret] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
-  const { connected, confirmBeforeInject, setConfirmBeforeInject, addLog } = useAppStore();
+  const {
+    connected,
+    confirmBeforeInject,
+    autoSubmit,
+    submitKey,
+    setConfirmBeforeInject,
+    setAutoSubmit,
+    setSubmitKey,
+    addLog,
+  } = useAppStore();
 
   const [connecting, setConnecting] = useState(false);
   const connState: ConnState = connected ? "connected" : connecting ? "connecting" : "idle";
@@ -26,11 +38,13 @@ export default function ConnectionTab() {
       setAppId(s.feishu_app_id);
       setAppSecret(s.feishu_app_secret);
       setConfirmBeforeInject(s.confirm_before_inject);
+      setAutoSubmit(s.auto_submit);
+      setSubmitKey(s.submit_key ?? DEFAULT_SUBMIT_KEY);
       setHydrated(true);
     });
   }, []);
 
-  // 凭据变更时，去抖持久化（500ms）
+  // 所有设置变更时，去抖持久化（500ms）
   useEffect(() => {
     if (!hydrated) return;
     const id = setTimeout(() => {
@@ -39,11 +53,13 @@ export default function ConnectionTab() {
           feishu_app_id: appId.trim(),
           feishu_app_secret: appSecret.trim(),
           confirm_before_inject: confirmBeforeInject,
+          auto_submit: autoSubmit,
+          submit_key: submitKey,
         },
       }).catch(() => {});
     }, 500);
     return () => clearTimeout(id);
-  }, [appId, appSecret, confirmBeforeInject, hydrated]);
+  }, [appId, appSecret, confirmBeforeInject, autoSubmit, submitKey, hydrated]);
 
   async function handleConnect() {
     if (!appId.trim() || !appSecret.trim()) return;
@@ -57,7 +73,6 @@ export default function ConnectionTab() {
     }
   }
 
-  // 监听连接结果清除 connecting 状态（由 MainWindow 的 listener 更新 connected，这里本地止转圈）
   useEffect(() => {
     if (connected) setConnecting(false);
   }, [connected]);
@@ -145,6 +160,7 @@ export default function ConnectionTab() {
 
         <div className="h-px bg-border my-1" />
 
+        {/* 输入前确认 */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-[13px] text-text">输入前确认</span>
@@ -157,6 +173,37 @@ export default function ConnectionTab() {
             data-on={confirmBeforeInject}
             onClick={() => setConfirmBeforeInject(!confirmBeforeInject)}
             aria-label="切换输入前确认"
+          />
+        </div>
+
+        {/* 输入后自动提交 */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-[13px] text-text">输入后自动提交</span>
+            <span className="text-[11px] text-subtle mt-0.5">
+              写入完成后模拟按下提交按键
+            </span>
+          </div>
+          <button
+            className="tb-toggle"
+            data-on={autoSubmit}
+            onClick={() => setAutoSubmit(!autoSubmit)}
+            aria-label="切换输入后自动提交"
+          />
+        </div>
+
+        {/* 提交按键 */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-[13px] text-text">提交按键</span>
+            <span className="text-[11px] text-subtle mt-0.5">
+              点击录入，Escape 取消
+            </span>
+          </div>
+          <KeyBindInput
+            value={submitKey}
+            onChange={setSubmitKey}
+            disabled={!autoSubmit}
           />
         </div>
       </div>

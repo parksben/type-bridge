@@ -21,15 +21,35 @@ export interface HistoryMessage {
 
 export type TabId = "connection" | "history" | "logs";
 
+export interface SubmitKey {
+  key: string;      // KeyboardEvent.code (e.g. "Enter", "KeyA", "Space")
+  cmd: boolean;
+  shift: boolean;
+  option: boolean;
+  ctrl: boolean;
+}
+
+export const DEFAULT_SUBMIT_KEY: SubmitKey = {
+  key: "Enter",
+  cmd: false,
+  shift: false,
+  option: false,
+  ctrl: false,
+};
+
 interface AppStore {
   connected: boolean;
   confirmBeforeInject: boolean;
+  autoSubmit: boolean;
+  submitKey: SubmitKey;
   logs: LogEntry[];
   history: HistoryMessage[];
   activeTab: TabId;
 
   setConnected: (v: boolean) => void;
   setConfirmBeforeInject: (v: boolean) => void;
+  setAutoSubmit: (v: boolean) => void;
+  setSubmitKey: (k: SubmitKey) => void;
   setActiveTab: (tab: TabId) => void;
   addLog: (entry: Omit<LogEntry, "time">) => void;
   setHistory: (items: HistoryMessage[]) => void;
@@ -41,12 +61,16 @@ interface AppStore {
 export const useAppStore = create<AppStore>((set) => ({
   connected: false,
   confirmBeforeInject: false,
+  autoSubmit: true,
+  submitKey: DEFAULT_SUBMIT_KEY,
   logs: [],
   history: [],
   activeTab: "connection",
 
   setConnected: (connected) => set({ connected }),
   setConfirmBeforeInject: (confirmBeforeInject) => set({ confirmBeforeInject }),
+  setAutoSubmit: (autoSubmit) => set({ autoSubmit }),
+  setSubmitKey: (submitKey) => set({ submitKey }),
   setActiveTab: (activeTab) => set({ activeTab }),
 
   addLog: (entry) =>
@@ -87,3 +111,4 @@ export const useAppStore = create<AppStore>((set) => ({
       history: state.history.filter((m) => m.id !== id),
     })),
 }));
+
