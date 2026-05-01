@@ -29,3 +29,5 @@ objc2-app-kit = { version = "0.2", features = ["NSPasteboard", "NSWorkspace"] }
 objc2-foundation = { version = "0.2", features = ["NSString", "NSData", "NSURL", "NSArray"] }
 core-foundation = "0.9"
 core-graphics = { version = "0.23", features = ["highsierra"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+dirs = "5"
