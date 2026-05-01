@@ -82,16 +82,6 @@ export default function ConnectionTab() {
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
       <div className="max-w-md mx-auto flex flex-col gap-5">
-        <header>
-          <h2 className="text-[32px] leading-[1.05] tracking-tight text-text">
-            <span className="font-display">Type</span>
-            <span className="font-display text-accent">Bridge</span>
-          </h2>
-          <p className="mt-1.5 text-[12px] text-muted font-mono tracking-wide">
-            messages to keyboard
-          </p>
-        </header>
-
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <KeyRound size={12} strokeWidth={1.75} />

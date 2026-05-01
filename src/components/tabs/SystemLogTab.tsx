@@ -64,8 +64,10 @@ export default function SystemLogTab() {
         {logs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-subtle">
             <Terminal size={28} strokeWidth={1.25} className="mb-3 opacity-60" />
-            <div className="font-display italic text-xl mb-1">quiet for now</div>
-            <div className="text-[11.5px] font-mono">应用运行时的系统事件将出现在这里</div>
+            <div className="text-[15px] text-muted mb-1.5">暂无系统事件</div>
+            <div className="text-[11.5px] max-w-xs">
+              应用运行期间的连接、错误、通知事件将出现在这里
+            </div>
           </div>
         ) : (
           <div className="font-mono text-[12px] space-y-1.5">
