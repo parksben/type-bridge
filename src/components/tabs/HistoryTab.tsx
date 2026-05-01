@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { History, Trash2 } from "lucide-react";
+import { Eraser, History } from "lucide-react";
 import { useAppStore, type HistoryMessage, type MessageStatus } from "../../store";
 import HistoryCard from "../HistoryCard";
 
 export default function HistoryTab() {
-  const { history, setHistory, updateHistoryStatus, removeHistoryMessage } = useAppStore();
+  const {
+    history,
+    hiddenHistoryIds,
+    setHistory,
+    updateHistoryStatus,
+    removeHistoryMessage,
+    clearHistoryDisplay,
+  } = useAppStore();
   const [imagesBaseDir, setImagesBaseDir] = useState<string>("");
+
+  // 过滤出软清空后仍可见的消息
+  const visible = useMemo(
+    () => history.filter((m) => !hiddenHistoryIds.has(m.id)),
+    [history, hiddenHistoryIds]
+  );
 
   // 初次加载历史 + 解析 typebridge 目录绝对路径
   useEffect(() => {
@@ -36,7 +49,7 @@ export default function HistoryTab() {
 
   const stats = useMemo(() => {
     let sent = 0, failed = 0, processing = 0, queued = 0;
-    for (const m of history) {
+    for (const m of visible) {
       switch (m.status) {
         case "sent": sent++; break;
         case "failed": failed++; break;
@@ -45,7 +58,7 @@ export default function HistoryTab() {
       }
     }
     return { sent, failed, processing, queued };
-  }, [history]);
+  }, [visible]);
 
   async function handleDelete(id: string) {
     await invoke("delete_history_message", { id }).catch(() => {});
@@ -56,44 +69,35 @@ export default function HistoryTab() {
     try {
       await invoke("retry_history_message", { id });
     } catch (e) {
-      // 即时反馈给用户
       console.error("retry failed", e);
     }
-  }
-
-  async function handleClearAll() {
-    const confirmed = window.confirm("确定清空全部消息历史？此操作不可恢复。");
-    if (!confirmed) return;
-    for (const m of history) {
-      await invoke("delete_history_message", { id: m.id }).catch(() => {});
-    }
-    setHistory([]);
   }
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
         <div className="text-[11.5px] font-mono text-muted">
-          最近 {history.length} 条
+          最近 {visible.length} 条
           <span className="text-success ml-2">已发送 {stats.sent}</span>
           <span className="text-error ml-2">失败 {stats.failed}</span>
           {(stats.processing > 0 || stats.queued > 0) && (
             <span className="text-accent ml-2">处理中 {stats.processing + stats.queued}</span>
           )}
         </div>
-        {history.length > 0 && (
+        {visible.length > 0 && (
           <button
-            onClick={handleClearAll}
+            onClick={clearHistoryDisplay}
             className="tb-btn-ghost flex items-center gap-1.5"
+            title="清空当前 UI 显示，历史文件保持不变"
           >
-            <Trash2 size={11} strokeWidth={1.75} />
+            <Eraser size={12} strokeWidth={1.75} />
             清空
           </button>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto thin-scroll px-6 py-4">
-        {history.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-subtle">
             <History size={32} strokeWidth={1.25} className="mb-3 opacity-60" />
             <div className="text-[15px] text-muted mb-1.5">暂无消息记录</div>
@@ -103,7 +107,7 @@ export default function HistoryTab() {
           </div>
         ) : (
           <div className="flex flex-col gap-2.5 max-w-2xl mx-auto">
-            {history.map((msg) => (
+            {visible.map((msg) => (
               <HistoryCard
                 key={msg.id}
                 message={msg}

@@ -44,6 +44,7 @@ interface AppStore {
   submitKey: SubmitKey;
   logs: LogEntry[];
   history: HistoryMessage[];
+  hiddenHistoryIds: Set<string>;
   activeTab: TabId;
 
   setConnected: (v: boolean) => void;
@@ -52,10 +53,12 @@ interface AppStore {
   setSubmitKey: (k: SubmitKey) => void;
   setActiveTab: (tab: TabId) => void;
   addLog: (entry: Omit<LogEntry, "time">) => void;
+  clearLogs: () => void;
   setHistory: (items: HistoryMessage[]) => void;
   upsertHistoryMessage: (msg: HistoryMessage) => void;
   updateHistoryStatus: (id: string, status: MessageStatus, reason?: string) => void;
   removeHistoryMessage: (id: string) => void;
+  clearHistoryDisplay: () => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -65,6 +68,7 @@ export const useAppStore = create<AppStore>((set) => ({
   submitKey: DEFAULT_SUBMIT_KEY,
   logs: [],
   history: [],
+  hiddenHistoryIds: new Set(),
   activeTab: "connection",
 
   setConnected: (connected) => set({ connected }),
@@ -83,6 +87,8 @@ export const useAppStore = create<AppStore>((set) => ({
         },
       ].slice(-500),
     })),
+
+  clearLogs: () => set({ logs: [] }),
 
   setHistory: (history) => set({ history }),
 
@@ -107,8 +113,19 @@ export const useAppStore = create<AppStore>((set) => ({
     })),
 
   removeHistoryMessage: (id) =>
+    set((state) => {
+      // 真正删除后，从隐藏集合里也剔除（防止 id 复用产生幽灵状态）
+      const nextHidden = new Set(state.hiddenHistoryIds);
+      nextHidden.delete(id);
+      return {
+        history: state.history.filter((m) => m.id !== id),
+        hiddenHistoryIds: nextHidden,
+      };
+    }),
+
+  clearHistoryDisplay: () =>
     set((state) => ({
-      history: state.history.filter((m) => m.id !== id),
+      hiddenHistoryIds: new Set(state.history.map((m) => m.id)),
     })),
 }));
 
