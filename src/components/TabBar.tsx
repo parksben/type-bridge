@@ -48,8 +48,8 @@ export default function TabBar() {
             connected ? "dot-connected" : "dot-idle"
           }`}
         />
-        <span className="text-[11.5px] font-mono">
-          {connected ? "connected" : "disconnected"}
+        <span className="text-[11.5px]">
+          {connected ? "已连接" : "未连接"}
         </span>
       </div>
     </div>
