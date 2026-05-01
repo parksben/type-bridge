@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { Bot, Check, X } from "lucide-react";
 
 interface ConfirmRequest {
   type: string;
@@ -51,9 +52,9 @@ export default function ConfirmOverlay() {
         padding: "14px 16px",
       }}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent" />
-        <span className="text-[11px] uppercase tracking-[0.12em] text-muted font-medium">
+      <div className="flex items-center gap-1.5 mb-2 text-muted">
+        <Bot size={12} strokeWidth={1.75} />
+        <span className="text-[11px] uppercase tracking-[0.12em] font-medium">
           来自 {request.sender ? `@${request.sender}` : "飞书"}
         </span>
       </div>
@@ -63,18 +64,20 @@ export default function ConfirmOverlay() {
       <div className="flex gap-2">
         <button
           onClick={handleInject}
-          className="tb-btn-primary"
+          className="tb-btn-primary flex items-center justify-center gap-1.5"
           style={{ padding: "7px 12px", fontSize: "12.5px" }}
         >
+          <Check size={13} strokeWidth={2} />
           输入
         </button>
         <button
           onClick={handleIgnore}
-          className="flex-1 text-[12.5px] text-muted py-[7px] rounded-lg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 text-[12.5px] text-muted py-[7px] rounded-lg transition-colors"
           style={{ background: "var(--surface-2)" }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--border)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
         >
+          <X size={13} strokeWidth={2} />
           忽略
         </button>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { KeyRound, Lock, Plug, RotateCw } from "lucide-react";
 import { useAppStore } from "../store";
 
 interface Settings {
@@ -22,7 +23,6 @@ export default function ConfigWindow() {
   const [connecting, setConnecting] = useState(false);
   const connState: ConnState = connected ? "connected" : connecting ? "connecting" : "idle";
 
-  // Load saved settings on mount
   useEffect(() => {
     invoke<Settings>("get_settings").then((s) => {
       setAppId(s.feishu_app_id);
@@ -47,7 +47,6 @@ export default function ConfigWindow() {
     return () => clearTimeout(id);
   }, [appId, appSecret, confirmBeforeInject, hydrated]);
 
-  // Connection status
   useEffect(() => {
     const unlisten = listen<{ connected: boolean }>("feishu://status", (e) => {
       setConnected(e.payload.connected);
@@ -60,7 +59,6 @@ export default function ConfigWindow() {
     return () => { unlisten.then((f) => f()); };
   }, []);
 
-  // Inject results
   useEffect(() => {
     const unlisten = listen<{ success: boolean; reason?: string }>(
       "feishu://inject-result",
@@ -74,7 +72,6 @@ export default function ConfigWindow() {
     return () => { unlisten.then((f) => f()); };
   }, []);
 
-  // Incoming messages → log
   useEffect(() => {
     const unlisten = listen<{ sender: string; text: string }>(
       "feishu://message",
@@ -101,21 +98,22 @@ export default function ConfigWindow() {
 
   return (
     <div className="relative h-screen w-full flex flex-col px-7 py-6 select-none animate-enter">
-      {/* Brand 区 */}
+      {/* Brand */}
       <header className="relative z-10 mb-7">
         <h1 className="text-[40px] leading-[1.05] tracking-tight text-text">
           <span className="font-display">Type</span>
           <span className="font-display text-accent">Bridge</span>
         </h1>
         <p className="mt-1.5 text-[12px] text-muted font-mono tracking-wide">
-          messages → keyboard
+          messages to keyboard
         </p>
       </header>
 
       {/* Form */}
       <div className="relative z-10 flex flex-col gap-4 flex-1">
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+          <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+            <KeyRound size={12} strokeWidth={1.75} />
             App ID
           </label>
           <input
@@ -130,13 +128,14 @@ export default function ConfigWindow() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+          <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+            <Lock size={12} strokeWidth={1.75} />
             App Secret
           </label>
           <input
             type="password"
             className="tb-input"
-            placeholder="••••••••••••••••••••"
+            placeholder="enter your secret"
             value={appSecret}
             onChange={(e) => setAppSecret(e.target.value)}
             spellCheck={false}
@@ -148,9 +147,19 @@ export default function ConfigWindow() {
         <button
           onClick={handleConnect}
           disabled={!canConnect}
-          className="tb-btn-primary mt-1"
+          className="tb-btn-primary mt-1 flex items-center justify-center gap-1.5"
         >
-          {connecting ? "连接中…" : connected ? "重新连接" : "测试连接"}
+          {connecting ? (
+            <>
+              <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
+              连接中
+            </>
+          ) : (
+            <>
+              <Plug size={14} strokeWidth={1.75} />
+              {connected ? "重新连接" : "测试连接"}
+            </>
+          )}
         </button>
 
         {/* 连接状态 */}
