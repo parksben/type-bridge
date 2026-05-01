@@ -9,8 +9,57 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
-use tauri_plugin_shell::process::CommandEvent;
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
+
+/// Rust → Go 命令（通过 sidecar stdin 发送，JSON Lines）
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "cmd", rename_all = "snake_case")]
+pub enum SidecarCommand {
+    Reaction { message_id: String, emoji_type: String },
+    Reply { message_id: String, text: String },
+}
+
+/// 包装 Go sidecar 子进程，允许随时写入命令（stdin）
+#[derive(Default)]
+pub struct SidecarBridge {
+    child: Mutex<Option<CommandChild>>,
+}
+
+impl SidecarBridge {
+    pub fn set(&self, child: CommandChild) {
+        let mut g = self.child.lock().unwrap();
+        *g = Some(child);
+    }
+
+    pub fn clear(&self) {
+        let mut g = self.child.lock().unwrap();
+        *g = None;
+    }
+
+    pub fn send(&self, cmd: &SidecarCommand) {
+        let mut line = match serde_json::to_vec(cmd) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!("[sidecar stdin] serialize failed: {}", e);
+                return;
+            }
+        };
+        line.push(b'\n');
+
+        let mut guard = self.child.lock().unwrap();
+        match guard.as_mut() {
+            Some(c) => {
+                if let Err(e) = c.write(&line) {
+                    tracing::warn!("[sidecar stdin] write failed: {}", e);
+                }
+            }
+            None => {
+                tracing::debug!("[sidecar stdin] not connected, command dropped: {:?}", cmd);
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -41,18 +90,26 @@ pub struct AppContext {
     pub confirm_before_inject: Arc<Mutex<bool>>,
     pub history: Arc<HistoryStore>,
     pub injector: Arc<Injector>,
+    pub bridge: Arc<SidecarBridge>,
 }
 
 impl AppContext {
     pub fn new<R: Runtime>(app: AppHandle<R>, initial_confirm: bool) -> Arc<Self> {
         let history = HistoryStore::open();
         let confirm_flag = Arc::new(Mutex::new(initial_confirm));
-        let injector = Injector::spawn(app.clone(), history.clone(), confirm_flag.clone());
+        let bridge: Arc<SidecarBridge> = Arc::new(SidecarBridge::default());
+        let injector = Injector::spawn(
+            app.clone(),
+            history.clone(),
+            confirm_flag.clone(),
+            bridge.clone(),
+        );
 
         Arc::new(Self {
             confirm_before_inject: confirm_flag,
             history,
             injector,
+            bridge,
         })
     }
 
@@ -68,13 +125,17 @@ pub async fn start_feishu<R: Runtime>(
     app_secret: String,
 ) -> Result<(), String> {
     let shell = app.shell();
-    let (mut rx, _child) = shell
+    let (mut rx, child) = shell
         .sidecar("feishu-bridge")
         .map_err(|e| e.to_string())?
         .env("FEISHU_APP_ID", &app_id)
         .env("FEISHU_APP_SECRET", &app_secret)
         .spawn()
         .map_err(|e| e.to_string())?;
+
+    // 把 child 存进 bridge，供 queue worker 向 stdin 写 reaction/reply 命令
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    ctx.bridge.set(child);
 
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -95,6 +156,11 @@ pub async fn start_feishu<R: Runtime>(
                 }
                 CommandEvent::Terminated(_) => {
                     tracing::warn!("[sidecar] terminated, retrying in {}s", retry_delay);
+                    // 子进程终止，清理 bridge 里的旧 child（防止向死 stdin 写）
+                    let ctx: Arc<AppContext> =
+                        app_handle.state::<Arc<AppContext>>().inner().clone();
+                    ctx.bridge.clear();
+
                     let _ = app_handle.emit(
                         "feishu://status",
                         SidecarEvent::Status { connected: false },
@@ -133,6 +199,7 @@ fn dispatch_event<R: Runtime>(
                 app,
                 &ctx.history,
                 &ctx.injector,
+                &ctx.bridge,
                 id,
                 sender.clone(),
                 text.clone(),
@@ -162,6 +229,7 @@ fn dispatch_event<R: Runtime>(
                 app,
                 &ctx.history,
                 &ctx.injector,
+                &ctx.bridge,
                 message_id.clone(),
                 sender.clone(),
                 text.clone(),
