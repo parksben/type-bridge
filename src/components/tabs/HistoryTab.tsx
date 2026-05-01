@@ -65,14 +65,6 @@ export default function HistoryTab() {
     removeHistoryMessage(id);
   }
 
-  async function handleRetry(id: string) {
-    try {
-      await invoke("retry_history_message", { id });
-    } catch (e) {
-      console.error("retry failed", e);
-    }
-  }
-
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
@@ -113,7 +105,6 @@ export default function HistoryTab() {
                 message={msg}
                 imagesBaseDir={imagesBaseDir}
                 onDelete={handleDelete}
-                onRetry={handleRetry}
               />
             ))}
           </div>
