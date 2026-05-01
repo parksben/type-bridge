@@ -12,7 +12,7 @@
 //   5. send reaction (DONE/CRY) + optional thread reply to Go sidecar
 
 use crate::history::{HistoryMessage, HistoryStore, MessageStatus};
-use crate::sidecar::{SidecarBridge, SidecarCommand};
+use crate::sidecar::{SidecarBridge, SidecarCommand, SubmitConfig};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime};
@@ -56,6 +56,7 @@ impl Injector {
         app: AppHandle<R>,
         history: Arc<HistoryStore>,
         confirm_flag: Arc<std::sync::Mutex<bool>>,
+        submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
         bridge: Arc<SidecarBridge>,
     ) -> Arc<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
@@ -71,6 +72,7 @@ impl Injector {
             app,
             history,
             confirm_flag,
+            submit_config,
             pending_confirm,
             bridge,
         ));
@@ -101,11 +103,21 @@ async fn worker_loop<R: Runtime>(
     app: AppHandle<R>,
     history: Arc<HistoryStore>,
     confirm_flag: Arc<std::sync::Mutex<bool>>,
+    submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
     pending_confirm: Arc<Mutex<Option<PendingConfirm>>>,
     bridge: Arc<SidecarBridge>,
 ) {
     while let Some(msg) = rx.recv().await {
-        process_one(&app, &history, &confirm_flag, &pending_confirm, &bridge, msg).await;
+        process_one(
+            &app,
+            &history,
+            &confirm_flag,
+            &submit_config,
+            &pending_confirm,
+            &bridge,
+            msg,
+        )
+        .await;
     }
     tracing::info!("[queue] worker loop exited");
 }
@@ -114,6 +126,7 @@ async fn process_one<R: Runtime>(
     app: &AppHandle<R>,
     history: &Arc<HistoryStore>,
     confirm_flag: &Arc<std::sync::Mutex<bool>>,
+    submit_config: &Arc<std::sync::Mutex<SubmitConfig>>,
     pending_confirm: &Arc<Mutex<Option<PendingConfirm>>>,
     bridge: &Arc<SidecarBridge>,
     msg: QueuedMessage,
@@ -178,6 +191,22 @@ async fn process_one<R: Runtime>(
         serde_json::json!({"success": true}),
     );
     send_reaction(bridge, &msg.id, REACT_SENT);
+
+    // 5. 自动提交（可选）：注入完成后模拟"提交按键"
+    //    快照读一次配置，避免在 spawn_blocking 里再拿锁
+    let (auto_submit, submit_key) = {
+        let g = submit_config.lock().unwrap();
+        (g.auto_submit, g.submit_key.clone())
+    };
+    if auto_submit {
+        let _ = tauri::async_runtime::spawn_blocking(move || {
+            use crate::injector;
+            if let Err(e) = injector::simulate_submit(&submit_key) {
+                tracing::warn!("[auto-submit] simulate failed: {}", e);
+            }
+        })
+        .await;
+    }
 }
 
 async fn inject_text_blocking(text: String) -> Result<(), String> {
