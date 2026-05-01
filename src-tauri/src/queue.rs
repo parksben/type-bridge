@@ -18,11 +18,13 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::{mpsc, oneshot, Mutex};
 
-// 飞书 reaction emoji_type 常量（对照 open.feishu.cn 文档枚举；
-// 如具体项目环境里某个值不被接受，改这里即可）
-pub const REACT_RECEIVED: &str = "EYES"; // 收到消息
-pub const REACT_SENT: &str = "DONE";     // 已成功输入
-pub const REACT_FAILED: &str = "CRY";    // 失败
+// 飞书 reaction emoji_type 常量。值来自飞书 open.feishu.cn 文档的枚举；
+// 如某个环境下仍被拒（code 231001 "reaction type is invalid"），在此
+// 一处替换即可——候选集：SMILE / LAUGH / OK / HEART / FIRE / THUMBSUP /
+// SAD / SADFACE / CRY / BLUSH。
+pub const REACT_RECEIVED: &str = "EYES"; // 👀 收到消息（已验证有效）
+pub const REACT_SENT: &str = "OK";       // 👌 已成功输入（替换原 DONE）
+pub const REACT_FAILED: &str = "SAD";    // 😢 失败（替换原 CRY）
 
 #[derive(Debug, Clone)]
 pub struct QueuedMessage {
