@@ -1,15 +1,10 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  AlertCircle,
-  Bell,
-  Cable,
-  ExternalLink,
-  Inbox,
-  Keyboard,
-  MessageSquare,
-} from "lucide-react";
-import { useAppStore, LogEntry } from "../store";
+import { AlertCircle, Bell, Cable, ExternalLink, Terminal } from "lucide-react";
+import { useAppStore, LogEntry } from "../../store";
+
+// 系统日志 tab 只展示运维/系统事件，不含 message / inject（这些归消息历史 tab）
+const systemKinds: Set<LogEntry["kind"]> = new Set(["connect", "error", "notify"]);
 
 const kindLabel: Record<LogEntry["kind"], string> = {
   connect: "连接",
@@ -21,8 +16,8 @@ const kindLabel: Record<LogEntry["kind"], string> = {
 
 const KindIcon: Record<LogEntry["kind"], typeof Cable> = {
   connect: Cable,
-  message: MessageSquare,
-  inject: Keyboard,
+  message: Cable,
+  inject: Cable,
   error: AlertCircle,
   notify: Bell,
 };
@@ -35,8 +30,9 @@ const kindClass: Record<LogEntry["kind"], string> = {
   notify: "text-muted",
 };
 
-export default function LogWindow() {
-  const logs = useAppStore((s) => s.logs);
+export default function SystemLogTab() {
+  const allLogs = useAppStore((s) => s.logs);
+  const logs = allLogs.filter((l) => systemKinds.has(l.kind));
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,11 +46,11 @@ export default function LogWindow() {
   }
 
   return (
-    <div className="relative h-screen w-full flex flex-col animate-enter">
-      <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <span className="font-display text-[22px] text-text leading-none">日志</span>
-          <span className="text-[11px] font-mono text-subtle uppercase tracking-[0.12em]">
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border">
+        <div className="flex items-center gap-2 text-muted">
+          <Terminal size={14} strokeWidth={1.75} />
+          <span className="text-[11px] font-mono uppercase tracking-[0.12em]">
             {logs.length} 条记录
           </span>
         </div>
@@ -64,12 +60,12 @@ export default function LogWindow() {
         </button>
       </div>
 
-      <div className="relative z-10 flex-1 overflow-y-auto thin-scroll px-6 py-4">
+      <div className="flex-1 overflow-y-auto thin-scroll px-6 py-4">
         {logs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-subtle">
-            <Inbox size={32} strokeWidth={1.25} className="mb-3 opacity-60" />
-            <div className="font-display italic text-2xl mb-1.5">awaiting messages</div>
-            <div className="text-[12px] font-mono">连接飞书后，消息将出现在这里</div>
+            <Terminal size={28} strokeWidth={1.25} className="mb-3 opacity-60" />
+            <div className="font-display italic text-xl mb-1">quiet for now</div>
+            <div className="text-[11.5px] font-mono">应用运行时的系统事件将出现在这里</div>
           </div>
         ) : (
           <div className="font-mono text-[12px] space-y-1.5">
@@ -91,7 +87,7 @@ export default function LogWindow() {
         )}
       </div>
 
-      <div className="relative z-10 px-6 py-2.5 border-t border-border">
+      <div className="px-6 py-2.5 border-t border-border">
         <span className="text-[11px] font-mono text-subtle">
           ~/Library/Logs/TypeBridge/
         </span>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { KeyRound, Lock, Plug, RotateCw } from "lucide-react";
-import { useAppStore } from "../store";
+import { useAppStore } from "../../store";
 
 interface Settings {
   feishu_app_id: string;
@@ -12,13 +11,12 @@ interface Settings {
 
 type ConnState = "idle" | "connecting" | "connected";
 
-export default function ConfigWindow() {
+export default function ConnectionTab() {
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
-  const { connected, confirmBeforeInject, setConnected, setConfirmBeforeInject, addLog } =
-    useAppStore();
+  const { connected, confirmBeforeInject, setConfirmBeforeInject, addLog } = useAppStore();
 
   const [connecting, setConnecting] = useState(false);
   const connState: ConnState = connected ? "connected" : connecting ? "connecting" : "idle";
@@ -47,41 +45,6 @@ export default function ConfigWindow() {
     return () => clearTimeout(id);
   }, [appId, appSecret, confirmBeforeInject, hydrated]);
 
-  useEffect(() => {
-    const unlisten = listen<{ connected: boolean }>("feishu://status", (e) => {
-      setConnected(e.payload.connected);
-      setConnecting(false);
-      addLog({
-        kind: "connect",
-        text: e.payload.connected ? "飞书长连接已建立" : "飞书连接断开",
-      });
-    });
-    return () => { unlisten.then((f) => f()); };
-  }, []);
-
-  useEffect(() => {
-    const unlisten = listen<{ success: boolean; reason?: string }>(
-      "feishu://inject-result",
-      (e) => {
-        addLog({
-          kind: "inject",
-          text: e.payload.success ? "输入成功" : `输入失败: ${e.payload.reason ?? "未知原因"}`,
-        });
-      }
-    );
-    return () => { unlisten.then((f) => f()); };
-  }, []);
-
-  useEffect(() => {
-    const unlisten = listen<{ sender: string; text: string }>(
-      "feishu://message",
-      (e) => {
-        addLog({ kind: "message", text: `@${e.payload.sender}: "${e.payload.text}"` });
-      }
-    );
-    return () => { unlisten.then((f) => f()); };
-  }, []);
-
   async function handleConnect() {
     if (!appId.trim() || !appSecret.trim()) return;
     setConnecting(true);
@@ -94,23 +57,26 @@ export default function ConfigWindow() {
     }
   }
 
+  // 监听连接结果清除 connecting 状态（由 MainWindow 的 listener 更新 connected，这里本地止转圈）
+  useEffect(() => {
+    if (connected) setConnecting(false);
+  }, [connected]);
+
   const canConnect = appId.trim().length > 0 && appSecret.trim().length > 0 && !connecting;
 
   return (
-    <div className="relative h-screen w-full flex flex-col px-7 py-6 select-none animate-enter">
-      {/* Brand */}
-      <header className="relative z-10 mb-7">
-        <h1 className="text-[40px] leading-[1.05] tracking-tight text-text">
-          <span className="font-display">Type</span>
-          <span className="font-display text-accent">Bridge</span>
-        </h1>
-        <p className="mt-1.5 text-[12px] text-muted font-mono tracking-wide">
-          messages to keyboard
-        </p>
-      </header>
+    <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
+      <div className="max-w-md mx-auto flex flex-col gap-5">
+        <header>
+          <h2 className="text-[32px] leading-[1.05] tracking-tight text-text">
+            <span className="font-display">Type</span>
+            <span className="font-display text-accent">Bridge</span>
+          </h2>
+          <p className="mt-1.5 text-[12px] text-muted font-mono tracking-wide">
+            messages to keyboard
+          </p>
+        </header>
 
-      {/* Form */}
-      <div className="relative z-10 flex flex-col gap-4 flex-1">
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <KeyRound size={12} strokeWidth={1.75} />
@@ -162,7 +128,6 @@ export default function ConfigWindow() {
           )}
         </button>
 
-        {/* 连接状态 */}
         <div className="flex items-center gap-2.5 px-0.5 py-1">
           <span
             className={`inline-block w-2.5 h-2.5 rounded-full ${
@@ -178,10 +143,8 @@ export default function ConfigWindow() {
           </span>
         </div>
 
-        {/* 分隔线 */}
         <div className="h-px bg-border my-1" />
 
-        {/* 输入前确认 toggle */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-[13px] text-text">输入前确认</span>
@@ -197,12 +160,6 @@ export default function ConfigWindow() {
           />
         </div>
       </div>
-
-      {/* 底部 */}
-      <footer className="relative z-10 mt-5 flex items-center justify-between text-[10.5px] text-subtle font-mono">
-        <span>v0.1.0</span>
-        <span>关闭即最小化到托盘</span>
-      </footer>
     </div>
   );
 }
