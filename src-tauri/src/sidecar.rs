@@ -367,7 +367,7 @@ pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Resul
         return Err("当前状态不允许重发".to_string());
     }
 
-    ctx.history.update_status(&id, MessageStatus::Queued);
+    ctx.history.update_status(&id, MessageStatus::Queued, None);
     let _ = app.emit("feishu://history-update", ());
 
     ctx.injector.enqueue(crate::queue::QueuedMessage {
