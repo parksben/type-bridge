@@ -22,6 +22,9 @@ use tokio::sync::{mpsc, oneshot, Mutex};
 // 如某个环境下仍被拒（code 231001 "reaction type is invalid"），在此
 // 一处替换即可——候选集：Get / DONE / CRY / SMILE / LAUGH / OK /
 // HEART / FIRE / THUMBSUP / SAD / SADFACE / BLUSH。
+//
+// ⚠ 大小写敏感：`Get` 就是首字母大写 + 后两位小写的混合形式。不要
+// "归一化"成 `GET` 或 `get`，飞书两种都拒。DONE / CRY 保持全大写。
 pub const REACT_RECEIVED: &str = "Get";  // 已收到消息
 pub const REACT_SENT: &str = "DONE";     // ✅ 已成功输入
 pub const REACT_FAILED: &str = "CRY";    // 😢 失败
