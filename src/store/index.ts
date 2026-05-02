@@ -1,9 +1,21 @@
 import { create } from "zustand";
 
+/// 渠道标识——与 Rust ChannelId enum 的 serde 键对齐（见 src-tauri/src/channel.rs）。
+/// v0.6 P0 引入；P0 阶段历史消息全部来自飞书，新字段主要供前端类型兼容。
+export type ChannelId = "feishu" | "dingtalk" | "wecom";
+
+export const CHANNEL_LABEL: Record<ChannelId, string> = {
+  feishu: "飞书",
+  dingtalk: "钉钉",
+  wecom: "企微",
+};
+
 export interface LogEntry {
   time: string;
   kind: "connect" | "message" | "inject" | "error" | "notify";
   text: string;
+  /// 可选渠道前缀。P1 起后端 emit log 时显式带渠道；P0 旧日志无此字段。
+  channel?: ChannelId;
 }
 
 export type MessageStatus = "queued" | "processing" | "sent" | "failed";
@@ -16,7 +28,13 @@ export interface FeedbackError {
 }
 
 export interface HistoryMessage {
+  /// 复合 id `{channel}:{source_id}`，例：`feishu:om_xxx`。v0.5 之前是原始
+  /// 飞书 id，Rust 启动时会自动迁移成复合格式（见 history::migrate_legacy）。
   id: string;
+  /// 消息所属渠道。Rust 端通过 serde 默认值兼容旧记录（默认飞书）。
+  channel: ChannelId;
+  /// 平台原始 message_id——仅用于后端调平台 API；前端一般不关心。
+  source_message_id: string;
   received_at: number;  // Unix seconds
   updated_at: number;
   sender: string;
@@ -25,6 +43,8 @@ export interface HistoryMessage {
   status: MessageStatus;
   failure_reason?: string | null;
   feedback_error?: FeedbackError | null;
+  /// 非 reaction 渠道（钉钉 / 企微）的状态反馈卡片 id。P0 只占位，不消费。
+  feedback_card_id?: string | null;
 }
 
 export type TabId =
