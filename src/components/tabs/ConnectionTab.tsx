@@ -30,12 +30,13 @@ export default function ConnectionTab() {
   const [selftestResult, setSelftestResult] = useState<SelftestResult | null>(null);
 
   const {
-    connected,
+    channelConnected,
     setAutoSubmit,
     setSubmitKey,
     addLog,
   } = useAppStore();
 
+  const connected = channelConnected.feishu === true;
   const connState: ConnState = connected ? "connected" : starting ? "connecting" : "idle";
 
   useEffect(() => {
@@ -104,7 +105,7 @@ export default function ConnectionTab() {
     setSelftesting(true);
     setSelftestResult(null);
     try {
-      const res = await invoke<SelftestResult>("run_selftest");
+      const res = await invoke<SelftestResult>("run_selftest", { channel: "feishu" });
       setSelftestResult(res);
       const allOk = res.credentials_ok && res.probes.every((p) => p.ok);
       const failedCount = res.credentials_ok

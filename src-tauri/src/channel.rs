@@ -45,7 +45,6 @@ impl ChannelId {
     /// 对应 sidecar 二进制的 target-triple-agnostic 前缀名。
     /// Tauri shell plugin 的 `externalBin: ["binaries/<name>"]` 会按当前
     /// target 自动拼 `-<triple>` 后缀选对应二进制。
-    #[allow(dead_code)] // P0 暂未使用；P1 起 sidecar 调度器会按 channel 启对应进程
     pub fn sidecar_binary(&self) -> &'static str {
         match self {
             Self::Feishu => "feishu-bridge",
@@ -55,7 +54,6 @@ impl ChannelId {
     }
 
     /// 渠道能力矩阵。详见 REQUIREMENTS §2.9.3 / TECH_DESIGN §二十七。
-    #[allow(dead_code)] // P0 未消费；P1 起 UI / queue 根据它决定是否发反馈命令
     pub fn capability(&self) -> ChannelCapability {
         match self {
             Self::Feishu => ChannelCapability {
@@ -81,7 +79,6 @@ impl ChannelId {
 }
 
 /// 渠道能力矩阵。用于 UI 差异化渲染（如飞书展示事件订阅引导；钉钉/企微不展示）。
-#[allow(dead_code)] // P0 未消费
 #[derive(Debug, Clone, Copy)]
 pub struct ChannelCapability {
     /// 是否支持给消息加表情反应（飞书独有）

@@ -2,10 +2,17 @@
 //
 // 本模块职责：启动 Go sidecar、读取其 stdout 的 JSON Lines、转交给
 // history + queue 进行入队处理；不再直接执行注入（那是 queue.rs 的事）。
+//
+// v0.6 P1：从单飞书 sidecar 扩展到多渠道。每个已配置凭据的渠道启一个
+// 独立 Go sidecar 进程；AppContext 持有 per-channel SidecarBridge。
+// 事件协议不变（JSON Lines），但前端事件命名空间从 feishu://* 统一为
+// typebridge://*，payload 带 channel 字段，前端据此分路到渠道状态。
 
+use crate::channel::ChannelId;
 use crate::history::HistoryStore;
 use crate::queue::{ingest_message, Injector};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
@@ -17,8 +24,11 @@ use tokio::sync::{oneshot, Mutex as TokioMutex};
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
 pub enum SidecarCommand {
+    /// 飞书内部 reaction 命令；P1 Rust 侧仍直接用，P2 起统一走 feedback_*
     Reaction { message_id: String, emoji_type: String },
+    /// 飞书内部 reply 命令；同上
     Reply { message_id: String, text: String },
+    /// selftest：让 sidecar 执行该渠道的凭据 / scope 自检
     Selftest,
 }
 
@@ -49,7 +59,7 @@ pub struct SelftestResult {
     pub probes: Vec<ProbeResult>,
 }
 
-/// 包装 Go sidecar 子进程，允许随时写入命令（stdin）
+/// 包装 Go sidecar 子进程，允许随时写入命令（stdin）。每个渠道一个实例。
 #[derive(Default)]
 pub struct SidecarBridge {
     child: Mutex<Option<CommandChild>>,
@@ -91,6 +101,36 @@ impl SidecarBridge {
                 tracing::debug!("[sidecar stdin] not connected, command dropped: {:?}", cmd);
             }
         }
+    }
+}
+
+/// 按 ChannelId 索引的 SidecarBridge 集合。未配置的渠道对应一个空 bridge
+/// （is_connected = false）。
+pub struct SidecarBridges {
+    inner: HashMap<ChannelId, Arc<SidecarBridge>>,
+}
+
+impl SidecarBridges {
+    pub fn new() -> Self {
+        let mut inner = HashMap::new();
+        inner.insert(ChannelId::Feishu, Arc::new(SidecarBridge::default()));
+        inner.insert(ChannelId::DingTalk, Arc::new(SidecarBridge::default()));
+        // WeCom 留白，P3 再加
+        Self { inner }
+    }
+
+    pub fn get(&self, channel: ChannelId) -> Arc<SidecarBridge> {
+        // 未配置的渠道也返回一个 empty bridge，避免 Option 到处传
+        self.inner
+            .get(&channel)
+            .cloned()
+            .unwrap_or_else(|| Arc::new(SidecarBridge::default()))
+    }
+}
+
+impl Default for SidecarBridges {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -136,14 +176,40 @@ pub enum SidecarEvent {
     },
 }
 
+/// 前端事件 payload：所有渠道相关事件都带 channel 字段。frontend 据此分路。
+#[derive(Debug, Clone, Serialize)]
+pub struct ChannelStatusPayload {
+    pub channel: ChannelId,
+    pub connected: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChannelMessagePayload {
+    pub channel: ChannelId,
+    pub message_id: Option<String>,
+    pub sender: String,
+    pub text: String,
+    pub ts: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChannelImagePayload {
+    pub channel: ChannelId,
+    pub message_id: String,
+    pub sender: String,
+    pub text: String,
+    pub mime: String,
+    // data 不回放给前端（base64 很大）；前端靠 message 历史里的 image_path 拿
+}
+
 /// 应用共享上下文 — 用 tauri::Manager::manage 注入，每个 field 自行并发控制
 pub struct AppContext {
     pub submit_config: Arc<Mutex<SubmitConfig>>,
     pub history: Arc<HistoryStore>,
     pub injector: Arc<Injector>,
-    pub bridge: Arc<SidecarBridge>,
-    /// 等待中的 selftest 回执 sender。selftest 每次最多一个在途。
-    pub pending_selftest: Arc<TokioMutex<Option<oneshot::Sender<SelftestResult>>>>,
+    pub bridges: Arc<SidecarBridges>,
+    /// 等待中的 selftest 回执 sender，按渠道分槽。每个渠道同时最多一个在途。
+    pub pending_selftests: Arc<TokioMutex<HashMap<ChannelId, oneshot::Sender<SelftestResult>>>>,
 }
 
 /// "输入后自动提交"相关配置（auto_submit + 目标按键），集中在一把 Mutex 里
@@ -169,20 +235,20 @@ impl AppContext {
     ) -> Arc<Self> {
         let history = HistoryStore::open();
         let submit_config = Arc::new(Mutex::new(initial_submit));
-        let bridge: Arc<SidecarBridge> = Arc::new(SidecarBridge::default());
+        let bridges: Arc<SidecarBridges> = Arc::new(SidecarBridges::new());
         let injector = Injector::spawn(
             app.clone(),
             history.clone(),
             submit_config.clone(),
-            bridge.clone(),
+            bridges.clone(),
         );
 
         Arc::new(Self {
             submit_config,
             history,
             injector,
-            bridge,
-            pending_selftest: Arc::new(TokioMutex::new(None)),
+            bridges,
+            pending_selftests: Arc::new(TokioMutex::new(HashMap::new())),
         })
     }
 
@@ -193,24 +259,28 @@ impl AppContext {
     }
 }
 
-#[tauri::command]
-pub async fn start_feishu<R: Runtime>(
+// ──────────────────────────────────────────────────────────────
+// 通用 sidecar 启动 / 事件分发
+// ──────────────────────────────────────────────────────────────
+
+/// 启动某个渠道的 sidecar 进程，绑定 stdin/stdout 到 AppContext。
+///
+/// `envs` 是该渠道需要传给 Go sidecar 的环境变量（凭据）。
+async fn start_sidecar<R: Runtime>(
     app: AppHandle<R>,
-    app_id: String,
-    app_secret: String,
+    channel: ChannelId,
+    envs: Vec<(String, String)>,
 ) -> Result<(), String> {
     let shell = app.shell();
-    let (mut rx, child) = shell
-        .sidecar("feishu-bridge")
-        .map_err(|e| e.to_string())?
-        .env("FEISHU_APP_ID", &app_id)
-        .env("FEISHU_APP_SECRET", &app_secret)
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    let mut cmd = shell.sidecar(channel.sidecar_binary()).map_err(|e| e.to_string())?;
+    for (k, v) in envs {
+        cmd = cmd.env(&k, &v);
+    }
+    let (mut rx, child) = cmd.spawn().map_err(|e| e.to_string())?;
 
-    // 把 child 存进 bridge，供 queue worker 向 stdin 写 reaction/reply 命令
+    // 把 child 存进对应 bridge，供 queue worker 向 stdin 写命令
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
-    ctx.bridge.set(child);
+    ctx.bridges.get(channel).set(child);
 
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -220,13 +290,14 @@ pub async fn start_feishu<R: Runtime>(
             match event {
                 CommandEvent::Stdout(line) => {
                     let text = String::from_utf8_lossy(&line);
-                    tracing::info!("[sidecar] {}", text.trim());
+                    tracing::info!("[{}-bridge] {}", channel.key(), text.trim());
 
                     match serde_json::from_str::<SidecarEvent>(text.trim()) {
-                        Ok(evt) => dispatch_event(&app_handle, &evt, &mut retry_delay),
+                        Ok(evt) => dispatch_event(&app_handle, channel, &evt, &mut retry_delay),
                         Err(e) => {
                             tracing::warn!(
-                                "[sidecar] failed to parse event: {} | raw: {}",
+                                "[{}-bridge] failed to parse event: {} | raw: {}",
+                                channel.key(),
                                 e,
                                 text.trim()
                             );
@@ -234,18 +305,29 @@ pub async fn start_feishu<R: Runtime>(
                     }
                 }
                 CommandEvent::Stderr(line) => {
-                    tracing::warn!("[sidecar stderr] {}", String::from_utf8_lossy(&line).trim());
+                    tracing::warn!(
+                        "[{}-bridge stderr] {}",
+                        channel.key(),
+                        String::from_utf8_lossy(&line).trim()
+                    );
                 }
                 CommandEvent::Terminated(_) => {
-                    tracing::warn!("[sidecar] terminated, retrying in {}s", retry_delay);
+                    tracing::warn!(
+                        "[{}-bridge] terminated, retrying in {}s",
+                        channel.key(),
+                        retry_delay
+                    );
                     // 子进程终止，清理 bridge 里的旧 child（防止向死 stdin 写）
                     let ctx: Arc<AppContext> =
                         app_handle.state::<Arc<AppContext>>().inner().clone();
-                    ctx.bridge.clear();
+                    ctx.bridges.get(channel).clear();
 
                     let _ = app_handle.emit(
-                        "feishu://status",
-                        SidecarEvent::Status { connected: false },
+                        "typebridge://status",
+                        ChannelStatusPayload {
+                            channel,
+                            connected: false,
+                        },
                     );
                     tokio::time::sleep(Duration::from_secs(retry_delay)).await;
                     retry_delay = (retry_delay * 2).min(60);
@@ -260,6 +342,7 @@ pub async fn start_feishu<R: Runtime>(
 
 fn dispatch_event<R: Runtime>(
     app: &AppHandle<R>,
+    channel: ChannelId,
     evt: &SidecarEvent,
     retry_delay: &mut u64,
 ) {
@@ -270,20 +353,35 @@ fn dispatch_event<R: Runtime>(
             if *connected {
                 *retry_delay = 2;
             }
-            let _ = app.emit("feishu://status", evt);
+            let _ = app.emit(
+                "typebridge://status",
+                ChannelStatusPayload {
+                    channel,
+                    connected: *connected,
+                },
+            );
         }
-        SidecarEvent::Message { message_id, sender, text, .. } => {
+        SidecarEvent::Message { message_id, sender, text, ts } => {
             let source_id = message_id
                 .clone()
                 .unwrap_or_else(|| format!("local-{}", uuid::Uuid::new_v4()));
-            let _ = app.emit("feishu://message", evt);
-            // P0：仅飞书 sidecar；P1 起按 event.channel 字段分路
+            let _ = app.emit(
+                "typebridge://message",
+                ChannelMessagePayload {
+                    channel,
+                    message_id: message_id.clone(),
+                    sender: sender.clone(),
+                    text: text.clone(),
+                    ts: ts.clone(),
+                },
+            );
+            let bridge = ctx.bridges.get(channel);
             ingest_message(
                 app,
                 &ctx.history,
                 &ctx.injector,
-                &ctx.bridge,
-                crate::channel::ChannelId::Feishu,
+                &bridge,
+                channel,
                 source_id,
                 sender.clone(),
                 text.clone(),
@@ -292,29 +390,39 @@ fn dispatch_event<R: Runtime>(
             );
         }
         SidecarEvent::Image { message_id, data, mime, sender, text } => {
-            let _ = app.emit("feishu://image", evt);
+            let _ = app.emit(
+                "typebridge://image",
+                ChannelImagePayload {
+                    channel,
+                    message_id: message_id.clone(),
+                    sender: sender.clone(),
+                    text: text.clone(),
+                    mime: mime.clone(),
+                },
+            );
 
             // base64 → 保存到 images dir → 入队
             let bytes = match base64_decode(data) {
                 Ok(b) => b,
                 Err(e) => {
-                    tracing::error!("[sidecar] base64 decode failed: {}", e);
+                    tracing::error!("[{}-bridge] base64 decode failed: {}", channel.key(), e);
                     return;
                 }
             };
             let rel = match ctx.history.save_image(message_id, mime, &bytes) {
                 Ok(p) => p,
                 Err(e) => {
-                    tracing::error!("[sidecar] save image failed: {}", e);
+                    tracing::error!("[{}-bridge] save image failed: {}", channel.key(), e);
                     return;
                 }
             };
+            let bridge = ctx.bridges.get(channel);
             ingest_message(
                 app,
                 &ctx.history,
                 &ctx.injector,
-                &ctx.bridge,
-                crate::channel::ChannelId::Feishu,
+                &bridge,
+                channel,
                 message_id.clone(),
                 sender.clone(),
                 text.clone(),
@@ -323,29 +431,32 @@ fn dispatch_event<R: Runtime>(
             );
         }
         SidecarEvent::Error { msg } => {
-            tracing::error!("[feishu] {}", msg);
-            // 注意：不再 emit feishu://status {connected:false}
-            // 一次 API 业务错不等于长连接断开；连接状态由 Status 事件独占。
+            tracing::error!("[{}-bridge] {}", channel.key(), msg);
+            // 注意：不 emit status；一次 API 业务错不等于长连接断开
         }
         SidecarEvent::SelftestResult { credentials_ok, credentials_reason, probes } => {
-            // 唤醒正在等待的 run_selftest command
+            // 唤醒该渠道正在等待的 run_selftest command
             let result = SelftestResult {
                 credentials_ok: *credentials_ok,
                 credentials_reason: credentials_reason.clone(),
                 probes: probes.clone(),
             };
-            let pending = ctx.pending_selftest.clone();
+            let pending = ctx.pending_selftests.clone();
             tauri::async_runtime::spawn(async move {
-                let mut guard = pending.lock().await;
-                if let Some(sender) = guard.take() {
+                let mut map = pending.lock().await;
+                if let Some(sender) = map.remove(&channel) {
                     let _ = sender.send(result);
                 }
             });
         }
         SidecarEvent::FeedbackError { message_id, kind, code, msg } => {
             tracing::warn!(
-                "[feishu feedback] {} on {} failed: code={} msg={}",
-                kind, message_id, code, msg
+                "[{}-bridge feedback] {} on {} failed: code={} msg={}",
+                channel.key(),
+                kind,
+                message_id,
+                code,
+                msg
             );
             let help_url = extract_help_url(msg);
             let err = crate::history::FeedbackError {
@@ -354,16 +465,13 @@ fn dispatch_event<R: Runtime>(
                 msg: msg.clone(),
                 help_url,
             };
-            // sidecar 传的是飞书原始 message_id；用 find_by_source 定位 HistoryMessage
-            // 拿到复合 id 再去 attach_feedback_error。P1 起 sidecar 事件自带 channel
-            // 字段，这里的 Feishu 硬编码会改成 evt.channel。
             let composite = ctx
                 .history
-                .find_by_source(crate::channel::ChannelId::Feishu, message_id)
+                .find_by_source(channel, message_id)
                 .map(|m| m.id);
             if let Some(cid) = composite {
                 if ctx.history.attach_feedback_error(&cid, err) {
-                    let _ = app.emit("feishu://history-update", ());
+                    let _ = app.emit("typebridge://history-update", ());
                 }
             }
         }
@@ -383,15 +491,94 @@ fn extract_help_url(msg: &str) -> Option<String> {
     Some(tail[..end].trim_end_matches(|c: char| matches!(c, '.' | ',' | '。' | '，' | ')' | '）')).to_string())
 }
 
+// ──────────────────────────────────────────────────────────────
+// Tauri 命令：启动 / 停止 / 自检（渠道通用）
+// ──────────────────────────────────────────────────────────────
+
 #[tauri::command]
-pub fn stop_feishu<R: Runtime>(app: AppHandle<R>) {
+pub async fn start_feishu<R: Runtime>(
+    app: AppHandle<R>,
+    app_id: String,
+    app_secret: String,
+) -> Result<(), String> {
+    start_sidecar(
+        app,
+        ChannelId::Feishu,
+        vec![
+            ("FEISHU_APP_ID".to_string(), app_id),
+            ("FEISHU_APP_SECRET".to_string(), app_secret),
+        ],
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn start_dingtalk<R: Runtime>(
+    app: AppHandle<R>,
+    client_id: String,
+    client_secret: String,
+) -> Result<(), String> {
+    start_sidecar(
+        app,
+        ChannelId::DingTalk,
+        vec![
+            ("DINGTALK_CLIENT_ID".to_string(), client_id),
+            ("DINGTALK_CLIENT_SECRET".to_string(), client_secret),
+        ],
+    )
+    .await
+}
+
+/// 停止某渠道 sidecar。现在只发 status:false 事件并依赖 Terminated 清理；
+/// 真正的 child.kill() 留给 Tauri 进程生命周期处理。
+#[tauri::command]
+pub fn stop_channel<R: Runtime>(app: AppHandle<R>, channel: ChannelId) {
     let _ = app.emit(
-        "feishu://status",
-        SidecarEvent::Status { connected: false },
+        "typebridge://status",
+        ChannelStatusPayload {
+            channel,
+            connected: false,
+        },
     );
 }
 
-// --- Commands for history/queue ---
+/// 对某渠道发 selftest 命令，等待该渠道 sidecar 回执（10s 超时）。
+#[tauri::command]
+pub async fn run_selftest<R: Runtime>(
+    app: AppHandle<R>,
+    channel: ChannelId,
+) -> Result<SelftestResult, String> {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    let bridge = ctx.bridges.get(channel);
+
+    if !bridge.is_connected() {
+        return Err("长连接尚未建立，请先点击「启动长连接」".into());
+    }
+
+    let (tx, rx) = oneshot::channel::<SelftestResult>();
+    {
+        let mut map = ctx.pending_selftests.lock().await;
+        // 如果同渠道已有 pending，直接丢弃旧的
+        map.insert(channel, tx);
+    }
+
+    bridge.send(&SidecarCommand::Selftest);
+
+    match tokio::time::timeout(Duration::from_secs(10), rx).await {
+        Ok(Ok(result)) => Ok(result),
+        Ok(Err(_)) => Err("selftest 通道被释放".into()),
+        Err(_) => {
+            // 超时：清掉对应槽位，避免后续结果被错配
+            let mut map = ctx.pending_selftests.lock().await;
+            map.remove(&channel);
+            Err("selftest 超时（10s），请检查网络或 sidecar 进程状态".into())
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────
+// 历史 / 剪贴板相关 Tauri 命令
+// ──────────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn get_history<R: Runtime>(app: AppHandle<R>) -> Vec<crate::history::HistoryMessage> {
@@ -411,7 +598,7 @@ pub fn delete_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> bool
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
     let removed = ctx.history.delete(&id).is_some();
     if removed {
-        let _ = app.emit("feishu://history-update", ());
+        let _ = app.emit("typebridge://history-update", ());
     }
     removed
 }
@@ -467,7 +654,7 @@ pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Resul
     }
 
     ctx.history.update_status(&id, MessageStatus::Queued, None);
-    let _ = app.emit("feishu://history-update", ());
+    let _ = app.emit("typebridge://history-update", ());
 
     ctx.injector.enqueue(crate::queue::QueuedMessage {
         id,
@@ -478,36 +665,6 @@ pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Resul
         image_mime: msg.image_path.as_ref().map(|_| "image/png".to_string()),
     })?;
     Ok(())
-}
-
-#[tauri::command]
-pub async fn run_selftest<R: Runtime>(app: AppHandle<R>) -> Result<SelftestResult, String> {
-    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
-
-    // 若 sidecar 未启动，直接返回明确错误
-    if !ctx.bridge.is_connected() {
-        return Err("长连接尚未建立，请先点击「启动长连接」".into());
-    }
-
-    let (tx, rx) = oneshot::channel::<SelftestResult>();
-    {
-        let mut slot = ctx.pending_selftest.lock().await;
-        // 如有遗留的旧 sender，直接丢弃（前一次请求已超时或结果丢失）
-        *slot = Some(tx);
-    }
-
-    ctx.bridge.send(&SidecarCommand::Selftest);
-
-    match tokio::time::timeout(Duration::from_secs(10), rx).await {
-        Ok(Ok(result)) => Ok(result),
-        Ok(Err(_)) => Err("selftest 通道被释放".into()),
-        Err(_) => {
-            // 超时：把 pending 清掉，避免后续结果灌进来被错配给下一次请求
-            let mut slot = ctx.pending_selftest.lock().await;
-            *slot = None;
-            Err("selftest 超时（10s），请检查网络或 sidecar 进程状态".into())
-        }
-    }
 }
 
 // --- base64 decode (kept local, Go side emits standard base64) ---
