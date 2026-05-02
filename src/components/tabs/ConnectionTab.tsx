@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   AlertCircle,
-  CheckCircle2,
   ExternalLink,
   KeyRound,
   Lock,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAppStore, DEFAULT_SUBMIT_KEY, type SubmitKey } from "../../store";
 import KeyBindInput from "../KeyBindInput";
+import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
 
 
 interface Settings {
@@ -21,34 +21,11 @@ interface Settings {
   submit_key: SubmitKey;
 }
 
-interface SelftestResult {
-  ok: boolean;
-  reason: string;
-}
-
 type ConnState = "idle" | "connecting" | "connected";
 
 interface FieldErrors {
   appId?: string;
   appSecret?: string;
-}
-
-// 把 Go/飞书的失败 reason 翻译为更友好的诊断建议
-function diagnoseSelftest(reason: string): string {
-  const r = reason.toLowerCase();
-  if (r.includes("invalid app_id") || r.includes("99991663")) {
-    return "App ID 无效，请确认是否填写了正确的自建应用 App ID（cli_ 开头）。";
-  }
-  if (r.includes("invalid app_secret") || r.includes("app_secret") && r.includes("error")) {
-    return "App Secret 不匹配，请到飞书开发者后台重新复制。";
-  }
-  if (r.includes("permission") || r.includes("scope") || r.includes("access denied")) {
-    return "应用权限不足，请到开发者后台「权限管理」中勾选 im:chat 权限，并发布新版本。";
-  }
-  if (r.includes("网络请求失败") || r.includes("timeout") || r.includes("no such host")) {
-    return "网络不通，请检查本机网络、代理，或稍后重试。";
-  }
-  return "请确认已在开发者后台「事件订阅」中完成长连接验证，再重试自检。";
 }
 
 export default function ConnectionTab() {
@@ -136,13 +113,26 @@ export default function ConnectionTab() {
     try {
       const res = await invoke<SelftestResult>("run_selftest");
       setSelftestResult(res);
+      const allOk = res.credentials_ok && res.probes.every((p) => p.ok);
+      const failedCount = res.credentials_ok
+        ? res.probes.filter((p) => !p.ok).length
+        : -1;
       addLog({
-        kind: res.ok ? "connect" : "error",
-        text: res.ok ? "自检通过：双向通信正常" : `自检失败：${res.reason}`,
+        kind: allOk ? "connect" : "error",
+        text: allOk
+          ? "连接测试通过：全部 API scope 校验成功"
+          : res.credentials_ok
+          ? `连接测试：${failedCount} 项 scope 缺失`
+          : `连接测试失败：${res.credentials_reason}`,
       });
     } catch (e) {
-      setSelftestResult({ ok: false, reason: String(e) });
-      addLog({ kind: "error", text: `自检异常：${e}` });
+      // invoke 本身抛异常（sidecar 未启动 / 超时等）→ 造一个凭据错误型结果展示
+      setSelftestResult({
+        credentials_ok: false,
+        credentials_reason: String(e),
+        probes: [],
+      });
+      addLog({ kind: "error", text: `连接测试异常：${e}` });
     } finally {
       setSelftesting(false);
     }
@@ -151,6 +141,11 @@ export default function ConnectionTab() {
   async function openFeishuDevPortal() {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
     await openUrl("https://open.feishu.cn/app").catch(() => {});
+  }
+
+  async function openUrlFromChecklist(url: string) {
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(url).catch(() => {});
   }
 
   // 校验错误清空时机：输入变化时清除对应错误
@@ -165,10 +160,6 @@ export default function ConnectionTab() {
 
   const canStart = !starting && appId.trim().length > 0 && appSecret.trim().length > 0;
   const canSelftest = connected && !selftesting;
-  const diagnose = useMemo(
-    () => (selftestResult && !selftestResult.ok ? diagnoseSelftest(selftestResult.reason) : ""),
-    [selftestResult]
-  );
 
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
@@ -308,33 +299,11 @@ export default function ConnectionTab() {
 
         {/* 自检结果 */}
         {selftestResult && (
-          <div
-            className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
-            style={{
-              background: selftestResult.ok ? "var(--success-soft)" : "var(--accent-soft)",
-              border: "1px solid var(--border)",
-              color: "var(--text)",
-            }}
-          >
-            {selftestResult.ok ? (
-              <CheckCircle2 size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-success" />
-            ) : (
-              <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-error" />
-            )}
-            <div className="flex-1">
-              {selftestResult.ok ? (
-                <span>双向通信正常，可以开始使用。</span>
-              ) : (
-                <>
-                  <div className="text-error font-medium mb-1">自检失败</div>
-                  <div className="text-muted text-[11.5px] mb-1 font-mono break-all">
-                    {selftestResult.reason}
-                  </div>
-                  <div className="text-text">{diagnose}</div>
-                </>
-              )}
-            </div>
-          </div>
+          <SelftestChecklist
+            result={selftestResult}
+            appId={appId.trim()}
+            onOpenUrl={openUrlFromChecklist}
+          />
         )}
 
         <div className="h-px bg-border my-1" />

@@ -22,12 +22,31 @@ pub enum SidecarCommand {
     Selftest,
 }
 
-/// selftest 执行结果（Go 返回，Rust 传给前端 invoke 调用者）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SelftestResult {
+/// 消息链路每个 API 的 probe 结论
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ProbeResult {
+    pub id: String,
+    pub label: String,
+    pub scope_hint: String,
     pub ok: bool,
     #[serde(default)]
-    pub reason: String,
+    pub code: i64,
+    #[serde(default)]
+    pub msg: String,
+    #[serde(default)]
+    pub scopes: Vec<String>,
+    #[serde(default)]
+    pub help_url: String,
+}
+
+/// selftest 执行结果（Go 返回，Rust 传给前端 invoke 调用者）
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SelftestResult {
+    pub credentials_ok: bool,
+    #[serde(default)]
+    pub credentials_reason: String,
+    #[serde(default)]
+    pub probes: Vec<ProbeResult>,
 }
 
 /// 包装 Go sidecar 子进程，允许随时写入命令（stdin）
@@ -102,9 +121,12 @@ pub enum SidecarEvent {
     },
     Error { msg: String },
     SelftestResult {
-        ok: bool,
         #[serde(default)]
-        reason: String,
+        credentials_ok: bool,
+        #[serde(default)]
+        credentials_reason: String,
+        #[serde(default)]
+        probes: Vec<ProbeResult>,
     },
     FeedbackError {
         message_id: String,
@@ -302,11 +324,12 @@ fn dispatch_event<R: Runtime>(
             // 注意：不再 emit feishu://status {connected:false}
             // 一次 API 业务错不等于长连接断开；连接状态由 Status 事件独占。
         }
-        SidecarEvent::SelftestResult { ok, reason } => {
+        SidecarEvent::SelftestResult { credentials_ok, credentials_reason, probes } => {
             // 唤醒正在等待的 run_selftest command
             let result = SelftestResult {
-                ok: *ok,
-                reason: reason.clone(),
+                credentials_ok: *credentials_ok,
+                credentials_reason: credentials_reason.clone(),
+                probes: probes.clone(),
             };
             let pending = ctx.pending_selftest.clone();
             tauri::async_runtime::spawn(async move {
