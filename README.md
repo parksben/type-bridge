@@ -129,6 +129,10 @@ npm run tauri build -- --target x86_64-apple-darwin
 - `src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/TypeBridge_*.dmg`
 - `src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/TypeBridge_*.dmg`
 
+### CI 自动发布
+
+推送 `v*` 格式的 tag 或通过 GitHub Actions UI 手动触发 `Release` workflow，即可自动完成双架构构建并发布到 [GitHub Releases](https://github.com/parksben/type-bridge/releases)。详见 [docs/REQUIREMENTS.md §8](docs/REQUIREMENTS.md#八-cicd-发布流水线)。
+
 > 真机分发需要 Apple Developer 证书签名，否则 Gatekeeper 会拦截辅助功能权限申请。详见 [docs/TECH_DESIGN.md](docs/TECH_DESIGN.md)。
 
 ---

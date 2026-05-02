@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (without v prefix, e.g. 0.2.0)'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+  GOPROXY: https://goproxy.cn,direct
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Override version in config files
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          sed -i '' "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: feishu-bridge/go.sum
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust target
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/target
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-target-
+
+      - name: Build Go sidecar (arm64)
+        run: |
+          cd feishu-bridge
+          GOOS=darwin GOARCH=arm64 go build -ldflags '-s -w' \
+            -o ../src-tauri/binaries/feishu-bridge-aarch64-apple-darwin .
+
+      - name: Build Go sidecar (amd64)
+        run: |
+          cd feishu-bridge
+          GOOS=darwin GOARCH=amd64 go build -ldflags '-s -w' \
+            -o ../src-tauri/binaries/feishu-bridge-x86_64-apple-darwin .
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build Tauri (aarch64)
+        run: npm run tauri build -- --target aarch64-apple-darwin
+
+      - name: Build Tauri (x86_64)
+        run: npm run tauri build -- --target x86_64-apple-darwin
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg release-artifacts/
+          cp src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg release-artifacts/
+          ls -la release-artifacts/
+
+      - name: Create/Update Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: TypeBridge v${{ steps.version.outputs.VERSION }}
+          files: release-artifacts/*.dmg
+          fail_on_unmatched_files: true
+          make_latest: true
+          body: |
+            ## TypeBridge v${{ steps.version.outputs.VERSION }}
+
+            macOS 菜单栏应用：接收飞书机器人消息，自动写入当前聚焦的输入框。
+
+            ### 下载
+
+            | 架构 | 安装包 |
+            |------|--------|
+            | Apple Silicon (M1/M2/M3) | `TypeBridge_${{ steps.version.outputs.VERSION }}_aarch64.dmg` |
+            | Intel | `TypeBridge_${{ steps.version.outputs.VERSION }}_x64.dmg` |
+
+            > **注意**：CI 产物未签名，首次打开需在「系统设置 → 隐私与安全性」中手动允许运行。
+
+            ### 安装后
+
+            首次启动需授予「辅助功能」权限以支持消息注入；详见 [README](https://github.com/${{ github.repository }}#%E6%9D%83%E9%99%90)。
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
