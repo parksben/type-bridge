@@ -17,20 +17,56 @@
   --color-success-dark: #34d399;
 }
 
+/* ============ Theme: Light (default) ============ */
+:root {
+  --tb-bg: #faf9f6;
+  --tb-surface: #ffffff;
+  --tb-border: #e7e5e1;
+  --tb-text: #18181b;
+  --tb-muted: #71717a;
+  --tb-accent: #c2410c;
+}
+
+/* ============ Theme: System dark (media query fallback) ============ */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-force) {
+    --tb-bg: #0e0e10;
+    --tb-surface: #18181b;
+    --tb-border: #27272a;
+    --tb-text: #fafafa;
+    --tb-muted: #a1a1aa;
+    --tb-accent: #fb923c;
+  }
+}
+
+/* ============ Theme: Manual dark (overrides media query) ============ */
+.dark {
+  --tb-bg: #0e0e10;
+  --tb-surface: #18181b;
+  --tb-border: #27272a;
+  --tb-text: #fafafa;
+  --tb-muted: #a1a1aa;
+  --tb-accent: #fb923c;
+}
+
+/* ============ Theme: Manual light (overrides system dark) ============ */
+.light-force {
+  --tb-bg: #faf9f6;
+  --tb-surface: #ffffff;
+  --tb-border: #e7e5e1;
+  --tb-text: #18181b;
+  --tb-muted: #71717a;
+  --tb-accent: #c2410c;
+}
+
 /* Base */
 body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background-color: var(--tb-bg);
+  color: var(--tb-text);
   font-family: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: var(--color-bg-dark);
-    color: var(--color-text-dark);
-  }
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Instrument Serif for brand moments */
@@ -55,7 +91,7 @@ body {
 
 /* Gradient glow for accent moments */
 .glow-orange {
-  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(194, 65, 12, 0.15), transparent 60%);
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in srgb, var(--tb-accent) 18%, transparent), transparent 60%);
 }
 
 /* Staggered fade-in animation */
@@ -71,3 +107,9 @@ body {
 .animate-delay-3 { animation-delay: 0.3s; opacity: 0; }
 .animate-delay-4 { animation-delay: 0.4s; opacity: 0; }
 .animate-delay-5 { animation-delay: 0.5s; opacity: 0; }
+
+/* Gradient border utilities */
+.gradient-border-t {
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tb-accent) 30%, transparent), transparent) 1;
+}
