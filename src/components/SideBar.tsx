@@ -1,5 +1,5 @@
 import { History, Plug, Terminal, Settings2, LucideIcon } from "lucide-react";
-import { useAppStore, TabId } from "../store";
+import { useAppStore, CHANNEL_LABEL, TabId, type ChannelId } from "../store";
 
 interface TabDef {
   id: TabId;
@@ -31,7 +31,7 @@ const SECTIONS: Section[] = [
 ];
 
 export default function SideBar() {
-  const { activeTab, setActiveTab, connected } = useAppStore();
+  const { activeTab, setActiveTab, channelConnected } = useAppStore();
 
   return (
     <div
@@ -82,17 +82,33 @@ export default function SideBar() {
       </nav>
 
       <div
-        className="mt-auto px-3 py-3 flex items-center gap-2"
+        className="mt-auto px-3 py-3 flex flex-col gap-1.5"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <span
-          className={`inline-block w-2 h-2 rounded-full ${
-            connected ? "dot-connected" : "dot-idle"
-          }`}
-        />
-        <span className="text-[11.5px] text-muted">
-          {connected ? "已连接" : "未连接"}
-        </span>
+        {(() => {
+          const configuredChannels = (Object.keys(channelConnected) as ChannelId[])
+            .filter((ch) => channelConnected[ch] !== undefined);
+          if (configuredChannels.length === 0) {
+            return (
+              <span className="text-[11px] text-subtle">尚未配置任何渠道</span>
+            );
+          }
+          return configuredChannels.map((ch) => {
+            const isConnected = channelConnected[ch] === true;
+            return (
+              <div key={ch} className="flex items-center gap-2">
+                <span
+                  className={`inline-block w-2 h-2 rounded-full ${
+                    isConnected ? "dot-connected" : "dot-idle"
+                  }`}
+                />
+                <span className="text-[11.5px] text-muted">
+                  {CHANNEL_LABEL[ch]} {isConnected ? "已连接" : "未连接"}
+                </span>
+              </div>
+            );
+          });
+        })()}
       </div>
     </div>
   );

@@ -30,7 +30,7 @@ export default function HistoryTab() {
 
   // 监听整体结构变化（新增/删除）→ 重新拉
   useEffect(() => {
-    const un = listen("feishu://history-update", () => {
+    const un = listen("typebridge://history-update", () => {
       invoke<HistoryMessage[]>("get_history").then(setHistory).catch(() => {});
     });
     return () => { un.then((f) => f()); };
@@ -39,7 +39,7 @@ export default function HistoryTab() {
   // 监听单条状态变化 → 仅更新 status 字段（更高效）
   useEffect(() => {
     const un = listen<{ id: string; status: MessageStatus; reason?: string }>(
-      "feishu://message-status",
+      "typebridge://message-status",
       (e) => {
         updateHistoryStatus(e.payload.id, e.payload.status, e.payload.reason);
       }

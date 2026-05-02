@@ -84,7 +84,9 @@ export interface Settings {
 }
 
 interface AppStore {
-  connected: boolean;
+  /// 每渠道独立的连接状态。仅"已配置凭据且启动过 sidecar"的渠道存在 key。
+  /// P1：feishu + dingtalk；wecom 待 P3。
+  channelConnected: Partial<Record<ChannelId, boolean>>;
   autoSubmit: boolean;
   submitKey: SubmitKey;
   logs: LogEntry[];
@@ -92,7 +94,7 @@ interface AppStore {
   hiddenHistoryIds: Set<string>;
   activeTab: TabId;
 
-  setConnected: (v: boolean) => void;
+  setChannelConnected: (channel: ChannelId, connected: boolean) => void;
   setAutoSubmit: (v: boolean) => void;
   setSubmitKey: (k: SubmitKey) => void;
   setActiveTab: (tab: TabId) => void;
@@ -106,7 +108,7 @@ interface AppStore {
 }
 
 export const useAppStore = create<AppStore>((set) => ({
-  connected: false,
+  channelConnected: {},
   autoSubmit: true,
   submitKey: DEFAULT_SUBMIT_KEY,
   logs: [],
@@ -114,7 +116,10 @@ export const useAppStore = create<AppStore>((set) => ({
   hiddenHistoryIds: new Set(),
   activeTab: "connection",
 
-  setConnected: (connected) => set({ connected }),
+  setChannelConnected: (channel, connected) =>
+    set((state) => ({
+      channelConnected: { ...state.channelConnected, [channel]: connected },
+    })),
   setAutoSubmit: (autoSubmit) => set({ autoSubmit }),
   setSubmitKey: (submitKey) => set({ submitKey }),
   setActiveTab: (activeTab) => set({ activeTab }),

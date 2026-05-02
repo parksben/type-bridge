@@ -11,7 +11,7 @@
 
 use crate::channel::{composite_id, ChannelId};
 use crate::history::{HistoryMessage, HistoryStore, MessageStatus};
-use crate::sidecar::{SidecarBridge, SidecarCommand, SubmitConfig};
+use crate::sidecar::{SidecarBridge, SidecarBridges, SidecarCommand, SubmitConfig};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Runtime};
@@ -60,7 +60,7 @@ impl Injector {
         app: AppHandle<R>,
         history: Arc<HistoryStore>,
         submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
-        bridge: Arc<SidecarBridge>,
+        bridges: Arc<SidecarBridges>,
     ) -> Arc<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
 
@@ -71,7 +71,7 @@ impl Injector {
             app,
             history,
             submit_config,
-            bridge,
+            bridges,
         ));
 
         injector
@@ -87,9 +87,11 @@ async fn worker_loop<R: Runtime>(
     app: AppHandle<R>,
     history: Arc<HistoryStore>,
     submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
-    bridge: Arc<SidecarBridge>,
+    bridges: Arc<SidecarBridges>,
 ) {
     while let Some(msg) = rx.recv().await {
+        // 按消息渠道选 bridge 发反馈命令
+        let bridge = bridges.get(msg.channel);
         process_one(&app, &history, &submit_config, &bridge, msg).await;
     }
     tracing::info!("[queue] worker loop exited");
@@ -130,11 +132,13 @@ async fn process_one<R: Runtime>(
     history.update_status(&msg.id, MessageStatus::Sent, None);
     emit_status(app, &msg.id, "sent", None);
     let _ = app.emit(
-        "feishu://inject-result",
-        serde_json::json!({"success": true}),
+        "typebridge://inject-result",
+        serde_json::json!({"success": true, "channel": msg.channel}),
     );
-    // 发 reaction 用平台原始 message_id；复合 id 只存在 Rust / 前端侧
-    send_reaction(bridge, &msg.source_message_id, REACT_SENT);
+    // 发 reaction 用平台原始 message_id；仅支持 reaction 的渠道（飞书）才发
+    if msg.channel.capability().reactions {
+        send_reaction(bridge, &msg.source_message_id, REACT_SENT);
+    }
 
     // 4. 自动提交（可选）：注入完成后模拟"提交按键"
     //    快照读一次配置，避免在 spawn_blocking 里再拿锁
@@ -194,21 +198,26 @@ fn fail<R: Runtime>(
     );
     emit_status(app, &msg.id, "failed", Some(reason.to_string()));
     let _ = app.emit(
-        "feishu://inject-result",
-        serde_json::json!({"success": false, "reason": reason}),
+        "typebridge://inject-result",
+        serde_json::json!({"success": false, "reason": reason, "channel": msg.channel}),
     );
 
-    // 仅在失败时同步发送表情 + thread 文字说明（用原始 source_message_id）
-    send_reaction(bridge, &msg.source_message_id, REACT_FAILED);
-    bridge.send(&SidecarCommand::Reply {
-        message_id: msg.source_message_id.clone(),
-        text: format!("❌ 输入失败：{}", reason),
-    });
+    // 反馈仅对支持 reaction / thread_reply 的渠道（飞书）执行。DingTalk / WeCom
+    // 在 P2 接入流式卡片反馈后会在这里走 channel.capability() 的对应分支。
+    if msg.channel.capability().reactions {
+        send_reaction(bridge, &msg.source_message_id, REACT_FAILED);
+    }
+    if msg.channel.capability().thread_reply {
+        bridge.send(&SidecarCommand::Reply {
+            message_id: msg.source_message_id.clone(),
+            text: format!("❌ 输入失败：{}", reason),
+        });
+    }
 }
 
 fn emit_status<R: Runtime>(app: &AppHandle<R>, id: &str, status: &str, reason: Option<String>) {
     let _ = app.emit(
-        "feishu://message-status",
+        "typebridge://message-status",
         StatusPayload {
             id: id.to_string(),
             status: status.to_string(),
@@ -261,11 +270,13 @@ pub fn ingest_message<R: Runtime>(
         feedback_card_id: None,
     };
     history.append(msg);
-    let _ = app.emit("feishu://history-update", ());
+    let _ = app.emit("typebridge://history-update", ());
     emit_status(app, &id, "queued", None);
 
-    // 给用户一个"已看到"的表情反馈（用原始 source_id 调飞书 API）
-    send_reaction(bridge, &source_id, REACT_RECEIVED);
+    // 给用户一个"已看到"的表情反馈——仅支持 reaction 的渠道（飞书）才发
+    if channel.capability().reactions {
+        send_reaction(bridge, &source_id, REACT_RECEIVED);
+    }
 
     if let Err(e) = injector.enqueue(QueuedMessage {
         id,
