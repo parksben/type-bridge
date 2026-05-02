@@ -27,7 +27,7 @@ export interface HistoryMessage {
   feedback_error?: FeedbackError | null;
 }
 
-export type TabId = "connection" | "history" | "logs";
+export type TabId = "connection" | "history" | "logs" | "input";
 
 export interface SubmitKey {
   key: string;      // KeyboardEvent.code (e.g. "Enter", "KeyA", "Space")
