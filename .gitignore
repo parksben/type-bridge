@@ -22,6 +22,7 @@ src-tauri/binaries/feishu-bridge-*-apple-darwin
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+.venv-icons/
 .idea
 .DS_Store
 *.suo
