@@ -18,6 +18,8 @@ src-tauri/gen/schemas/
 
 # Go sidecar 编译产物（由 go build 生成，不入库）
 src-tauri/binaries/feishu-bridge-*-apple-darwin
+src-tauri/binaries/dingtalk-bridge-*-apple-darwin
+src-tauri/binaries/wecom-bridge-*-apple-darwin
 
 # Editor directories and files
 .vscode/*
