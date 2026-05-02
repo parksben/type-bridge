@@ -10,48 +10,38 @@ import {
   Radar,
   RotateCw,
 } from "lucide-react";
-import { useAppStore, DEFAULT_SUBMIT_KEY, type Settings } from "../../store";
+import { useAppStore, type Settings } from "../../store";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
 
 type ConnState = "idle" | "connecting" | "connected";
 
 interface FieldErrors {
-  appId?: string;
-  appSecret?: string;
+  clientId?: string;
+  clientSecret?: string;
 }
 
-export default function ConnectionTab() {
-  const [appId, setAppId] = useState("");
-  const [appSecret, setAppSecret] = useState("");
+export default function DingTalkConnectionTab() {
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [starting, setStarting] = useState(false);
   const [selftesting, setSelftesting] = useState(false);
   const [selftestResult, setSelftestResult] = useState<SelftestResult | null>(null);
 
-  const {
-    channelConnected,
-    setAutoSubmit,
-    setSubmitKey,
-    addLog,
-  } = useAppStore();
-
-  const connected = channelConnected.feishu === true;
+  const { channelConnected, addLog } = useAppStore();
+  const connected = channelConnected.dingtalk === true;
   const connState: ConnState = connected ? "connected" : starting ? "connecting" : "idle";
 
   useEffect(() => {
     invoke<Settings>("get_settings").then((s) => {
-      setAppId(s.feishu_app_id);
-      setAppSecret(s.feishu_app_secret);
-      // 顺带 hydrate 输入设置到 Zustand，让 InputSettingsTab 首次打开就有值
-      setAutoSubmit(s.auto_submit);
-      setSubmitKey(s.submit_key ?? DEFAULT_SUBMIT_KEY);
+      setClientId(s.dingtalk_client_id);
+      setClientSecret(s.dingtalk_client_secret);
       setHydrated(true);
     });
   }, []);
 
-  // 凭据变更时去抖持久化（500ms）——读当前全量 settings 再合并回写，
-  // 避免清空 InputSettingsTab 拥有的 auto_submit / submit_key 字段
+  // 去抖持久化——读全量 settings 再 merge 回写，避免清空其他字段
   useEffect(() => {
     if (!hydrated) return;
     const id = setTimeout(async () => {
@@ -60,13 +50,13 @@ export default function ConnectionTab() {
       await invoke("save_settings", {
         settings: {
           ...current,
-          feishu_app_id: appId.trim(),
-          feishu_app_secret: appSecret.trim(),
+          dingtalk_client_id: clientId.trim(),
+          dingtalk_client_secret: clientSecret.trim(),
         },
       }).catch(() => {});
     }, 500);
     return () => clearTimeout(id);
-  }, [appId, appSecret, hydrated]);
+  }, [clientId, clientSecret, hydrated]);
 
   useEffect(() => {
     if (connected) setStarting(false);
@@ -74,30 +64,27 @@ export default function ConnectionTab() {
 
   function validate(): FieldErrors {
     const errs: FieldErrors = {};
-    const id = appId.trim();
-    const secret = appSecret.trim();
-    if (!id) errs.appId = "App ID 不能为空";
-    else if (!id.startsWith("cli_")) errs.appId = "App ID 应以 cli_ 开头";
-    if (!secret) errs.appSecret = "App Secret 不能为空";
+    if (!clientId.trim()) errs.clientId = "Client ID 不能为空";
+    if (!clientSecret.trim()) errs.clientSecret = "Client Secret 不能为空";
     return errs;
   }
 
   async function handleStart() {
     const errs = validate();
     setFieldErrors(errs);
-    setSelftestResult(null); // 重新启动时清掉旧的自检结果
+    setSelftestResult(null);
     if (Object.keys(errs).length > 0) return;
 
     setStarting(true);
     try {
-      await invoke("start_feishu", {
-        appId: appId.trim(),
-        appSecret: appSecret.trim(),
+      await invoke("start_dingtalk", {
+        clientId: clientId.trim(),
+        clientSecret: clientSecret.trim(),
       });
-      addLog({ kind: "connect", text: "正在启动长连接..." });
+      addLog({ kind: "connect", channel: "dingtalk", text: "正在启动长连接..." });
     } catch (e) {
       setStarting(false);
-      addLog({ kind: "error", text: `启动失败: ${e}` });
+      addLog({ kind: "error", channel: "dingtalk", text: `启动失败: ${e}` });
     }
   }
 
@@ -105,36 +92,30 @@ export default function ConnectionTab() {
     setSelftesting(true);
     setSelftestResult(null);
     try {
-      const res = await invoke<SelftestResult>("run_selftest", { channel: "feishu" });
+      const res = await invoke<SelftestResult>("run_selftest", { channel: "dingtalk" });
       setSelftestResult(res);
-      const allOk = res.credentials_ok && res.probes.every((p) => p.ok);
-      const failedCount = res.credentials_ok
-        ? res.probes.filter((p) => !p.ok).length
-        : -1;
       addLog({
-        kind: allOk ? "connect" : "error",
-        text: allOk
-          ? "连接测试通过：全部 API scope 校验成功"
-          : res.credentials_ok
-          ? `连接测试：${failedCount} 项 scope 缺失`
+        kind: res.credentials_ok ? "connect" : "error",
+        channel: "dingtalk",
+        text: res.credentials_ok
+          ? "连接测试通过：凭据已通过 WSS 鉴权"
           : `连接测试失败：${res.credentials_reason}`,
       });
     } catch (e) {
-      // invoke 本身抛异常（sidecar 未启动 / 超时等）→ 造一个凭据错误型结果展示
       setSelftestResult({
         credentials_ok: false,
         credentials_reason: String(e),
         probes: [],
       });
-      addLog({ kind: "error", text: `连接测试异常：${e}` });
+      addLog({ kind: "error", channel: "dingtalk", text: `连接测试异常：${e}` });
     } finally {
       setSelftesting(false);
     }
   }
 
-  async function openFeishuDevPortal() {
+  async function openDingTalkDevPortal() {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl("https://open.feishu.cn/app").catch(() => {});
+    await openUrl("https://open-dev.dingtalk.com").catch(() => {});
   }
 
   async function openUrlFromChecklist(url: string) {
@@ -142,23 +123,22 @@ export default function ConnectionTab() {
     await openUrl(url).catch(() => {});
   }
 
-  // 校验错误清空时机：输入变化时清除对应错误
-  const appIdError = fieldErrors.appId;
-  const appSecretError = fieldErrors.appSecret;
+  const clientIdError = fieldErrors.clientId;
+  const clientSecretError = fieldErrors.clientSecret;
   useEffect(() => {
-    if (appIdError) setFieldErrors((e) => ({ ...e, appId: undefined }));
-  }, [appId]);
+    if (clientIdError) setFieldErrors((e) => ({ ...e, clientId: undefined }));
+  }, [clientId]);
   useEffect(() => {
-    if (appSecretError) setFieldErrors((e) => ({ ...e, appSecret: undefined }));
-  }, [appSecret]);
+    if (clientSecretError) setFieldErrors((e) => ({ ...e, clientSecret: undefined }));
+  }, [clientSecret]);
 
-  const canStart = !starting && appId.trim().length > 0 && appSecret.trim().length > 0;
+  const canStart = !starting && clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canSelftest = connected && !selftesting;
 
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
       <div className="max-w-md mx-auto flex flex-col gap-5">
-        {/* 引导 banner：降低首次配置门槛 */}
+        {/* 引导 banner */}
         <div
           className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
           style={{
@@ -172,37 +152,37 @@ export default function ConnectionTab() {
             className="shrink-0 mt-0.5 text-accent"
           />
           <div className="flex-1 text-text">
-            还没有自建应用？先到{" "}
+            还没有钉钉应用？先到{" "}
             <button
-              onClick={openFeishuDevPortal}
+              onClick={openDingTalkDevPortal}
               className="text-accent hover:underline inline-flex items-center gap-0.5"
             >
-              飞书开发者后台
+              钉钉开发者后台
               <ExternalLink size={10} strokeWidth={2} />
             </button>{" "}
-            创建一个，复制 App ID / Secret 到下方。
+            创建「企业内部应用」，加机器人能力 + 选 Stream 模式后复制 Client ID / Secret 到下方。
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <KeyRound size={12} strokeWidth={1.75} />
-            App ID
+            Client ID
           </label>
           <input
             className="tb-input"
-            placeholder="cli_xxxxxxxxxxxxxxxx"
-            value={appId}
-            onChange={(e) => setAppId(e.target.value)}
+            placeholder="dingxxxxxxxxxxxxxxxx"
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
-            style={appIdError ? { borderColor: "var(--error)" } : undefined}
+            style={clientIdError ? { borderColor: "var(--error)" } : undefined}
           />
-          {appIdError && (
+          {clientIdError && (
             <span className="text-[11px] text-error flex items-center gap-1 mt-0.5">
               <AlertCircle size={11} strokeWidth={2} />
-              {appIdError}
+              {clientIdError}
             </span>
           )}
         </div>
@@ -210,28 +190,27 @@ export default function ConnectionTab() {
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <Lock size={12} strokeWidth={1.75} />
-            App Secret
+            Client Secret
           </label>
           <input
             type="password"
             className="tb-input"
-            placeholder="请输入 App Secret"
-            value={appSecret}
-            onChange={(e) => setAppSecret(e.target.value)}
+            placeholder="请输入 Client Secret"
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
-            style={appSecretError ? { borderColor: "var(--error)" } : undefined}
+            style={clientSecretError ? { borderColor: "var(--error)" } : undefined}
           />
-          {appSecretError && (
+          {clientSecretError && (
             <span className="text-[11px] text-error flex items-center gap-1 mt-0.5">
               <AlertCircle size={11} strokeWidth={2} />
-              {appSecretError}
+              {clientSecretError}
             </span>
           )}
         </div>
 
-        {/* 两个按钮 */}
         <div className="flex gap-2 mt-1">
           <button
             onClick={handleStart}
@@ -255,12 +234,12 @@ export default function ConnectionTab() {
             disabled={!canSelftest}
             className="flex-1 flex items-center justify-center gap-1.5 text-[13px] rounded-lg py-[10px] transition-colors"
             style={{
-              background: canSelftest ? "var(--surface-2)" : "var(--surface-2)",
+              background: "var(--surface-2)",
               border: `1px solid ${canSelftest ? "var(--border-strong)" : "var(--border)"}`,
               color: canSelftest ? "var(--text)" : "var(--subtle)",
               cursor: canSelftest ? "pointer" : "not-allowed",
             }}
-            title={connected ? "向飞书发一次 ping 请求以验证凭据和网络" : "请先启动长连接"}
+            title={connected ? "验证 WSS 鉴权通过情况" : "请先启动长连接"}
           >
             {selftesting ? (
               <>
@@ -292,7 +271,7 @@ export default function ConnectionTab() {
           </span>
         </div>
 
-        {/* 启动成功后：引导去后台验证 */}
+        {/* 启动成功后：引导去后台 */}
         {connected && !selftestResult && (
           <div
             className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
@@ -304,15 +283,15 @@ export default function ConnectionTab() {
           >
             <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
             <div className="flex-1">
-              长连接已启动。请前往{" "}
+              长连接已启动。若没收到消息，去{" "}
               <button
-                onClick={openFeishuDevPortal}
+                onClick={openDingTalkDevPortal}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                飞书开发者后台
+                钉钉开发者后台
                 <ExternalLink size={10} strokeWidth={2} />
               </button>{" "}
-              的「事件订阅」里完成长连接验证，再点「测试连接」验证双向通信。
+              确认「消息接收模式」已选 Stream 模式；或点「测试连接」验证凭据可用。
             </div>
           </div>
         )}
@@ -321,8 +300,8 @@ export default function ConnectionTab() {
         {selftestResult && (
           <SelftestChecklist
             result={selftestResult}
-            channel="feishu"
-            appIdOrEquivalent={appId.trim()}
+            channel="dingtalk"
+            appIdOrEquivalent={clientId.trim()}
             onOpenUrl={openUrlFromChecklist}
           />
         )}

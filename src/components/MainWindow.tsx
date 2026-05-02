@@ -1,9 +1,16 @@
 import { useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useAppStore, CHANNEL_LABEL, type ChannelId } from "../store";
+import {
+  useAppStore,
+  CHANNEL_LABEL,
+  type ChannelId,
+  type Settings,
+} from "../store";
 import SideBar from "./SideBar";
 import ErrorBoundary from "./ErrorBoundary";
 import ConnectionTab from "./tabs/ConnectionTab";
+import DingTalkConnectionTab from "./tabs/DingTalkConnectionTab";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
 import InputSettingsTab from "./tabs/InputSettingsTab";
@@ -11,6 +18,20 @@ import ComingSoonTab from "./tabs/ComingSoonTab";
 
 export default function MainWindow() {
   const { activeTab, setChannelConnected, addLog } = useAppStore();
+
+  // 启动时拉一次 settings，把已配置凭据的渠道注册到 channelConnected
+  // （初始都是 false）。这样 sidebar 底部能立刻显示对应渠道行，而不是"尚未配置"。
+  // 后续 typebridge://status 事件会按实际连接状态更新该行。
+  useEffect(() => {
+    invoke<Settings>("get_settings").then((s) => {
+      if (s.feishu_app_id.trim() && s.feishu_app_secret.trim()) {
+        setChannelConnected("feishu", false);
+      }
+      if (s.dingtalk_client_id.trim() && s.dingtalk_client_secret.trim()) {
+        setChannelConnected("dingtalk", false);
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const un1 = listen<{ channel: ChannelId; connected: boolean }>(
@@ -65,7 +86,7 @@ export default function MainWindow() {
         )}
         {activeTab === "connection-dingtalk" && (
           <ErrorBoundary label="连接钉钉 Bot tab">
-            <ComingSoonTab platform="dingtalk" />
+            <DingTalkConnectionTab />
           </ErrorBoundary>
         )}
         {activeTab === "connection-wecom" && (
