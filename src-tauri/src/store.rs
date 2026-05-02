@@ -42,6 +42,12 @@ pub struct Settings {
     pub feishu_app_id: String,
     #[serde(default)]
     pub feishu_app_secret: String,
+    /// 钉钉 Stream Mode 凭据（P1 接入）。Client ID 即钉钉开放平台的 AppKey。
+    #[serde(default)]
+    pub dingtalk_client_id: String,
+    /// 钉钉 Client Secret 即 AppSecret。
+    #[serde(default)]
+    pub dingtalk_client_secret: String,
     /// 输入后自动提交。默认开启。
     #[serde(default = "default_true")]
     pub auto_submit: bool,
@@ -55,6 +61,8 @@ impl Default for Settings {
         Self {
             feishu_app_id: String::new(),
             feishu_app_secret: String::new(),
+            dingtalk_client_id: String::new(),
+            dingtalk_client_secret: String::new(),
             auto_submit: true,
             submit_key: SubmitKey::default(),
         }
@@ -81,6 +89,14 @@ pub fn get_settings(app: tauri::AppHandle<Wry>) -> Settings {
             .get("feishu_app_secret")
             .and_then(|v| v.as_str().map(String::from))
             .unwrap_or_default(),
+        dingtalk_client_id: store
+            .get("dingtalk_client_id")
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default(),
+        dingtalk_client_secret: store
+            .get("dingtalk_client_secret")
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default(),
         auto_submit: store
             .get("auto_submit")
             .and_then(|v| v.as_bool())
@@ -94,6 +110,8 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
     let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
     store.set("feishu_app_id", settings.feishu_app_id);
     store.set("feishu_app_secret", settings.feishu_app_secret);
+    store.set("dingtalk_client_id", settings.dingtalk_client_id);
+    store.set("dingtalk_client_secret", settings.dingtalk_client_secret);
     store.set("auto_submit", settings.auto_submit);
     store.set(
         "submit_key",

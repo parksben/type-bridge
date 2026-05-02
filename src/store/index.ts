@@ -71,6 +71,18 @@ export const DEFAULT_SUBMIT_KEY: SubmitKey = {
   ctrl: false,
 };
 
+/// Settings 是 Rust `store::Settings` 的 TS 镜像。包含所有渠道凭据 + 输入设置。
+/// 任一 tab 修改自己关心的字段时必须先 `get_settings` 再 merge 回写，避免
+/// 清空其他渠道 / 其他 tab 拥有的字段。
+export interface Settings {
+  feishu_app_id: string;
+  feishu_app_secret: string;
+  dingtalk_client_id: string;
+  dingtalk_client_secret: string;
+  auto_submit: boolean;
+  submit_key: SubmitKey;
+}
+
 interface AppStore {
   connected: boolean;
   autoSubmit: boolean;

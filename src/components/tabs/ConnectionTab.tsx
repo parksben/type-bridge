@@ -10,16 +10,8 @@ import {
   Radar,
   RotateCw,
 } from "lucide-react";
-import { useAppStore, DEFAULT_SUBMIT_KEY, type SubmitKey } from "../../store";
+import { useAppStore, DEFAULT_SUBMIT_KEY, type Settings } from "../../store";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
-
-
-interface Settings {
-  feishu_app_id: string;
-  feishu_app_secret: string;
-  auto_submit: boolean;
-  submit_key: SubmitKey;
-}
 
 type ConnState = "idle" | "connecting" | "connected";
 
@@ -66,10 +58,9 @@ export default function ConnectionTab() {
       if (!current) return;
       await invoke("save_settings", {
         settings: {
+          ...current,
           feishu_app_id: appId.trim(),
           feishu_app_secret: appSecret.trim(),
-          auto_submit: current.auto_submit,
-          submit_key: current.submit_key,
         },
       }).catch(() => {});
     }, 500);

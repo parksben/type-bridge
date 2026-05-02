@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Keyboard, Zap } from "lucide-react";
-import { useAppStore, DEFAULT_SUBMIT_KEY, type SubmitKey } from "../../store";
+import { useAppStore, DEFAULT_SUBMIT_KEY, type Settings } from "../../store";
 import KeyBindInput from "../KeyBindInput";
-
-interface Settings {
-  feishu_app_id: string;
-  feishu_app_secret: string;
-  auto_submit: boolean;
-  submit_key: SubmitKey;
-}
 
 export default function InputSettingsTab() {
   const { autoSubmit, submitKey, setAutoSubmit, setSubmitKey } = useAppStore();
@@ -36,8 +29,7 @@ export default function InputSettingsTab() {
       if (!current) return;
       await invoke("save_settings", {
         settings: {
-          feishu_app_id: current.feishu_app_id,
-          feishu_app_secret: current.feishu_app_secret,
+          ...current,
           auto_submit: autoSubmit,
           submit_key: submitKey,
         },
