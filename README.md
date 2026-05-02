@@ -181,7 +181,12 @@ type-bridge/
 ├── website/                      产品官网 (Next.js)
 │   ├── netlify.toml              Netlify 零手动部署配置
 │   ├── app/                      Next.js 15 App Router
-│   │   ├── page.tsx              单页落地 (Hero / 特性 / 下载)
+│   │   ├── page.tsx              首页 (Hero / 工作原理 / 特性 / 接入教程 / 下载)
+│   │   ├── docs/
+│   │   │   ├── page.tsx          文档中心（三渠道导航入口）
+│   │   │   ├── feishu/page.tsx   飞书自建应用接入教程（自维护）
+│   │   │   ├── dingtalk/page.tsx 钉钉企业内部应用接入教程（自维护）
+│   │   │   └── wecom/page.tsx    企业微信自建应用接入教程（自维护）
 │   │   └── download/[arch]       GitHub Release .dmg 代理转发
 │   └── package.json
 │
