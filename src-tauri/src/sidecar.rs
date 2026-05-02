@@ -273,16 +273,18 @@ fn dispatch_event<R: Runtime>(
             let _ = app.emit("feishu://status", evt);
         }
         SidecarEvent::Message { message_id, sender, text, .. } => {
-            let id = message_id
+            let source_id = message_id
                 .clone()
                 .unwrap_or_else(|| format!("local-{}", uuid::Uuid::new_v4()));
             let _ = app.emit("feishu://message", evt);
+            // P0：仅飞书 sidecar；P1 起按 event.channel 字段分路
             ingest_message(
                 app,
                 &ctx.history,
                 &ctx.injector,
                 &ctx.bridge,
-                id,
+                crate::channel::ChannelId::Feishu,
+                source_id,
                 sender.clone(),
                 text.clone(),
                 None,
@@ -312,6 +314,7 @@ fn dispatch_event<R: Runtime>(
                 &ctx.history,
                 &ctx.injector,
                 &ctx.bridge,
+                crate::channel::ChannelId::Feishu,
                 message_id.clone(),
                 sender.clone(),
                 text.clone(),
@@ -351,8 +354,17 @@ fn dispatch_event<R: Runtime>(
                 msg: msg.clone(),
                 help_url,
             };
-            if ctx.history.attach_feedback_error(message_id, err) {
-                let _ = app.emit("feishu://history-update", ());
+            // sidecar 传的是飞书原始 message_id；用 find_by_source 定位 HistoryMessage
+            // 拿到复合 id 再去 attach_feedback_error。P1 起 sidecar 事件自带 channel
+            // 字段，这里的 Feishu 硬编码会改成 evt.channel。
+            let composite = ctx
+                .history
+                .find_by_source(crate::channel::ChannelId::Feishu, message_id)
+                .map(|m| m.id);
+            if let Some(cid) = composite {
+                if ctx.history.attach_feedback_error(&cid, err) {
+                    let _ = app.emit("feishu://history-update", ());
+                }
             }
         }
     }
@@ -459,6 +471,8 @@ pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Resul
 
     ctx.injector.enqueue(crate::queue::QueuedMessage {
         id,
+        channel: msg.channel,
+        source_message_id: msg.source_message_id,
         text: msg.text,
         image_path: msg.image_path.clone(),
         image_mime: msg.image_path.as_ref().map(|_| "image/png".to_string()),

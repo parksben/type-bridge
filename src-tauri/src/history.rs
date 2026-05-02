@@ -6,7 +6,12 @@
 //
 // Capacity: HISTORY_MAX entries (FIFO eviction; oldest pruned when over cap).
 // Concurrency: single RwLock; writes trigger full file rewrite (cheap at this scale).
+//
+// v0.6 P0：HistoryMessage 增加 channel / source_message_id / feedback_card_id
+// 三个字段；id 变复合格式 "{channel}:{source_id}" 以支持多渠道。旧 history.json
+// 里没带这些字段的记录视作飞书消息，启动时一次性迁移（详见 migrate_legacy）。
 
+use crate::channel::{composite_id, ChannelId};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
@@ -51,7 +56,18 @@ pub struct FeedbackError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryMessage {
+    /// 复合 id `{channel}:{source_message_id}`，跨渠道全局唯一。
+    /// 例：`feishu:om_xxx` / `dingtalk:msgABC`。
+    /// 迁移期：旧记录只有原始 source_id 时，`migrate_legacy` 会把它改写成
+    /// 复合格式并回填 source_message_id。
     pub id: String,
+    /// 消息所属渠道。旧记录没带此字段时默认为飞书。
+    #[serde(default)]
+    pub channel: ChannelId,
+    /// 平台原始 message_id——给 sidecar 调对应平台 API 用（发反馈 / 回复 / 下载资源）。
+    /// 旧记录默认为空，`migrate_legacy` 阶段从 `id` 字段搬过来。
+    #[serde(default)]
+    pub source_message_id: String,
     pub received_at: i64,
     pub updated_at: i64,
     pub sender: String,
@@ -64,6 +80,12 @@ pub struct HistoryMessage {
     /// 与 status 独立——消息可能已成功注入，仅双向反馈失败。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub feedback_error: Option<FeedbackError>,
+    /// 钉钉 / 企微等非 reaction 渠道用"互动卡片 + 流式更新"实现状态反馈，
+    /// 需要保存初始发送卡片的 card_id 供后续 sent/failed 更新使用。
+    /// 飞书不使用此字段。P0 仅落地 schema，不消费——sidecar 重启后 card_id 会
+    /// 丢失，详见 TECH_DESIGN §29.3。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feedback_card_id: Option<String>,
 }
 
 pub struct HistoryStore {
@@ -80,13 +102,20 @@ impl HistoryStore {
         let _ = fs::create_dir_all(&base);
         let _ = fs::create_dir_all(&images_dir);
 
-        let messages = load_from_disk(&file_path);
+        let mut messages = load_from_disk(&file_path);
+        let migrated = migrate_legacy(&mut messages);
 
         let store = Arc::new(Self {
             file_path,
             images_dir,
             messages: RwLock::new(messages),
         });
+
+        // 迁移后立刻落盘，下次启动不再重跑
+        if migrated > 0 {
+            tracing::info!("[history] migrated {} legacy records to composite id", migrated);
+            store.flush();
+        }
 
         // 清理孤儿图片
         store.cleanup_orphan_images();
@@ -210,6 +239,20 @@ impl HistoryStore {
         guard.iter().find(|m| m.id == id).cloned()
     }
 
+    /// 按 (channel, source_message_id) 查找消息。sidecar 回传的事件里
+    /// 只带原始平台 message_id，不知道复合 id，用此方法定位。
+    pub fn find_by_source(
+        &self,
+        channel: ChannelId,
+        source_id: &str,
+    ) -> Option<HistoryMessage> {
+        let guard = self.messages.read().unwrap();
+        guard
+            .iter()
+            .find(|m| m.channel == channel && m.source_message_id == source_id)
+            .cloned()
+    }
+
     /// 倒序返回所有消息（最新在最前）
     pub fn all_desc(&self) -> Vec<HistoryMessage> {
         let guard = self.messages.read().unwrap();
@@ -271,6 +314,26 @@ fn load_from_disk(path: &PathBuf) -> Vec<HistoryMessage> {
     }
 }
 
+/// 把 v0.5 及以前的 HistoryMessage（只有原始 source_id、无 channel 前缀）
+/// 迁移为 v0.6 的复合 id + source_message_id 结构。返回迁移条数。
+///
+/// 迁移规则：`source_message_id.is_empty()` 即视作旧记录：
+///   - `source_message_id` ← 原 `id` 值
+///   - `id` ← `"feishu:{原 id}"`（channel 已由 serde default 设为 Feishu）
+///
+/// 迁移幂等：第二次调用时 `source_message_id` 已非空，直接跳过。
+fn migrate_legacy(messages: &mut [HistoryMessage]) -> usize {
+    let mut migrated = 0;
+    for m in messages.iter_mut() {
+        if m.source_message_id.is_empty() {
+            m.source_message_id = m.id.clone();
+            m.id = composite_id(m.channel, &m.source_message_id);
+            migrated += 1;
+        }
+    }
+    migrated
+}
+
 pub fn typebridge_dir() -> PathBuf {
     dirs::home_dir()
         .map(|h| h.join(".typebridge"))
@@ -292,5 +355,89 @@ fn mime_to_ext(mime: &str) -> &'static str {
         "image/gif" => "gif",
         "image/webp" => "webp",
         _ => "bin",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn legacy_msg(id: &str) -> HistoryMessage {
+        HistoryMessage {
+            id: id.to_string(),
+            channel: ChannelId::Feishu,
+            source_message_id: String::new(), // 旧记录：空值
+            received_at: 1700000000,
+            updated_at: 1700000000,
+            sender: "ou_test".into(),
+            text: "hi".into(),
+            image_path: None,
+            status: MessageStatus::Sent,
+            failure_reason: None,
+            feedback_error: None,
+            feedback_card_id: None,
+        }
+    }
+
+    #[test]
+    fn migrate_legacy_feishu_messages() {
+        let mut msgs = vec![legacy_msg("om_abc"), legacy_msg("om_def")];
+        let n = migrate_legacy(&mut msgs);
+        assert_eq!(n, 2);
+        assert_eq!(msgs[0].id, "feishu:om_abc");
+        assert_eq!(msgs[0].source_message_id, "om_abc");
+        assert_eq!(msgs[1].id, "feishu:om_def");
+        assert_eq!(msgs[1].source_message_id, "om_def");
+    }
+
+    #[test]
+    fn migration_is_idempotent() {
+        let mut msgs = vec![legacy_msg("om_abc")];
+        let n1 = migrate_legacy(&mut msgs);
+        let n2 = migrate_legacy(&mut msgs);
+        assert_eq!(n1, 1);
+        assert_eq!(n2, 0); // 第二次跑发现已迁移，不改动
+        assert_eq!(msgs[0].id, "feishu:om_abc");
+    }
+
+    #[test]
+    fn new_schema_records_unchanged() {
+        let mut msgs = vec![HistoryMessage {
+            id: "dingtalk:msgXYZ".into(),
+            channel: ChannelId::DingTalk,
+            source_message_id: "msgXYZ".into(),
+            received_at: 1700000000,
+            updated_at: 1700000000,
+            sender: "staff_1".into(),
+            text: "hi".into(),
+            image_path: None,
+            status: MessageStatus::Sent,
+            failure_reason: None,
+            feedback_error: None,
+            feedback_card_id: None,
+        }];
+        let n = migrate_legacy(&mut msgs);
+        assert_eq!(n, 0);
+        assert_eq!(msgs[0].id, "dingtalk:msgXYZ");
+    }
+
+    #[test]
+    fn serde_default_on_legacy_json() {
+        // 模拟 v0.5 写出来的 history.json 条目（无 channel / source_message_id）
+        let legacy_json = r#"{
+            "id": "om_abc",
+            "received_at": 1700000000,
+            "updated_at": 1700000000,
+            "sender": "ou_test",
+            "text": "hi",
+            "image_path": null,
+            "status": "sent"
+        }"#;
+        let m: HistoryMessage = serde_json::from_str(legacy_json).unwrap();
+        assert_eq!(m.channel, ChannelId::Feishu);
+        assert_eq!(m.source_message_id, "");
+        assert_eq!(m.feedback_card_id, None);
+        // 迁移前 id 仍是原始值；migrate_legacy 跑完才变成复合 id
+        assert_eq!(m.id, "om_abc");
     }
 }

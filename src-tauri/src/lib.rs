@@ -1,3 +1,4 @@
+pub mod channel;
 pub mod history;
 pub mod injector;
 pub mod logger;

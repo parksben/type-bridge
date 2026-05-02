@@ -9,6 +9,7 @@
 //   3. status → Sent / Failed, emit feishu://message-status + feishu://inject-result
 //   4. send reaction (DONE/CRY) + failure thread reply to Go sidecar
 
+use crate::channel::{composite_id, ChannelId};
 use crate::history::{HistoryMessage, HistoryStore, MessageStatus};
 use crate::sidecar::{SidecarBridge, SidecarCommand, SubmitConfig};
 use serde::Serialize;
@@ -29,7 +30,13 @@ pub const REACT_FAILED: &str = "CRY";    // 😢 失败
 
 #[derive(Debug, Clone)]
 pub struct QueuedMessage {
+    /// 复合 id：`{channel}:{source_id}`。用于 history 状态更新 / 前端事件
+    /// payload / React key。
     pub id: String,
+    /// 消息所属渠道。P0 仅飞书，P1 起会有钉钉 / 企微。
+    pub channel: ChannelId,
+    /// 平台原始 message_id。发 reaction / reply / 下载资源时给 sidecar 用。
+    pub source_message_id: String,
     pub text: String,
     pub image_path: Option<String>, // 相对 typebridge_dir 的路径
     pub image_mime: Option<String>,
@@ -126,7 +133,8 @@ async fn process_one<R: Runtime>(
         "feishu://inject-result",
         serde_json::json!({"success": true}),
     );
-    send_reaction(bridge, &msg.id, REACT_SENT);
+    // 发 reaction 用平台原始 message_id；复合 id 只存在 Rust / 前端侧
+    send_reaction(bridge, &msg.source_message_id, REACT_SENT);
 
     // 4. 自动提交（可选）：注入完成后模拟"提交按键"
     //    快照读一次配置，避免在 spawn_blocking 里再拿锁
@@ -190,10 +198,10 @@ fn fail<R: Runtime>(
         serde_json::json!({"success": false, "reason": reason}),
     );
 
-    // 仅在失败时同步发送表情 + thread 文字说明
-    send_reaction(bridge, &msg.id, REACT_FAILED);
+    // 仅在失败时同步发送表情 + thread 文字说明（用原始 source_message_id）
+    send_reaction(bridge, &msg.source_message_id, REACT_FAILED);
     bridge.send(&SidecarCommand::Reply {
-        message_id: msg.id.clone(),
+        message_id: msg.source_message_id.clone(),
         text: format!("❌ 输入失败：{}", reason),
     });
 }
@@ -221,21 +229,27 @@ fn send_reaction(bridge: &Arc<SidecarBridge>, message_id: &str, emoji_type: &str
     });
 }
 
-/// Helper: 刚到的 Feishu 消息入队流程（写历史 + 发 EYES + enqueue）
+/// Helper: 刚到的消息入队流程（写历史 + 发 EYES + enqueue）。
+/// `source_id` 是平台原始 message_id（飞书 `om_xxx` / 钉钉 `msgXXX` / ...）；
+/// 内部会构造复合 id `{channel}:{source_id}` 作为 HistoryMessage.id。
 pub fn ingest_message<R: Runtime>(
     app: &AppHandle<R>,
     history: &Arc<HistoryStore>,
     injector: &Arc<Injector>,
     bridge: &Arc<SidecarBridge>,
-    id: String,
+    channel: ChannelId,
+    source_id: String,
     sender: String,
     text: String,
     image_path: Option<String>,
     image_mime: Option<String>,
 ) {
     let now = now_secs();
+    let id = composite_id(channel, &source_id);
     let msg = HistoryMessage {
         id: id.clone(),
+        channel,
+        source_message_id: source_id.clone(),
         received_at: now,
         updated_at: now,
         sender,
@@ -244,16 +258,19 @@ pub fn ingest_message<R: Runtime>(
         status: MessageStatus::Queued,
         failure_reason: None,
         feedback_error: None,
+        feedback_card_id: None,
     };
     history.append(msg);
     let _ = app.emit("feishu://history-update", ());
     emit_status(app, &id, "queued", None);
 
-    // 给用户一个"已看到"的表情反馈
-    send_reaction(bridge, &id, REACT_RECEIVED);
+    // 给用户一个"已看到"的表情反馈（用原始 source_id 调飞书 API）
+    send_reaction(bridge, &source_id, REACT_RECEIVED);
 
     if let Err(e) = injector.enqueue(QueuedMessage {
         id,
+        channel,
+        source_message_id: source_id,
         text,
         image_path,
         image_mime,
