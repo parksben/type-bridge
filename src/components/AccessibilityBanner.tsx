@@ -55,7 +55,7 @@ export default function AccessibilityBanner() {
       <div className="flex-1">
         <div className="font-medium mb-0.5">辅助功能权限未授予</div>
         <div className="text-muted text-[11.5px] mb-1.5">
-          没有此权限，收到的消息将无法被写入到焦点输入框。授予后应用会自动检测，无需手动刷新。
+          没有此权限，应用无法模拟 Cmd+V 把消息粘贴到前台应用。授予后应用会自动检测，无需手动刷新。
         </div>
         <button
           onClick={openPrefs}

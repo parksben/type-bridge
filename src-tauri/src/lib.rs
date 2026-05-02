@@ -1,7 +1,6 @@
 pub mod history;
 pub mod injector;
 pub mod logger;
-pub mod notification;
 pub mod queue;
 pub mod sidecar;
 pub mod store;
@@ -18,7 +17,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             store::get_settings,
             store::save_settings,
@@ -61,12 +59,6 @@ pub fn run() {
             };
             let ctx = AppContext::new(app.handle().clone(), submit_config);
             app.manage(ctx);
-
-            #[cfg(target_os = "macos")]
-            {
-                use tauri_plugin_notification::NotificationExt;
-                let _ = app.notification().request_permission();
-            }
 
             // 启动后广播一次辅助功能权限状态，前端 ConnectionTab 据此决定是否
             // 展示 banner；前端后续会每 3s 主动 check_accessibility 轮询直到授予
