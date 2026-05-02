@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <!-- Background subtle gradient: off-white to warm cream -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fafaf7"/>
+      <stop offset="100%" stop-color="#f3f0ea"/>
+    </linearGradient>
+
+    <!-- Bridge gradient: vibrant warm orange to deep terracotta -->
+    <linearGradient id="bridgeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f2682b"/>
+      <stop offset="35%" stop-color="#d9480f"/>
+      <stop offset="100%" stop-color="#9c340b"/>
+    </linearGradient>
+
+    <!-- Bridge soft shadow -->
+    <filter id="bridgeShadow" x="-10%" y="-5%" width="120%" height="115%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#9a3412" flood-opacity="0.18"/>
+    </filter>
+
+    <!-- Subtle inner shadow on background squircle for depth -->
+    <filter id="innerGlow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="32" result="blur"/>
+      <feOffset dx="0" dy="4" result="offsetBlur"/>
+      <feComposite in="SourceGraphic" in2="offsetBlur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- ── Background Squircle ── -->
+  <!-- Approximating macOS squircle with smooth bezier corners -->
+  <path d="
+    M 512 32
+    C 276 32 170 32 110 60
+    C 50 88 32 124 32 170
+    C 32 220 32 264 32 512
+    C 32 760 32 804 32 854
+    C 32 900 50 936 110 964
+    C 170 992 276 992 512 992
+    C 748 992 854 992 914 964
+    C 974 936 992 900 992 854
+    C 992 804 992 760 992 512
+    C 992 264 992 220 992 170
+    C 992 124 974 88 914 60
+    C 854 32 748 32 512 32
+    Z
+  " fill="url(#bgGrad)"/>
+
+  <!-- Subtle top highlight on background -->
+  <path d="
+    M 512 48
+    C 296 48 196 48 140 74
+    C 84 100 64 134 64 176
+    C 64 222 64 264 64 512
+    C 64 760 64 802 64 848
+    C 64 890 84 924 140 950
+    C 196 976 296 976 512 976
+    C 728 976 828 976 884 950
+    C 920 934 940 912 948 886
+  " stroke="white" stroke-opacity="0.25" stroke-width="1.5" fill="none"/>
+
+  <!-- ── Bridge Symbol ── -->
+  <!-- 
+    A continuous thick stroke forms the bridge:
+    - Two vertical pillars connected by a semicircular arch
+    - Round linecaps give soft, friendly pillar feet
+    - The negative space between pillars evokes a typing cursor
+  -->
+  <g filter="url(#bridgeShadow)">
+    <path d="
+      M 364 704
+      L 364 368
+      A 148 148 0 0 1 660 368
+      L 660 704
+    " stroke="url(#bridgeGrad)" stroke-width="132" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- ── Arch Inner Highlight ── -->
+  <!-- Thin highlight along the inner curve of the arch for 3D depth -->
+  <path d="
+    M 430 388
+    A 82 82 0 0 1 594 388
+  " stroke="white" stroke-opacity="0.10" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+  <!-- ── Pillar Inner Edge Highlights ── -->
+  <line x1="430" y1="420" x2="430" y2="680" stroke="white" stroke-opacity="0.06" stroke-width="2" stroke-linecap="round"/>
+  <line x1="594" y1="420" x2="594" y2="680" stroke="white" stroke-opacity="0.06" stroke-width="2" stroke-linecap="round"/>
+</svg>

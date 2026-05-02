@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <!-- Warm gradient background that fills entire canvas -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#faf8f5"/>
+      <stop offset="100%" stop-color="#f0ebe0"/>
+    </linearGradient>
+    <!-- Bridge gradient -->
+    <linearGradient id="bridgeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f2682b"/>
+      <stop offset="35%" stop-color="#d9480f"/>
+      <stop offset="100%" stop-color="#9c340b"/>
+    </linearGradient>
+    <filter id="bridgeShadow" x="-12%" y="-6%" width="124%" height="118%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#9a3412" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Full-canvas background -->
+  <rect width="1024" height="1024" fill="url(#bgGrad)"/>
+
+  <!-- Bridge Symbol -->
+  <g filter="url(#bridgeShadow)">
+    <path d="
+      M 364 720
+      L 364 388
+      A 148 148 0 0 1 660 388
+      L 660 720
+    " stroke="url(#bridgeGrad)" stroke-width="140" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- Arch inner highlight -->
+  <path d="
+    M 432 400
+    A 78 78 0 0 1 592 400
+  " stroke="white" stroke-opacity="0.10" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Pillar edge highlights -->
+  <line x1="432" y1="440" x2="432" y2="694" stroke="white" stroke-opacity="0.05" stroke-width="2" stroke-linecap="round"/>
+  <line x1="592" y1="440" x2="592" y2="694" stroke="white" stroke-opacity="0.05" stroke-width="2" stroke-linecap="round"/>
+</svg>
