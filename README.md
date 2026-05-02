@@ -84,6 +84,16 @@ GOPROXY=https://goproxy.cn,direct go build \
 
 需要 Ctrl+C 停掉 `tauri dev`，再重启（配置文件只在启动时读）。
 
+### 官网开发 (`website/`)
+
+```bash
+cd website
+npm install        # 首次需要
+npm run dev        # Next.js 开发模式，http://localhost:3000
+```
+
+官网是独立的 Next.js 项目，修改 `website/**/*.tsx` 会自动热更新。部署到 Netlify 后访问 `typebridge.parksben.xyz`。
+
 ---
 
 ## 调试
@@ -167,6 +177,13 @@ type-bridge/
 │   ├── main.go                   入口：读环境变量，建立长连接
 │   ├── handler.go                消息分发：text / image / post
 │   └── go.mod
+│
+├── website/                      产品官网 (Next.js)
+│   ├── netlify.toml              Netlify 零手动部署配置
+│   ├── app/                      Next.js 15 App Router
+│   │   ├── page.tsx              单页落地 (Hero / 特性 / 下载)
+│   │   └── download/[arch]       GitHub Release .dmg 代理转发
+│   └── package.json
 │
 └── docs/
     ├── REQUIREMENTS.md           做什么、为什么
