@@ -49,17 +49,18 @@ pub fn request_accessibility() {
 
 // ─── 前台应用自我保护 ────────────────────────────────────────────
 
-/// 当前前台应用的 bundle identifier 是否就是我们自己。
-/// 用来拦截"焦点仍在 TypeBridge 自己的窗口"这种场景——如果不拦截，
-/// CGEventPost 的按键会打回自己身上，粘贴命令也会粘到自己的 webview。
+/// 当前前台应用是不是我们自己的进程。
+/// 用 PID 比较而不是 bundleIdentifier：Tauri dev build 不走 .app
+/// bundle，bundleIdentifier 可能为空或与 tauri.conf.json 里配置的
+/// `com.typebridge.app` 不一致，导致自我保护在 dev 模式失效。PID
+/// 比较绝对可靠——它就是我们这个进程。
 pub fn is_frontmost_self() -> bool {
     use objc2_app_kit::NSWorkspace;
+    let my_pid = std::process::id() as i32;
     unsafe {
         let ws = NSWorkspace::sharedWorkspace();
         if let Some(app) = ws.frontmostApplication() {
-            if let Some(bid) = app.bundleIdentifier() {
-                return bid.to_string() == "com.typebridge.app";
-            }
+            return app.processIdentifier() as i32 == my_pid;
         }
         false
     }

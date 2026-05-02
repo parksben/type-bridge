@@ -11,9 +11,6 @@
     "store:allow-save",
     "store:allow-load",
     "shell:allow-execute",
-    "shell:allow-spawn",
-    "notification:allow-request-permission",
-    "notification:allow-notify",
-    "notification:allow-is-permission-granted"
+    "shell:allow-spawn"
   ]
 }
