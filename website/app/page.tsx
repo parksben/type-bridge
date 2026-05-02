@@ -2,6 +2,7 @@
 
 import {
   ArrowDown,
+  ArrowRight,
   Download,
   Zap,
   Image,
@@ -12,7 +13,6 @@ import {
   MessageSquareText,
   MousePointerClick,
   BookOpen,
-  ExternalLink,
   CheckCircle2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -155,38 +155,6 @@ function StepItem({
       <h3 className="font-semibold text-[15px] mb-1">{title}</h3>
       <p className="text-sm text-[var(--tb-muted)] max-w-[220px]">{desc}</p>
     </div>
-  );
-}
-
-// ── Channel setup card ─────────────────────────────────────────
-
-function ChannelCard({
-  name,
-  desc,
-  href,
-}: {
-  name: string;
-  desc: string;
-  href: string;
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 flex flex-col gap-3"
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-[15px] group-hover:text-[var(--tb-accent)] transition-colors">
-          {name}
-        </h3>
-        <ExternalLink
-          size={15}
-          className="text-[var(--tb-muted)] group-hover:text-[var(--tb-accent)] transition-colors"
-        />
-      </div>
-      <p className="text-sm text-[var(--tb-muted)] leading-relaxed">{desc}</p>
-    </a>
   );
 }
 
@@ -396,38 +364,82 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============ 渠道配置指南 ============ */}
+      {/* ============ 接入教程 ============ */}
       <section id="docs" className="px-6 py-20 md:py-28">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-14">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="mb-14">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
-              渠道
-              <span className="font-brand text-[var(--tb-accent)]">
-                配置指南
-              </span>
+              接入
+              <span className="font-brand text-[var(--tb-accent)]">教程</span>
             </h2>
             <p className="text-[var(--tb-muted)] max-w-md mx-auto">
-              选择你使用的 IM 平台，查看对应的机器人配置方法
+              手把手教你完成三大 IM 平台的机器人配置
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ChannelCard
-              name="飞书"
-              desc="创建飞书自建应用，开启长连接能力，获取 App ID 和 App Secret，填入 TypeBridge 即可开始使用。"
-              href="https://open.feishu.cn/document/home/index"
-            />
-            <ChannelCard
-              name="钉钉"
-              desc="在钉钉开放平台创建企业内部应用，配置机器人消息接收，获取应用凭证后填入 TypeBridge。"
-              href="https://open.dingtalk.com/document/orgapp/overview-of-organizational-applications"
-            />
-            <ChannelCard
-              name="企业微信"
-              desc="在企业微信管理后台创建自建应用，配置回调 URL 和消息接收，获取 Corp ID 和 Secret 后填入 TypeBridge。"
-              href="https://developer.work.weixin.qq.com/document/path/90664"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+            <a
+              href="/docs/feishu"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                <MessageSquareText size={20} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="font-semibold text-[15px] mb-1.5 group-hover:text-[var(--tb-accent)] transition-colors">
+                飞书接入指南
+              </h3>
+              <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-3">
+                创建飞书自建应用，获取 App ID 和 App Secret，开启长连接接收消息。
+              </p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--tb-accent)]">
+                查看教程 <ArrowRight size={13} />
+              </span>
+            </a>
+
+            <a
+              href="/docs/dingtalk"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                <MessageSquareText size={20} className="text-sky-600 dark:text-sky-400" />
+              </div>
+              <h3 className="font-semibold text-[15px] mb-1.5 group-hover:text-[var(--tb-accent)] transition-colors">
+                钉钉接入指南
+              </h3>
+              <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-3">
+                在钉钉开放平台创建企业内部应用，配置机器人消息接收。
+              </p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--tb-accent)]">
+                查看教程 <ArrowRight size={13} />
+              </span>
+            </a>
+
+            <a
+              href="/docs/wecom"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                <MessageSquareText size={20} className="text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="font-semibold text-[15px] mb-1.5 group-hover:text-[var(--tb-accent)] transition-colors">
+                企业微信接入指南
+              </h3>
+              <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-3">
+                在企业微信管理后台创建自建应用，配置消息回调与接收。
+              </p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--tb-accent)]">
+                查看教程 <ArrowRight size={13} />
+              </span>
+            </a>
           </div>
+
+          <a
+            href="/docs"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--tb-border)] text-sm font-medium text-[var(--tb-muted)] hover:text-[var(--tb-text)] hover:border-orange-300 dark:hover:border-orange-800 transition-all"
+          >
+            <BookOpen size={16} />
+            浏览全部文档
+          </a>
         </div>
       </section>
 

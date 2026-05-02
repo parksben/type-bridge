@@ -7,7 +7,10 @@ import {
   Monitor,
   Menu,
   X,
-  ExternalLink,
+  BookOpen,
+  Download,
+  Zap,
+  ChevronRight,
 } from "lucide-react";
 import {
   createContext,
@@ -114,31 +117,19 @@ function ThemeProvider({ children }: { children: ReactNode }) {
 // ── Navigation ─────────────────────────────────────────────────
 
 const NAV_ITEMS = [
-  {
-    label: "飞书",
-    href: "https://open.feishu.cn/document/home/index",
-    external: true,
-  },
-  {
-    label: "钉钉",
-    href: "https://open.dingtalk.com/document/orgapp/overview-of-organizational-applications",
-    external: true,
-  },
-  {
-    label: "企微",
-    href: "https://developer.work.weixin.qq.com/document/path/90664",
-    external: true,
-  },
-  { label: "使用文档", href: "#docs", external: false },
-  { label: "下载", href: "#download", external: false },
+  { label: "功能特性", href: "/#features", external: false },
+  { label: "使用文档", href: "/docs", external: false },
+  { label: "下载", href: "/#download", external: false },
 ];
 
 function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { mode, setMode, resolved } = useTheme();
   const [scrolled, setScrolled] = useState(false);
+  const [activePath, setActivePath] = useState("/");
 
   useEffect(() => {
+    setActivePath(window.location.pathname);
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -170,7 +161,7 @@ function TopNav() {
       <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
         {/* Logo */}
         <a
-          href="#"
+          href="/"
           className="font-brand text-xl text-[var(--tb-accent)] tracking-tight shrink-0 select-none"
         >
           TypeBridge
@@ -178,28 +169,19 @@ function TopNav() {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_ITEMS.map((item) =>
-            item.external ? (
-              <a
-                key={item.label}
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--tb-muted)] hover:text-[var(--tb-text)] hover:bg-[var(--tb-surface)] transition-colors"
-              >
-                {item.label}
-                <ExternalLink size={12} className="opacity-40" />
-              </a>
-            ) : (
-              <a
-                key={item.label}
-                href={item.href}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--tb-muted)] hover:text-[var(--tb-text)] hover:bg-[var(--tb-surface)] transition-colors"
-              >
-                {item.label}
-              </a>
-            )
-          )}
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                activePath === item.href
+                  ? "text-[var(--tb-accent)] bg-orange-50 dark:bg-orange-950/50"
+                  : "text-[var(--tb-muted)] hover:text-[var(--tb-text)] hover:bg-[var(--tb-surface)]"
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
 
           {/* Theme toggle */}
           <button
@@ -232,30 +214,20 @@ function TopNav() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-[var(--tb-bg)]/95 backdrop-blur-xl border-b border-[var(--tb-border)] px-5 pb-4 pt-2 flex flex-col gap-1">
-          {NAV_ITEMS.map((item) =>
-            item.external ? (
-              <a
-                key={item.label}
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setMobileOpen(false)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-[var(--tb-muted)] hover:text-[var(--tb-text)] transition-colors"
-              >
-                {item.label}
-                <ExternalLink size={12} className="opacity-40" />
-              </a>
-            ) : (
-              <a
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="px-3 py-2 rounded-lg text-sm font-medium text-[var(--tb-muted)] hover:text-[var(--tb-text)] transition-colors"
-              >
-                {item.label}
-              </a>
-            )
-          )}
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activePath === item.href
+                  ? "text-[var(--tb-accent)] bg-orange-50 dark:bg-orange-950/50"
+                  : "text-[var(--tb-muted)] hover:text-[var(--tb-text)]"
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
         </div>
       )}
     </nav>
