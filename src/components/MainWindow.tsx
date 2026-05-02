@@ -7,6 +7,7 @@ import ConnectionTab from "./tabs/ConnectionTab";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
 import InputSettingsTab from "./tabs/InputSettingsTab";
+import ComingSoonTab from "./tabs/ComingSoonTab";
 
 export default function MainWindow() {
   const { activeTab, setConnected, addLog } = useAppStore();
@@ -43,12 +44,22 @@ export default function MainWindow() {
       <SideBar />
       <div className="flex-1 overflow-hidden">
         {activeTab === "connection" && (
-          <ErrorBoundary label="连接 tab">
+          <ErrorBoundary label="连接飞书 Bot tab">
             <ConnectionTab />
           </ErrorBoundary>
         )}
+        {activeTab === "connection-dingtalk" && (
+          <ErrorBoundary label="连接钉钉 Bot tab">
+            <ComingSoonTab platform="dingtalk" />
+          </ErrorBoundary>
+        )}
+        {activeTab === "connection-wecom" && (
+          <ErrorBoundary label="连接企微 Bot tab">
+            <ComingSoonTab platform="wecom" />
+          </ErrorBoundary>
+        )}
         {activeTab === "history" && (
-          <ErrorBoundary label="消息历史 tab">
+          <ErrorBoundary label="历史消息 tab">
             <HistoryTab />
           </ErrorBoundary>
         )}

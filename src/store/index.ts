@@ -27,7 +27,13 @@ export interface HistoryMessage {
   feedback_error?: FeedbackError | null;
 }
 
-export type TabId = "connection" | "history" | "logs" | "input";
+export type TabId =
+  | "connection"            // 连接飞书 Bot
+  | "connection-dingtalk"   // 连接钉钉 Bot（占位）
+  | "connection-wecom"      // 连接企微 Bot（占位）
+  | "input"                 // 输入设置
+  | "history"               // 历史消息
+  | "logs";                 // 系统日志
 
 export interface SubmitKey {
   key: string;      // KeyboardEvent.code (e.g. "Enter", "KeyA", "Space")

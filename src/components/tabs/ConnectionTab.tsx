@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   AlertCircle,
   ExternalLink,
+  Info,
   KeyRound,
   Lock,
   Play,
@@ -165,6 +166,32 @@ export default function ConnectionTab() {
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
       <div className="max-w-md mx-auto flex flex-col gap-5">
+        {/* 引导 banner：降低首次配置门槛 */}
+        <div
+          className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+          style={{
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <Info
+            size={13}
+            strokeWidth={1.75}
+            className="shrink-0 mt-0.5 text-accent"
+          />
+          <div className="flex-1 text-text">
+            还没有自建应用？先到{" "}
+            <button
+              onClick={openFeishuDevPortal}
+              className="text-accent hover:underline inline-flex items-center gap-0.5"
+            >
+              飞书开发者后台
+              <ExternalLink size={10} strokeWidth={2} />
+            </button>{" "}
+            创建一个，复制 App ID / Secret 到下方。
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <KeyRound size={12} strokeWidth={1.75} />
