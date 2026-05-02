@@ -113,32 +113,28 @@ export default function SelftestChecklist({ result, appId, onOpenUrl }: Props) {
             接收消息事件 需在飞书后台「事件配置」单独完成
           </div>
           <div className="text-muted text-[11px] mt-0.5">
-            API probe 无法自动校验事件订阅状态，请按以下三步对照配置
+            API probe 无法自动校验事件订阅状态，请按以下两步对照配置
           </div>
           <ol className="mt-1.5 flex flex-col gap-1 text-text">
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">①</span>
               <span>
-                开启 <span className="font-mono">im.message.receive_v1</span>
+                <span className="font-medium">订阅方式</span>：选择"使用长连接接收事件"并完成验证
               </span>
             </li>
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">②</span>
               <span>
-                勾选 <span className="font-mono">im:message.p2p_msg</span> /{" "}
-                <span className="font-mono">im:message.group_at_msg</span>
+                <span className="font-medium">添加事件</span>：搜索{" "}
+                <span className="font-mono">im.message.receive_v1</span> 并勾选提交
               </span>
-            </li>
-            <li className="flex items-baseline gap-1.5">
-              <span className="text-accent font-mono text-[10.5px]">③</span>
-              <span>选择"长连接"模式并完成验证</span>
             </li>
           </ol>
           <div className="flex items-center gap-3 mt-2">
             <button
               onClick={() =>
                 onOpenUrl(
-                  `https://open.feishu.cn/app/${appId}/dev-config/event-subscription`
+                  `https://open.feishu.cn/app/${appId}/event`
                 )
               }
               className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
