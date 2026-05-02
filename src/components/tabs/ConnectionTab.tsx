@@ -10,7 +10,6 @@ import {
   RotateCw,
 } from "lucide-react";
 import { useAppStore, DEFAULT_SUBMIT_KEY, type SubmitKey } from "../../store";
-import KeyBindInput from "../KeyBindInput";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
 
 
@@ -39,8 +38,6 @@ export default function ConnectionTab() {
 
   const {
     connected,
-    autoSubmit,
-    submitKey,
     setAutoSubmit,
     setSubmitKey,
     addLog,
@@ -52,27 +49,31 @@ export default function ConnectionTab() {
     invoke<Settings>("get_settings").then((s) => {
       setAppId(s.feishu_app_id);
       setAppSecret(s.feishu_app_secret);
+      // 顺带 hydrate 输入设置到 Zustand，让 InputSettingsTab 首次打开就有值
       setAutoSubmit(s.auto_submit);
       setSubmitKey(s.submit_key ?? DEFAULT_SUBMIT_KEY);
       setHydrated(true);
     });
   }, []);
 
-  // 所有设置变更时，去抖持久化（500ms）
+  // 凭据变更时去抖持久化（500ms）——读当前全量 settings 再合并回写，
+  // 避免清空 InputSettingsTab 拥有的 auto_submit / submit_key 字段
   useEffect(() => {
     if (!hydrated) return;
-    const id = setTimeout(() => {
-      invoke("save_settings", {
+    const id = setTimeout(async () => {
+      const current = await invoke<Settings>("get_settings").catch(() => null);
+      if (!current) return;
+      await invoke("save_settings", {
         settings: {
           feishu_app_id: appId.trim(),
           feishu_app_secret: appSecret.trim(),
-          auto_submit: autoSubmit,
-          submit_key: submitKey,
+          auto_submit: current.auto_submit,
+          submit_key: current.submit_key,
         },
       }).catch(() => {});
     }, 500);
     return () => clearTimeout(id);
-  }, [appId, appSecret, autoSubmit, submitKey, hydrated]);
+  }, [appId, appSecret, hydrated]);
 
   useEffect(() => {
     if (connected) setStarting(false);
@@ -305,39 +306,6 @@ export default function ConnectionTab() {
             onOpenUrl={openUrlFromChecklist}
           />
         )}
-
-        <div className="h-px bg-border my-1" />
-
-        {/* 输入后自动提交 */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[13px] text-text">输入后自动提交</span>
-            <span className="text-[11px] text-subtle mt-0.5">
-              写入完成后模拟按下提交按键
-            </span>
-          </div>
-          <button
-            className="tb-toggle"
-            data-on={autoSubmit}
-            onClick={() => setAutoSubmit(!autoSubmit)}
-            aria-label="切换输入后自动提交"
-          />
-        </div>
-
-        {/* 提交按键 */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[13px] text-text">提交按键</span>
-            <span className="text-[11px] text-subtle mt-0.5">
-              点击录入，Escape 取消
-            </span>
-          </div>
-          <KeyBindInput
-            value={submitKey}
-            onChange={setSubmitKey}
-            disabled={!autoSubmit}
-          />
-        </div>
       </div>
     </div>
   );

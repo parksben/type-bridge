@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../store";
-import TabBar from "./TabBar";
+import SideBar from "./SideBar";
 import ErrorBoundary from "./ErrorBoundary";
 import ConnectionTab from "./tabs/ConnectionTab";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
+import InputSettingsTab from "./tabs/InputSettingsTab";
 
 export default function MainWindow() {
   const { activeTab, setConnected, addLog } = useAppStore();
@@ -38,8 +39,8 @@ export default function MainWindow() {
   }, []);
 
   return (
-    <div className="h-screen w-full flex flex-col animate-enter">
-      <TabBar />
+    <div className="h-screen w-full flex flex-row animate-enter">
+      <SideBar />
       <div className="flex-1 overflow-hidden">
         {activeTab === "connection" && (
           <ErrorBoundary label="连接 tab">
@@ -54,6 +55,11 @@ export default function MainWindow() {
         {activeTab === "logs" && (
           <ErrorBoundary label="系统日志 tab">
             <SystemLogTab />
+          </ErrorBoundary>
+        )}
+        {activeTab === "input" && (
+          <ErrorBoundary label="输入设置 tab">
+            <InputSettingsTab />
           </ErrorBoundary>
         )}
       </div>

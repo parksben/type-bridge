@@ -45,8 +45,8 @@ pub fn setup_tray<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
 fn build_main_window<R: Runtime, M: Manager<R>>(app: &M) -> tauri::Result<()> {
     let win = tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
         .title("TypeBridge")
-        .inner_size(720.0, 560.0)
-        .min_inner_size(620.0, 480.0)
+        .inner_size(820.0, 560.0)
+        .min_inner_size(720.0, 480.0)
         .resizable(true)
         .center()
         .visible(true)
