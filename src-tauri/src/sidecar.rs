@@ -409,7 +409,7 @@ fn dispatch_event<R: Runtime>(
                     return;
                 }
             };
-            let rel = match ctx.history.save_image(message_id, mime, &bytes) {
+            let rel = match ctx.history.save_image(channel, message_id, mime, &bytes) {
                 Ok(p) => p,
                 Err(e) => {
                     tracing::error!("[{}-bridge] save image failed: {}", channel.key(), e);

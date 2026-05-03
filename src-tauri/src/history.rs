@@ -261,10 +261,20 @@ impl HistoryStore {
         v
     }
 
-    /// 将 image bytes 写入 images dir，返回相对路径
-    pub fn save_image(&self, message_id: &str, mime: &str, bytes: &[u8]) -> Result<String, String> {
+    /// 将 image bytes 写入 images/{channel}/ 子目录，返回相对路径。
+    /// 分 channel 子目录避免跨渠道 message_id 命名空间意外碰撞。
+    pub fn save_image(
+        &self,
+        channel: ChannelId,
+        message_id: &str,
+        mime: &str,
+        bytes: &[u8],
+    ) -> Result<String, String> {
         let ext = mime_to_ext(mime);
-        let rel = format!("images/{}.{}", message_id, ext);
+        // 路径：images/{channel}/{message_id}.{ext}
+        let subdir = self.images_dir.join(channel.key());
+        fs::create_dir_all(&subdir).map_err(|e| format!("create channel dir: {}", e))?;
+        let rel = format!("images/{}/{}.{}", channel.key(), message_id, ext);
         let abs = self.abs_image_path(&rel);
         let mut f = fs::File::create(&abs).map_err(|e| e.to_string())?;
         f.write_all(bytes).map_err(|e| e.to_string())?;
@@ -284,21 +294,37 @@ impl HistoryStore {
     }
 
     fn cleanup_orphan_images(&self) {
-        let valid_ids: std::collections::HashSet<String> = {
+        let valid_paths: std::collections::HashSet<String> = {
             let guard = self.messages.read().unwrap();
             guard
                 .iter()
                 .filter_map(|m| m.image_path.as_ref().map(|p| p.clone()))
                 .collect()
         };
-        if let Ok(entries) = fs::read_dir(&self.images_dir) {
-            for entry in entries.flatten() {
-                if let Ok(rel) = entry.path().strip_prefix(typebridge_dir()) {
-                    let rel_str = rel.to_string_lossy().replace('\\', "/");
-                    if !valid_ids.contains(&rel_str) {
-                        let _ = fs::remove_file(entry.path());
-                    }
-                }
+        // images/ 下可能混有旧版扁平文件（v0.5-）和新版 channel 子目录（v0.6+）。
+        // 递归扫描整个 images 目录；孤儿图片按相对路径匹配 valid_paths。
+        cleanup_recursive(&self.images_dir, &typebridge_dir(), &valid_paths);
+    }
+}
+
+/// 递归扫描目录 + 按相对路径判断是否孤儿图片。跨平台用 `/` 作为 valid_paths 里的分隔符，
+/// Windows 下把 `\` 转成 `/` 再比较。
+fn cleanup_recursive(
+    dir: &PathBuf,
+    base: &PathBuf,
+    valid: &std::collections::HashSet<String>,
+) {
+    let Ok(entries) = fs::read_dir(dir) else { return };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            cleanup_recursive(&path, base, valid);
+            continue;
+        }
+        if let Ok(rel) = path.strip_prefix(base) {
+            let rel_str = rel.to_string_lossy().replace('\\', "/");
+            if !valid.contains(&rel_str) {
+                let _ = fs::remove_file(&path);
             }
         }
     }
