@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
   <defs>
-    <!-- Warm gradient background that fills entire canvas -->
+    <!-- Warm gradient background, contained within the squircle body -->
     <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#faf8f5"/>
       <stop offset="100%" stop-color="#f0ebe0"/>
@@ -12,30 +12,42 @@
       <stop offset="100%" stop-color="#9c340b"/>
     </linearGradient>
     <filter id="bridgeShadow" x="-12%" y="-6%" width="124%" height="118%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#9a3412" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="11" flood-color="#9a3412" flood-opacity="0.22"/>
+    </filter>
+    <!-- Subtle drop shadow under the squircle body, baked into icon -->
+    <filter id="bodyShadow" x="-5%" y="-2%" width="110%" height="108%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.12"/>
     </filter>
   </defs>
 
-  <!-- Full-canvas background -->
-  <rect width="1024" height="1024" fill="url(#bgGrad)"/>
+  <!--
+    macOS HIG app icon spec:
+      - 1024x1024 canvas with transparent padding
+      - Body squircle 824x824 centered (100px padding on each side)
+      - Corner radius ~22.37% of body width => ~185px
+    Apple does NOT auto-round app icons; the rounded shape must be baked into the asset.
+  -->
+  <g filter="url(#bodyShadow)">
+    <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#bgGrad)"/>
+  </g>
 
-  <!-- Bridge Symbol -->
+  <!-- Bridge symbol (bridge geometry scaled 0.805 from canvas center 512,512) -->
   <g filter="url(#bridgeShadow)">
     <path d="
-      M 364 720
-      L 364 388
-      A 148 148 0 0 1 660 388
-      L 660 720
-    " stroke="url(#bridgeGrad)" stroke-width="140" stroke-linecap="round" fill="none"/>
+      M 393 679
+      L 393 412
+      A 119 119 0 0 1 631 412
+      L 631 679
+    " stroke="url(#bridgeGrad)" stroke-width="113" stroke-linecap="round" fill="none"/>
   </g>
 
   <!-- Arch inner highlight -->
   <path d="
-    M 432 400
-    A 78 78 0 0 1 592 400
-  " stroke="white" stroke-opacity="0.10" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    M 448 422
+    A 63 63 0 0 1 576 422
+  " stroke="white" stroke-opacity="0.10" stroke-width="2" stroke-linecap="round" fill="none"/>
 
   <!-- Pillar edge highlights -->
-  <line x1="432" y1="440" x2="432" y2="694" stroke="white" stroke-opacity="0.05" stroke-width="2" stroke-linecap="round"/>
-  <line x1="592" y1="440" x2="592" y2="694" stroke="white" stroke-opacity="0.05" stroke-width="2" stroke-linecap="round"/>
+  <line x1="448" y1="454" x2="448" y2="659" stroke="white" stroke-opacity="0.05" stroke-width="2" stroke-linecap="round"/>
+  <line x1="576" y1="454" x2="576" y2="659" stroke="white" stroke-opacity="0.05" stroke-width="2" stroke-linecap="round"/>
 </svg>
