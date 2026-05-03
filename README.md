@@ -1,10 +1,12 @@
 # TypeBridge
 
-> macOS 菜单栏应用：接收飞书 / 钉钉 / 企业微信机器人消息，自动写入你当前聚焦的输入框。
+> macOS 菜单栏应用：接收飞书 / 钉钉 / 企业微信 / 官方 WebChat 网页机器人消息，自动写入你当前聚焦的输入框。
 
-典型场景：手机上用任一家 IM 给机器人发一段语音（转文字），桌面端同步将文本写入正在用的编辑器 / 终端 / 浏览器输入框，默认注入完即模拟一次 `Enter` 完成一键发送——实现"语音驱动桌面输入"。
+典型场景：手机上用任一家 IM（或扫桌面 QR 码进官方 WebChat 网页）给机器人发一段语音（转文字），桌面端同步将文本写入正在用的编辑器 / 终端 / 浏览器输入框，默认注入完即模拟一次 `Enter` 完成一键发送——实现"语音驱动桌面输入"。
 
-三家消息进同一个 FIFO 队列，依次粘到当前焦点。消息入队 / 成功 / 失败都会给机器人侧一个可见反馈（飞书 emoji reaction；钉钉一次性 `✅ 已输入` / `❌ 输入失败`；企微同一条消息原地从 `🟡 处理中...` 更新为 `✅ 已输入` / `❌ 输入失败`）。
+四个渠道平等共存，消息进同一个 FIFO 队列依次粘到当前焦点。消息入队 / 成功 / 失败都会给来源侧一个可见反馈（飞书 emoji reaction；钉钉一次性 `✅ 已输入` / `❌ 输入失败`；企微同一条消息原地从 `🟡 处理中...` 更新为 `✅ 已输入` / `❌ 输入失败`；WebChat 在手机聊天页消息底部显示 `已收到` / `已注入` / `失败：原因`）。
+
+> WebChat 渠道无需任何 IM 账号 —— 桌面端启动会话生成二维码 + 6 位 OTP，手机扫码进 [webchat-typebridge.parksben.xyz](https://webchat-typebridge.parksben.xyz) 输入 OTP 即可开聊。
 
 🌐 产品官网：[typebridge.parksben.xyz](https://typebridge.parksben.xyz) — 包含使用文档和各渠道应用接入教程。
 
@@ -51,6 +53,7 @@ npm run tauri dev
 ```
 
 应用首次启动会自动弹出配置窗口。在「连接 IM 应用」tab 下任选一家填好凭据即可：
+- WebChat：无需凭据，点「启动会话」生成 QR 码扫码即用
 - 飞书：App ID / App Secret（仅支持自建应用）
 - 钉钉：Client ID / Client Secret（Stream Mode）
 - 企微：Bot ID / Secret（智能机器人长连接模式）
@@ -101,6 +104,16 @@ npm run dev        # Next.js 开发模式，http://localhost:3000
 ```
 
 官网是独立的 Next.js 项目，修改 `website/**/*.tsx` 会自动热更新。部署到 Netlify 后访问 `typebridge.parksben.xyz`。
+
+### WebChat 移动端 + 中继 (`webchat/`)
+
+```bash
+cd webchat
+npm install        # 首次需要
+npm run dev        # Next.js 开发模式，http://localhost:3000
+```
+
+`webchat/` 是独立的 Next.js 项目，包含移动端聊天页面 + Netlify Functions 中继 API（端点 `/api/*`）。本地联调时把桌面 App 设置里的 `WEBCHAT_RELAY_URL` 改成 `http://<本机 IP>:3000` 即可让真机扫码连本地中继。Netlify 部署后访问 `webchat-typebridge.parksben.xyz`。
 
 ---
 
@@ -198,11 +211,23 @@ type-bridge/
 │   ├── app/                      Next.js 15 App Router
 │   │   ├── page.tsx              首页 (Hero / 工作原理 / 特性 / 接入教程 / 下载)
 │   │   ├── docs/
-│   │   │   ├── page.tsx          文档中心（三渠道导航入口）
+│   │   │   ├── page.tsx          文档中心（四渠道导航入口）
+│   │   │   ├── webchat/page.tsx  WebChat 接入教程（自维护）
 │   │   │   ├── feishu/page.tsx   飞书自建应用接入教程（自维护）
 │   │   │   ├── dingtalk/page.tsx 钉钉企业内部应用接入教程（自维护）
 │   │   │   └── wecom/page.tsx    企业微信自建应用接入教程（自维护）
 │   │   └── download/[arch]       GitHub Release .dmg 代理转发
+│   └── package.json
+│
+├── webchat/                      WebChat 移动端 + Netlify Functions 中继 (Next.js)
+│   ├── netlify.toml              Netlify 零手动部署配置
+│   ├── middleware.ts             UA 检测：PC / 微信 / IM 内置浏览器拦截
+│   ├── app/
+│   │   ├── page.tsx              单页 SPA：握手 → 聊天状态机
+│   │   ├── blocked/{pc,wechat}/  拦截引导页
+│   │   ├── components/           移动端聊天 UI（OTP 输入 / 消息流 / 文本/图片/语音）
+│   │   ├── lib/                  fetch wrapper / UA 检测 / 图片压缩 / Blobs 封装
+│   │   └── api/                  9 个 Route Handler（register / handshake / send / pull / ack / heartbeat ...）
 │   └── package.json
 │
 └── docs/
