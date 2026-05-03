@@ -61,6 +61,7 @@ impl ChannelId {
                 thread_reply: true,
                 failure_text_reply: true,
                 success_text_reply: false,
+                streaming_reply: false,
                 receive_images: true,
                 requires_event_config: true,
             },
@@ -69,14 +70,16 @@ impl ChannelId {
                 thread_reply: false,
                 failure_text_reply: true,
                 success_text_reply: true,
+                streaming_reply: false,
                 receive_images: true,
                 requires_event_config: false,
             },
             Self::WeCom => ChannelCapability {
                 reactions: false,
                 thread_reply: false,
-                failure_text_reply: true,
+                failure_text_reply: false,
                 success_text_reply: false,
+                streaming_reply: true,
                 receive_images: true,
                 requires_event_config: false,
             },
@@ -91,14 +94,17 @@ pub struct ChannelCapability {
     pub reactions: bool,
     /// 是否支持 thread 内回复（飞书独有）
     pub thread_reply: bool,
-    /// 是否支持给原消息回一条文字（反馈失败原因用）。飞书 / 钉钉 / 企微都支持，
-    /// 只是内部实现不同：飞书走 thread reply；钉钉用 sessionWebhook 发 text；
-    /// 企微走 aibot_respond_msg 帧。
+    /// 是否支持给原消息回一条文字（反馈失败原因用）。飞书 / 钉钉都支持；
+    /// 企微因为有 streaming_reply 更优的方案，直接走流式。
     pub failure_text_reply: bool,
-    /// 是否在注入成功时也回一条 "✅ 已输入"。仅对没有 reaction 能力的渠道开启
-    /// —— 飞书已经有 ✅ 表情反馈，没必要再发一条文字；钉钉没有 reaction，
-    /// 只能靠文字让用户知道消息被消费了。
+    /// 是否在注入成功时也回一条 "✅ 已输入"。仅对没有 reaction / streaming
+    /// 能力的渠道开启 —— 钉钉独有。
     pub success_text_reply: bool,
+    /// 是否支持"同一条 bot 消息原地更新"（企微 `aibot_respond_msg` 的
+    /// `stream.id + finish` 机制）。一旦为 true，queue.rs 会用它承载
+    /// 🟡 处理中 / ✅ 已输入 / ❌ 失败的全生命周期反馈，屏蔽
+    /// success_text_reply / failure_text_reply 分支，避免双发。
+    pub streaming_reply: bool,
     /// 是否支持接收图片消息
     pub receive_images: bool,
     /// 是否需要用户在平台后台单独配置"事件订阅"（飞书独有）
