@@ -46,13 +46,16 @@ WIN_ICON_SIZES = [16, 32, 48, 64, 128, 256]
 
 
 def svg_to_png(svg_path: Path, output_path: Path, size: int):
-    """Render SVG to PNG of given size using cairosvg."""
+    """Render SVG to PNG of given size using cairosvg, enforce RGBA."""
     png_data = cairosvg.svg2png(
         url=str(svg_path),
         output_width=size,
         output_height=size,
     )
-    output_path.write_bytes(png_data)
+    img = Image.open(io.BytesIO(png_data))
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+    img.save(output_path, "PNG")
     print(f"  ✓ {output_path.name} ({size}×{size})")
 
 
@@ -111,13 +114,13 @@ def main():
     for name, size in BUNDLE_SIZES.items():
         svg_to_png(appicon_svg, ICONS_DIR / name, size)
 
-    # 2. Tray icon
-    print("\n[2/4] Tray icon (32x32) from logo-tray.svg:")
+    # 2. Tray icon (separate file, not overwriting bundle icons)
+    print("\n[2/4] Tray icon (44x44) from logo-tray.svg:")
     if tray_svg.exists():
-        svg_to_png(tray_svg, ICONS_DIR / "32x32.png", 32)
+        svg_to_png(tray_svg, ICONS_DIR / "tray-icon.png", 44)
     else:
         print("  (tray SVG not found, using appicon for tray)")
-        svg_to_png(appicon_svg, ICONS_DIR / "32x32.png", 32)
+        svg_to_png(appicon_svg, ICONS_DIR / "tray-icon.png", 44)
 
     # 3. macOS .icns
     print("\n[3/4] macOS .icns:")
