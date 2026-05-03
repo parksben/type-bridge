@@ -157,7 +157,7 @@ export default function DingTalkConnectionTab() {
               onClick={openDingTalkDevPortal}
               className="text-accent hover:underline inline-flex items-center gap-0.5"
             >
-              钉钉开发者后台
+              钉钉开发者平台
               <ExternalLink size={10} strokeWidth={2} />
             </button>{" "}
             创建「企业内部应用」，加机器人能力 + 选 Stream 模式后复制 Client ID / Secret 到下方。
@@ -288,7 +288,7 @@ export default function DingTalkConnectionTab() {
                 onClick={openDingTalkDevPortal}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                钉钉开发者后台
+                钉钉开发者平台
                 <ExternalLink size={10} strokeWidth={2} />
               </button>{" "}
               确认「消息接收模式」已选 Stream 模式；或点「测试连接」验证凭据可用。

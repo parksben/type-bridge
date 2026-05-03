@@ -30,6 +30,9 @@ interface Props {
 /// 连接测试清单卡片：凭据 + N 行 probe（按 channel 差异化）+ 渠道特定的静态引导。
 /// 凭据失败时整块标红、不渲染 probe 行。
 export default function SelftestChecklist({ result, channel, appIdOrEquivalent, onOpenUrl }: Props) {
+  // 按渠道差异化的凭据文案（避免飞书术语泄漏到钉钉 / 企微面板）
+  const terms = credentialTerms(channel);
+
   if (!result.credentials_ok) {
     return (
       <div
@@ -46,7 +49,7 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
             {result.credentials_reason || "未知错误"}
           </div>
           <div className="text-text text-[11.5px] mt-1.5">
-            请检查 App ID / App Secret 是否正确，或本机网络 / 代理是否能访问 open.feishu.cn。
+            请检查 {terms.idLabel} 是否正确，或本机网络 / 代理是否能访问 {terms.host}。
           </div>
         </div>
       </div>
@@ -67,7 +70,7 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
       <ChecklistRow
         ok={true}
         label="凭据可用"
-        hint="App ID / App Secret 能换到 tenant_access_token"
+        hint={`${terms.idLabel} 能换到 ${terms.tokenName}`}
       />
 
       {result.probes.map((p) => (
@@ -221,19 +224,8 @@ function FooterGuide({
               onClick={() => onOpenUrl("https://open-dev.dingtalk.com")}
               className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
             >
-              去开发者后台
+              去钉钉开发者平台
               <ExternalLink size={10} strokeWidth={2} />
-            </button>
-            <button
-              onClick={() =>
-                onOpenUrl(
-                  "https://open.dingtalk.com/document/development/introduction-to-stream-mode"
-                )
-              }
-              className="inline-flex items-center gap-1 text-muted hover:text-text hover:underline text-[11px]"
-            >
-              查看文档
-              <ExternalLink size={9} strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -250,6 +242,31 @@ interface RowProps {
   label: string;
   hint: string;
   failureDetail?: React.ReactNode;
+}
+
+/// 凭据文案按渠道走：飞书用 App ID / tenant_access_token，钉钉用 Client ID / access_token，
+/// 否则会和表单里的字段名对不上，用户一眼看就觉得假。
+function credentialTerms(channel: ChannelId): { idLabel: string; tokenName: string; host: string } {
+  switch (channel) {
+    case "feishu":
+      return {
+        idLabel: "App ID / App Secret",
+        tokenName: "tenant_access_token",
+        host: "open.feishu.cn",
+      };
+    case "dingtalk":
+      return {
+        idLabel: "Client ID / Client Secret",
+        tokenName: "access_token",
+        host: "api.dingtalk.com",
+      };
+    default:
+      return {
+        idLabel: "凭据",
+        tokenName: "access_token",
+        host: "开放平台",
+      };
+  }
 }
 
 function ChecklistRow({ ok, label, hint, failureDetail }: RowProps) {
