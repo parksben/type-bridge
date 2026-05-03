@@ -34,6 +34,9 @@ func main() {
 	)
 	cli.RegisterChatBotCallbackRouter(handleMessage)
 
+	// 记住凭据供后续图片下载（需要换 access token）
+	initTokenCache(clientID, clientSecret)
+
 	emitStatus(false)
 
 	// 启动 stdin 命令读取协程
