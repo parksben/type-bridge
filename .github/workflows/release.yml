@@ -49,7 +49,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
-          cache-dependency-path: feishu-bridge/go.sum
+          cache-dependency-path: |
+            feishu-bridge/go.sum
+            dingtalk-bridge/go.sum
+            wecom-bridge/go.sum
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -63,17 +66,19 @@ jobs:
           key: ${{ runner.os }}-cargo-target-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-target-
 
-      - name: Build Go sidecar (arm64)
+      - name: Build Go sidecars (all channels, both arches)
         run: |
-          cd feishu-bridge
-          GOOS=darwin GOARCH=arm64 go build -ldflags '-s -w' \
-            -o ../src-tauri/binaries/feishu-bridge-aarch64-apple-darwin .
-
-      - name: Build Go sidecar (amd64)
-        run: |
-          cd feishu-bridge
-          GOOS=darwin GOARCH=amd64 go build -ldflags '-s -w' \
-            -o ../src-tauri/binaries/feishu-bridge-x86_64-apple-darwin .
+          set -euxo pipefail
+          for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
+            (
+              cd "$bridge"
+              GOOS=darwin GOARCH=arm64 go build -ldflags '-s -w' \
+                -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .
+              GOOS=darwin GOARCH=amd64 go build -ldflags '-s -w' \
+                -o "../src-tauri/binaries/${bridge}-x86_64-apple-darwin" .
+            )
+          done
+          ls -la src-tauri/binaries/
 
       - name: Install npm dependencies
         run: npm ci
@@ -102,7 +107,7 @@ jobs:
           body: |
             ## TypeBridge v${{ steps.version.outputs.VERSION }}
 
-            macOS 菜单栏应用：接收飞书机器人消息，自动写入当前聚焦的输入框。
+            macOS 菜单栏应用：接收飞书 / 钉钉 / 企业微信机器人消息，自动写入当前聚焦的输入框。
 
             ### 下载
 
