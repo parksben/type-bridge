@@ -210,7 +210,7 @@ function FooterGuide({
           </ol>
           <div className="flex items-center gap-3 mt-2">
             <button
-              onClick={() => onOpenUrl("https://open-dev.dingtalk.com")}
+              onClick={() => onOpenUrl("https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app")}
               className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
             >
               去钉钉开发者平台
@@ -243,22 +243,22 @@ function FooterGuide({
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">①</span>
               <span>
-                <span className="font-medium">API 模式</span>：管理后台 → 智能机器人 → 开启
+                <span className="font-medium">API 模式</span>：机器人详情 → 编辑 → API配置
               </span>
             </li>
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">②</span>
               <span>
-                <span className="font-medium">模式选择</span>：选择"长连接"（非"设置接收消息回调地址"）
+                <span className="font-medium">连接方式</span>：选择 “使用长连接”
               </span>
             </li>
           </ol>
           <div className="flex items-center gap-3 mt-2">
             <button
-              onClick={() => onOpenUrl("https://work.weixin.qq.com")}
+              onClick={() => onOpenUrl("https://work.weixin.qq.com/wework_admin/frame#/aiHelper/list?tab=manage")}
               className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
             >
-              去企业微信管理后台
+              去企微机器人管理后台
               <ExternalLink size={10} strokeWidth={2} />
             </button>
           </div>
