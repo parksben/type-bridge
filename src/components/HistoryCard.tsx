@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type { HistoryMessage } from "../store";
+import ChannelTag from "./ChannelTag";
 import StatusTag from "./StatusTag";
 
 interface Props {
@@ -75,7 +76,10 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
         <span className="text-[11.5px] text-muted font-mono">
           {formatRelative(message.received_at)}
         </span>
-        <StatusTag status={message.status} />
+        <div className="flex items-center gap-1.5">
+          <ChannelTag channel={message.channel} />
+          <StatusTag status={message.status} />
+        </div>
       </div>
 
       {message.text && (
