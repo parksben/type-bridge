@@ -124,6 +124,7 @@ npm run dev        # Next.js 开发模式，http://localhost:3000
 | 前端逻辑 / React state | 应用窗口里按 `Cmd + Option + I` 打开 DevTools |
 | Rust 日志 | `tracing::info!` / `println!` 输出到运行 `tauri dev` 的终端 |
 | Go sidecar 日志 | 由 Rust 捕获其 stdout 并以 `[sidecar]` 前缀转发到同一终端 |
+| WebChat 中继日志 | `[webchat] xxx` 前缀；本地联调时还可看 `cd webchat && npm run dev` 终端的 Next.js Route Handler 输出 |
 | 应用运行时文件日志 | `~/Library/Logs/TypeBridge/typebridge-YYYY-MM-DD.log`（按天滚动，保留 30 天） |
 | 应用内日志窗口 | 托盘菜单 → "消息日志" |
 | 持久化配置 | `~/.typebridge/config.json`（通过 `tauri-plugin-store` 写入） |
@@ -176,8 +177,8 @@ type-bridge/
 │   ├── components/
 │   │   ├── MainWindow.tsx        主窗口（SideBar + 4 tab 路由）
 │   │   ├── SideBar.tsx           左侧导航（连接 / 输入设置 / 历史 / 日志）
-│   │   ├── ConnectionHub.tsx     连接 tab 内的三渠道子 tab 容器
-│   │   ├── tabs/                 各 tab 页面（Feishu/DingTalk/WeCom Connection、Input、History、Log）
+│   │   ├── ConnectionHub.tsx     连接 tab 内的四渠道子 tab 容器（WebChat / 飞书 / 钉钉 / 企微）
+│   │   ├── tabs/                 各 tab 页面（WebChat / Feishu / DingTalk / WeCom Connection、Input、History、Log）
 │   │   ├── HistoryCard.tsx       单条历史消息卡片
 │   │   ├── SelftestChecklist.tsx selftest 结果清单（按渠道差异化）
 │   │   ├── StatusTag.tsx / ChannelTag.tsx / KeyBindInput.tsx / AccessibilityGate.tsx / ErrorBoundary.tsx
@@ -191,7 +192,8 @@ type-bridge/
 │   │   ├── lib.rs                入口 + plugin 注册 + AppContext
 │   │   ├── channel.rs            ChannelId + Capability + 复合 id 工具
 │   │   ├── tray.rs               托盘图标 + 窗口生命周期
-│   │   ├── sidecar.rs            多渠道 sidecar 进程管理 + 事件派发
+│   │   ├── sidecar.rs            飞书 / 钉钉 / 企微 sidecar 进程管理 + 事件派发
+│   │   ├── webchat.rs            WebChat 渠道 HTTP 轮询模块（不走 sidecar）
 │   │   ├── queue.rs              注入队列 + worker + 反馈（reaction / reply）
 │   │   ├── history.rs            消息历史持久化（history.json + 图片归档）
 │   │   ├── injector.rs           AXUIElement + CGEventPost 注入
@@ -265,6 +267,15 @@ A: 检查 `tauri dev` 终端里 `[sidecar]` 前缀的日志。常见原因：App
 
 **Q: 注入到 VSCode / 浏览器输入框后内容被覆盖？**
 A: 应该不会 —— 项目用 `CGEventPost` 模拟按键而非 `AXSetValue`。若遇到请在 issue 里附上目标应用名。
+
+**Q: WebChat tab 提示"启动会话"失败？**
+A: 大概率是网络问题——桌面端启动 WebChat 时会向 `webchat-typebridge.parksben.xyz` 发 `/api/register` 请求注册 sessionId。检查终端 `[webchat]` 前缀日志看具体错误。也可在 Rust `~/.typebridge/config.json` 里把 `webchat_relay_url` 改成自部署 URL。
+
+**Q: 用手机扫了 WebChat 的 QR 但页面提示"会话已过期"？**
+A: WebChat 会话有 5 分钟 TTL；如果生成 QR 后超过 5 分钟才扫，回桌面端点「重启会话」即可。
+
+**Q: 微信 / 钉钉 / 飞书内置浏览器扫 WebChat QR 进不去聊天页？**
+A: 设计如此 —— IM 内置 WebView 屏蔽了 Web Speech API（语音听写），无法体验完整功能；页面会拦截到引导页提示用 Safari / Chrome 等外部浏览器打开。
 
 ---
 
