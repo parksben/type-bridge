@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #faf9f6;
+  --color-bg-dark: #0e0e10;
+  --color-surface: #ffffff;
+  --color-surface-dark: #18181b;
+  --color-border: #e7e5e1;
+  --color-border-dark: #27272a;
+  --color-text: #18181b;
+  --color-text-dark: #fafafa;
+  --color-muted: #71717a;
+  --color-muted-dark: #a1a1aa;
+  --color-accent: #c2410c;
+  --color-accent-dark: #fb923c;
+  --color-success: #16a34a;
+  --color-success-dark: #34d399;
+  --color-danger: #dc2626;
+  --color-danger-dark: #f87171;
+}
+
+/* Light theme (default) */
+:root {
+  --tb-bg: #faf9f6;
+  --tb-surface: #ffffff;
+  --tb-border: #e7e5e1;
+  --tb-text: #18181b;
+  --tb-muted: #71717a;
+  --tb-accent: #c2410c;
+  --tb-success: #16a34a;
+  --tb-danger: #dc2626;
+  --tb-bubble-self: #c2410c;
+  --tb-bubble-other: #f4f4f5;
+}
+
+/* System dark */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tb-bg: #0e0e10;
+    --tb-surface: #18181b;
+    --tb-border: #27272a;
+    --tb-text: #fafafa;
+    --tb-muted: #a1a1aa;
+    --tb-accent: #fb923c;
+    --tb-success: #34d399;
+    --tb-danger: #f87171;
+    --tb-bubble-self: #fb923c;
+    --tb-bubble-other: #27272a;
+  }
+}
+
+html, body {
+  background-color: var(--tb-bg);
+  color: var(--tb-text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 完整高度 — 移动端聊天页面需要占满视口 */
+  min-height: 100dvh;
+  /* 防止 iOS 双击缩放 */
+  touch-action: manipulation;
+}
+
+/* 移动端禁止文本选中（聊天气泡内允许） */
+body {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+input, textarea, [data-allow-select] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* iOS 输入框圆角默认值修正 */
+input, textarea, button {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* 安全区域工具类 */
+.safe-area-top { padding-top: env(safe-area-inset-top); }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-area-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 隐藏滚动条但保留滚动 */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* 渐入动画 */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.25s ease-out forwards;
+}
+
+/* OTP 输入框抖动反馈错误 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}

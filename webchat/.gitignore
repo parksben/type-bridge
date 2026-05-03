@@ -1,0 +1,6 @@
+node_modules/
+.next/
+out/
+.env*.local
+.netlify/
+next-env.d.ts
