@@ -162,9 +162,15 @@ function TopNav() {
         {/* Logo */}
         <a
           href="/"
-          className="font-brand text-xl text-[var(--tb-accent)] tracking-tight shrink-0 select-none"
+          className="flex items-center gap-2 shrink-0 select-none"
         >
-          TypeBridge
+          <svg viewBox="0 0 64 64" className="w-6 h-6" fill="none">
+            <path d="M 16 46 L 16 22 A 16 16 0 0 1 48 22 L 48 46"
+              stroke="var(--tb-accent)" strokeWidth="7" strokeLinecap="round" fill="none"/>
+          </svg>
+          <span className="text-xl text-[var(--tb-accent)] font-bold tracking-tight">
+            TypeBridge
+          </span>
         </a>
 
         {/* Desktop links */}

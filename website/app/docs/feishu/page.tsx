@@ -47,7 +47,7 @@ export default function FeishuGuidePage() {
         </div>
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
           飞书接入
-          <span className="font-brand text-[var(--tb-accent)]">指南</span>
+          <span className="text-[var(--tb-accent)] font-bold">指南</span>
         </h1>
         <p className="text-[var(--tb-muted)] text-lg leading-relaxed">
           TypeBridge 通过飞书自建应用的 WebSocket 长连接接收消息。按以下步骤操作，

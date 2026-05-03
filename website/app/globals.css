@@ -59,6 +59,22 @@
   --tb-accent: #c2410c;
 }
 
+/* ============ Banner theme overrides — light mode ============ */
+:root .hero-orb,
+.light-force .hero-orb {
+  opacity: 0.12;
+}
+
+/* ============ Banner theme overrides — dark mode ============ */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-force) .hero-orb {
+    opacity: 0.2;
+  }
+}
+.dark .hero-orb {
+  opacity: 0.2;
+}
+
 /* Base */
 body {
   background-color: var(--tb-bg);
@@ -67,12 +83,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Instrument Serif for brand moments */
-.font-brand {
-  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
-  font-style: italic;
 }
 
 /* Noise texture overlay */
@@ -134,22 +144,21 @@ body {
   animation: blink-cursor 1s step-end infinite;
 }
 
-/* Grid pattern for hero */
+/* Grid pattern for hero — adapts to theme */
 .hero-grid-pattern {
   background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(var(--tb-text) 1px, transparent 1px),
+    linear-gradient(90deg, var(--tb-text) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
-/* Ambient color orbs */
+/* Ambient color orbs — more subtle in light mode */
 .hero-orb {
   position: absolute;
   width: 180px;
   height: 180px;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.2;
   z-index: 1;
 }
 .hero-orb-blue {
@@ -173,7 +182,7 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: radial-gradient(circle at center, var(--tb-accent), #a16207);
+  background: radial-gradient(circle at center, var(--tb-accent), color-mix(in srgb, var(--tb-accent) 60%, #a16207));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,14 +208,14 @@ body {
   50% { opacity: 1; }
 }
 
-/* Desktop frame */
+/* Desktop frame — theme-aware */
 .hero-desktop-frame {
   width: 160px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--tb-border);
+  background: var(--tb-surface);
   backdrop-filter: blur(4px);
-  box-shadow: 0 0 30px 0 rgba(255,255,255,0.03), 0 4px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
 /* Injected text shimmer */
@@ -251,7 +260,7 @@ body {
   z-index: 10;
 }
 
-/* Scanlines overlay */
+/* Scanlines overlay — only visible in dark mode */
 .hero-scanlines {
   background: repeating-linear-gradient(
     0deg,
@@ -260,7 +269,6 @@ body {
     rgba(0,0,0,0.03) 2px,
     rgba(0,0,0,0.03) 4px
   );
-  opacity: 0.5;
 }
 
 /* ============ Page-level Glow Effects ============ */
@@ -268,9 +276,9 @@ body {
 /* Hero section ambient glow */
 .hero-section-glow {
   background:
-    radial-gradient(ellipse 60% 40% at 20% 30%, color-mix(in srgb, #3370FF 8%, transparent), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 50% 50%, color-mix(in srgb, var(--tb-accent) 10%, transparent), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 70%, color-mix(in srgb, #06BA6A 6%, transparent), transparent 50%);
+    radial-gradient(ellipse 60% 40% at 20% 30%, color-mix(in srgb, #3370FF 6%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, color-mix(in srgb, var(--tb-accent) 8%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 70%, color-mix(in srgb, #06BA6A 4%, transparent), transparent 50%);
   pointer-events: none;
 }
 

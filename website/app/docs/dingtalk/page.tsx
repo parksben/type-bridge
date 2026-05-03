@@ -46,7 +46,7 @@ export default function DingTalkGuidePage() {
         </div>
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
           钉钉接入
-          <span className="font-brand text-[var(--tb-accent)]">指南</span>
+          <span className="text-[var(--tb-accent)] font-bold">指南</span>
         </h1>
         <p className="text-[var(--tb-muted)] text-lg leading-relaxed">
           TypeBridge 通过钉钉企业内部应用的长连接（Stream
