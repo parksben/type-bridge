@@ -170,17 +170,6 @@ function FooterGuide({
               去事件配置页
               <ExternalLink size={10} strokeWidth={2} />
             </button>
-            <button
-              onClick={() =>
-                onOpenUrl(
-                  "https://open.feishu.cn/document/server-docs/im-v1/message/events/receive"
-                )
-              }
-              className="inline-flex items-center gap-1 text-muted hover:text-text hover:underline text-[11px]"
-            >
-              查看文档
-              <ExternalLink size={9} strokeWidth={2} />
-            </button>
           </div>
         </div>
       </div>
