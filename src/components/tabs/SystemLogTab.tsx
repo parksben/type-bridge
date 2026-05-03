@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, Bell, Cable, Eraser, ExternalLink, Terminal } from "lucide-react";
-import { useAppStore, LogEntry } from "../../store";
+import { useAppStore, CHANNEL_LABEL, LogEntry, type ChannelId } from "../../store";
 
-// 系统日志 tab 只展示运维/系统事件，不含 message / inject（这些归消息历史 tab）
+// 系统日志 tab 只展示运维/系统事件，不含 message / inject（这些归历史消息 tab）
 const systemKinds: Set<LogEntry["kind"]> = new Set(["connect", "error", "notify"]);
 
 const kindLabel: Record<LogEntry["kind"], string> = {
@@ -28,6 +28,13 @@ const kindClass: Record<LogEntry["kind"], string> = {
   inject: "text-success",
   error: "text-error",
   notify: "text-muted",
+};
+
+/// 按渠道渲染不同颜色的 [渠道] 前缀。与 ChannelTag 颜色保持一致。
+const CHANNEL_PREFIX_COLOR: Record<ChannelId, string> = {
+  feishu: "var(--accent)",
+  dingtalk: "#1677ff",
+  wecom: "#07c160",
 };
 
 export default function SystemLogTab() {
@@ -93,6 +100,14 @@ export default function SystemLogTab() {
                     <Icon size={11} strokeWidth={1.75} />
                     {kindLabel[log.kind]}
                   </span>
+                  {log.channel && (
+                    <span
+                      className="shrink-0 pt-[2px]"
+                      style={{ color: CHANNEL_PREFIX_COLOR[log.channel] }}
+                    >
+                      [{CHANNEL_LABEL[log.channel]}]
+                    </span>
+                  )}
                   <span className="text-text break-all">{log.text}</span>
                 </div>
               );
