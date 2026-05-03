@@ -44,7 +44,7 @@ export default function DocsPage() {
           {/* Feishu */}
           <a
             href="/docs/feishu"
-            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300"
+            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 feature-card-glow"
           >
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
               <MessageSquareText
@@ -67,7 +67,7 @@ export default function DocsPage() {
           {/* DingTalk */}
           <a
             href="/docs/dingtalk"
-            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300"
+            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 feature-card-glow"
           >
             <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
               <MessageSquareText
@@ -90,7 +90,7 @@ export default function DocsPage() {
           {/* WeCom */}
           <a
             href="/docs/wecom"
-            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300"
+            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 feature-card-glow"
           >
             <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
               <MessageSquareText

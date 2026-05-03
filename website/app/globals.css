@@ -116,35 +116,13 @@ body {
 
 /* ============ Hero Banner Animations ============ */
 
-/* Floating phone */
-@keyframes float-phone {
-  0%, 100% { transform: translateY(-50%) translateY(0px); }
-  50% { transform: translateY(-50%) translateY(-8px); }
-}
-.animate-float-phone {
-  animation: float-phone 4s ease-in-out infinite;
-}
-
 /* Floating desktop */
 @keyframes float-desktop {
-  0%, 100% { transform: translateY(-50%) translateY(0px); }
-  50% { transform: translateY(-50%) translateY(-5px); }
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
 }
 .animate-float-desktop {
   animation: float-desktop 4.5s ease-in-out infinite;
-  animation-delay: 0.5s;
-}
-
-/* Message bubble float-in */
-@keyframes msg-float {
-  0% { opacity: 0; transform: translateX(-12px); }
-  10% { opacity: 1; transform: translateX(0); }
-  90% { opacity: 1; transform: translateX(0); }
-  100% { opacity: 0.5; }
-}
-.animate-msg-float {
-  animation: msg-float 6s ease-in-out infinite;
-  opacity: 0;
 }
 
 /* Blinking cursor */
@@ -156,38 +134,104 @@ body {
   animation: blink-cursor 1s step-end infinite;
 }
 
-/* Pulse glow on center dot */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 6px 2px color-mix(in srgb, var(--tb-accent) 40%, transparent); }
-  50% { box-shadow: 0 0 16px 6px color-mix(in srgb, var(--tb-accent) 70%, transparent); }
+/* Grid pattern for hero */
+.hero-grid-pattern {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
-.animate-pulse-glow {
+
+/* Ambient color orbs */
+.hero-orb {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.2;
+  z-index: 1;
+}
+.hero-orb-blue {
+  background: #3370FF;
+  top: 10%;
+  left: 5%;
+}
+.hero-orb-sky {
+  background: #0089FF;
+  top: 45%;
+  left: 12%;
+}
+.hero-orb-green {
+  background: #06BA6A;
+  bottom: 5%;
+  left: 8%;
+}
+
+/* Bridge center node */
+.hero-bridge-node {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, var(--tb-accent), #a16207);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px 4px color-mix(in srgb, var(--tb-accent) 50%, transparent);
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Arc lines - dash animation */
+/* Pulse glow */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 12px 2px color-mix(in srgb, var(--tb-accent) 40%, transparent); transform: scale(1); }
+  50% { box-shadow: 0 0 28px 8px color-mix(in srgb, var(--tb-accent) 65%, transparent); transform: scale(1.05); }
+}
+
+/* IM icon ring — animated border glow */
+.hero-icon-ring {
+  padding: 2px;
+  border-radius: 16px;
+  border: 2px solid;
+  animation: icon-ring-pulse 3s ease-in-out infinite;
+}
+@keyframes icon-ring-pulse {
+  0%, 100% { border-color: inherit; opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Desktop frame */
+.hero-desktop-frame {
+  width: 160px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 30px 0 rgba(255,255,255,0.03), 0 4px 20px rgba(0,0,0,0.3);
+}
+
+/* Injected text shimmer */
+.hero-injected-text {
+  animation: text-shimmer 2s ease-in-out infinite;
+}
+@keyframes text-shimmer {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.35; }
+}
+
+/* Arc dash animation */
 @keyframes arc-dash {
   to { stroke-dashoffset: -40; }
 }
-.hero-arc-line-blue {
-  stroke: #3370FF;
-  opacity: 0.4;
-  stroke-dasharray: 8 4;
-  animation: arc-dash 2s linear infinite;
+.hero-arc-dash {
+  stroke-dasharray: 6 4;
+  animation: arc-dash 1.5s linear infinite;
+  opacity: 0.5;
 }
-.hero-arc-line-sky {
-  stroke: #0089FF;
-  opacity: 0.4;
-  stroke-dasharray: 8 4;
-  animation: arc-dash 2s linear infinite;
-  animation-delay: 0.3s;
+.hero-arc-dash-delay-1 {
+  animation-delay: 0.2s;
 }
-.hero-arc-line-green {
-  stroke: #06BA6A;
-  opacity: 0.4;
-  stroke-dasharray: 8 4;
-  animation: arc-dash 2s linear infinite;
-  animation-delay: 0.6s;
+.hero-arc-dash-delay-2 {
+  animation-delay: 0.4s;
 }
 
 /* Flow particles */
@@ -197,22 +241,69 @@ body {
   90% { opacity: 1; }
   100% { left: 95%; opacity: 0; }
 }
-.hero-particle {
+.hero-flow-particle {
   position: absolute;
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--tb-accent) 90%, transparent);
-  box-shadow: 0 0 6px 2px color-mix(in srgb, var(--tb-accent) 50%, transparent);
-  animation: flow-particle 3s ease-in-out infinite;
+  animation: flow-particle 2.5s ease-in-out infinite;
   opacity: 0;
+  z-index: 10;
 }
 
-/* Channel tags subtle float */
-.hero-channel-tag {
-  opacity: 0;
-  animation: msg-float 6s ease-in-out infinite;
+/* Scanlines overlay */
+.hero-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  opacity: 0.5;
 }
-.hero-channel-tag:nth-child(1) { animation-delay: 0s; }
-.hero-channel-tag:nth-child(2) { animation-delay: 2s; }
-.hero-channel-tag:nth-child(3) { animation-delay: 4s; }
+
+/* ============ Page-level Glow Effects ============ */
+
+/* Hero section ambient glow */
+.hero-section-glow {
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 30%, color-mix(in srgb, #3370FF 8%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 50%, color-mix(in srgb, var(--tb-accent) 10%, transparent), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 70%, color-mix(in srgb, #06BA6A 6%, transparent), transparent 50%);
+  pointer-events: none;
+}
+
+/* Feature section glow */
+.section-glow-accent {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--tb-accent) 15%, transparent), transparent 60%);
+}
+
+/* Feature card hover glow */
+.feature-card-glow:hover {
+  box-shadow: 0 0 20px 0 color-mix(in srgb, var(--tb-accent) 15%, transparent);
+}
+
+/* Download section glow */
+.section-glow-download {
+  background: radial-gradient(ellipse 70% 40% at 50% 50%, color-mix(in srgb, var(--tb-accent) 8%, transparent), transparent 60%);
+}
+
+/* Thin scrollbar for doc sidebars */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tb-border) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--tb-border);
+  border-radius: 2px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--tb-muted);
+}
