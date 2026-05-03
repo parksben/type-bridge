@@ -10,7 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
+*.tsbuildinfo
 
 # Rust / Tauri 构建产物
 src-tauri/target/
