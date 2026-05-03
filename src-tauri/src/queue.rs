@@ -202,12 +202,13 @@ fn fail<R: Runtime>(
         serde_json::json!({"success": false, "reason": reason, "channel": msg.channel}),
     );
 
-    // 反馈仅对支持 reaction / thread_reply 的渠道（飞书）执行。DingTalk / WeCom
-    // 在 P2 接入流式卡片反馈后会在这里走 channel.capability() 的对应分支。
+    // 反馈仅对支持对应能力的渠道执行。飞书：reaction + thread-reply；
+    // 钉钉：仅 failure_text_reply（通过 sessionWebhook 发 text）。DingTalk /
+    // WeCom 的流式卡片反馈在 P2.1+ 后续版本接入。
     if msg.channel.capability().reactions {
         send_reaction(bridge, &msg.source_message_id, REACT_FAILED);
     }
-    if msg.channel.capability().thread_reply {
+    if msg.channel.capability().failure_text_reply {
         bridge.send(&SidecarCommand::Reply {
             message_id: msg.source_message_id.clone(),
             text: format!("❌ 输入失败：{}", reason),

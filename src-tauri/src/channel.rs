@@ -59,18 +59,21 @@ impl ChannelId {
             Self::Feishu => ChannelCapability {
                 reactions: true,
                 thread_reply: true,
+                failure_text_reply: true,
                 receive_images: true,
                 requires_event_config: true,
             },
             Self::DingTalk => ChannelCapability {
                 reactions: false,
                 thread_reply: false,
+                failure_text_reply: true,
                 receive_images: true,
                 requires_event_config: false,
             },
             Self::WeCom => ChannelCapability {
                 reactions: false,
                 thread_reply: false,
+                failure_text_reply: true,
                 receive_images: true,
                 requires_event_config: false,
             },
@@ -85,6 +88,10 @@ pub struct ChannelCapability {
     pub reactions: bool,
     /// 是否支持 thread 内回复（飞书独有）
     pub thread_reply: bool,
+    /// 是否支持给原消息回一条文字（反馈失败原因用）。飞书 / 钉钉 / 企微都支持，
+    /// 只是内部实现不同：飞书走 thread reply；钉钉用 sessionWebhook 发 text；
+    /// 企微走 aibot_respond_msg 帧。
+    pub failure_text_reply: bool,
     /// 是否支持接收图片消息
     pub receive_images: bool,
     /// 是否需要用户在平台后台单独配置"事件订阅"（飞书独有）
