@@ -1,21 +1,13 @@
 import type { ChannelId } from "../store";
-import FeishuIcon from "../assets/icons/feishu.svg?react";
+import feishuPng from "../assets/icons/feishu.png";
 import DingTalkIcon from "../assets/icons/dingtalk.svg?react";
 import WeComIcon from "../assets/icons/wecom.svg?react";
 
-/// 三家 IM 的品牌 icon。所有 SVG 用 `fill="currentColor"`，由外层 CSS
-/// （`color: var(--brand-feishu)` 等）决定实际渲染颜色。
-///
-/// 来源（都是各自母公司 / 关联设计系统开源的 icon 集）：
-///   - 飞书：icon-park（字节跳动 IconPark）
-///   - 钉钉：ant-design icons（阿里 Ant Design）
-///   - 企微：tdesign icons（腾讯 TDesign）
-
-const ICONS: Record<ChannelId, React.FC<React.SVGProps<SVGSVGElement>>> = {
-  feishu: FeishuIcon,
-  dingtalk: DingTalkIcon,
-  wecom: WeComIcon,
-};
+/// 三家 IM 的品牌 icon。
+///   - 飞书：官方 favicon PNG（sf/p1-hera.feishucdn.com），蓝+青+深蓝三色鸟形
+///     原色保留（不走 currentColor，因为品牌多色不能被单色覆盖）
+///   - 钉钉：ant-design icons（阿里 Ant Design），单色 SVG，currentColor 着色
+///   - 企微：tdesign icons（腾讯 TDesign），单色 SVG，currentColor 着色
 
 interface Props {
   channel: ChannelId;
@@ -24,13 +16,19 @@ interface Props {
 }
 
 export default function ChannelIcon({ channel, size = 14, className }: Props) {
-  const Icon = ICONS[channel];
-  return (
-    <Icon
-      width={size}
-      height={size}
-      className={className}
-      aria-hidden="true"
-    />
-  );
+  if (channel === "feishu") {
+    return (
+      <img
+        src={feishuPng}
+        width={size}
+        height={size}
+        className={className}
+        alt=""
+        aria-hidden="true"
+        style={{ display: "inline-block", objectFit: "contain" }}
+      />
+    );
+  }
+  const Icon = channel === "dingtalk" ? DingTalkIcon : WeComIcon;
+  return <Icon width={size} height={size} className={className} aria-hidden="true" />;
 }
