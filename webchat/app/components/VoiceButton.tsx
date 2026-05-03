@@ -35,11 +35,13 @@ function friendlyErrorMessage(code: string): string {
       return "语音识别需要联网，请检查网络。";
     case "service-not-allowed":
     case "language-not-supported":
+    case "engine-timeout":
+    case "start-failed":
       return "你的系统缺少中文语音引擎。";
     case "aborted":
       return "";
     default:
-      if (code.includes("engine") || code.includes("引擎")) {
+      if (code.includes("engine") || code.includes("引擎") || code.includes("timeout")) {
         return "你的系统缺少中文语音引擎。";
       }
       return "浏览器语音听写启动失败。";
@@ -100,14 +102,19 @@ export default function VoiceButton({ onInterim, onFinal, onHint }: Props) {
         ctrlRef.current = null;
       },
       onError: (code) => {
-        setMode({ kind: "idle" });
         ctrlRef.current = null;
         const msg = friendlyErrorMessage(code);
-        if (!msg) return; // "aborted" 之类静默
-        // Web Speech 失败 → 弹 Picker，让用户选降级
+        if (!msg) {
+          // "aborted" 等静默情况
+          setMode({ kind: "idle" });
+          return;
+        }
+        // 一次性切到 picker，避免 setMode(idle) → setMode(picker) 的中间闪烁
         setMode({ kind: "picker", reason: msg });
       },
       onEnd: () => {
+        // 注意：speech.ts 会在 errored 时不触发 onEnd，因此此处 setMode(idle)
+        // 不会误把 picker 重置掉。保留 idle 是 Web Speech 正常结束 / stop() 的路径。
         setMode({ kind: "idle" });
         ctrlRef.current = null;
       },
