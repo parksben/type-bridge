@@ -139,6 +139,15 @@ async fn process_one<R: Runtime>(
     if msg.channel.capability().reactions {
         send_reaction(bridge, &msg.source_message_id, REACT_SENT);
     }
+    // 没有 reaction 能力的渠道（钉钉）靠 sessionWebhook 发一条 "✅ 已输入"
+    // 让用户知道消息被消费了——否则用户发完消息看桌面没反应，也看不到 IM
+    // 这边任何回执。失败态已经会回 "❌ 输入失败：..."，这里对齐成功态。
+    if msg.channel.capability().success_text_reply && !msg.source_message_id.starts_with("local-") {
+        bridge.send(&SidecarCommand::Reply {
+            message_id: msg.source_message_id.clone(),
+            text: "✅ 已输入".to_string(),
+        });
+    }
 
     // 4. 自动提交（可选）：注入完成后模拟"提交按键"
     //    快照读一次配置，避免在 spawn_blocking 里再拿锁

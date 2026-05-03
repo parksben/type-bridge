@@ -155,18 +155,26 @@ npm run tauri build -- --target x86_64-apple-darwin
 type-bridge/
 ├── src/                          React 前端
 │   ├── components/
-│   │   ├── ConfigWindow.tsx      配置 & 连接窗口
-│   │   ├── LogWindow.tsx         日志窗口
-│   │   └── ConfirmOverlay.tsx    输入前确认浮层
+│   │   ├── MainWindow.tsx        主窗口（SideBar + 4 tab 路由）
+│   │   ├── SideBar.tsx           左侧导航（连接 / 输入设置 / 历史 / 日志）
+│   │   ├── ConnectionHub.tsx     连接 tab 内的三渠道子 tab 容器
+│   │   ├── tabs/                 各 tab 页面（Feishu/DingTalk/WeCom Connection、Input、History、Log）
+│   │   ├── HistoryCard.tsx       单条历史消息卡片
+│   │   ├── SelftestChecklist.tsx selftest 结果清单（按渠道差异化）
+│   │   ├── StatusTag.tsx / ChannelTag.tsx / KeyBindInput.tsx / AccessibilityGate.tsx / ErrorBoundary.tsx
+│   │   └── LogWindow.tsx         独立日志窗口
 │   ├── store/index.ts            Zustand 全局状态（前端侧）
 │   ├── styles/globals.css        设计 tokens + 组件样式
 │   └── main.tsx
 │
 ├── src-tauri/                    Tauri / Rust 后端
 │   ├── src/
-│   │   ├── lib.rs                入口 + plugin 注册 + AppState
+│   │   ├── lib.rs                入口 + plugin 注册 + AppContext
+│   │   ├── channel.rs            ChannelId + Capability + 复合 id 工具
 │   │   ├── tray.rs               托盘图标 + 窗口生命周期
-│   │   ├── sidecar.rs            feishu-bridge 进程管理 + 事件派发
+│   │   ├── sidecar.rs            多渠道 sidecar 进程管理 + 事件派发
+│   │   ├── queue.rs              注入队列 + worker + 反馈（reaction / reply）
+│   │   ├── history.rs            消息历史持久化（history.json + 图片归档）
 │   │   ├── injector.rs           AXUIElement + CGEventPost 注入
 │   │   ├── store.rs              凭据和设置持久化
 │   │   ├── notification.rs       系统推送
@@ -175,10 +183,8 @@ type-bridge/
 │   ├── capabilities/             Tauri 权限声明
 │   └── tauri.conf.json
 │
-├── feishu-bridge/                Go sidecar 源码
-│   ├── main.go                   入口：读环境变量，建立长连接
-│   ├── handler.go                消息分发：text / image / post
-│   └── go.mod
+├── feishu-bridge/                飞书 Go sidecar 源码
+├── dingtalk-bridge/              钉钉 Go sidecar 源码
 │
 ├── website/                      产品官网 (Next.js)
 │   ├── netlify.toml              Netlify 零手动部署配置
