@@ -16,6 +16,9 @@ func handleMessage(ctx context.Context, data *chatbot.BotCallbackDataModel) ([]b
 		return []byte(""), nil
 	}
 
+	// 记录 sessionWebhook 供后续 reply 命令使用（有效期 ~1h，过期自动淘汰）
+	rememberSession(data)
+
 	ts := fmt.Sprintf("%d", data.CreateAt)
 	sender := data.SenderStaffId
 	if sender == "" {
