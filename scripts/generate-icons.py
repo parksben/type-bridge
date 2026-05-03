@@ -38,7 +38,6 @@ BUNDLE_SIZES = {
     "32x32.png":         32,
     "128x128.png":       128,
     "128x128@2x.png":    256,
-    "icon.png":         1024,
 }
 
 # Windows icon (not used but kept for completeness)
