@@ -13,6 +13,10 @@ pub enum ChannelId {
     DingTalk,
     #[serde(rename = "wecom")]
     WeCom,
+    /// TypeBridge 官方网页扫码渠道。详见 REQUIREMENTS §2.10 / TECH_DESIGN §三十五。
+    /// 不走 sidecar 进程，由 Rust 内建 HTTP 轮询模块（webchat.rs）处理。
+    #[serde(rename = "webchat")]
+    WebChat,
 }
 
 impl Default for ChannelId {
@@ -30,6 +34,7 @@ impl ChannelId {
             Self::Feishu => "feishu",
             Self::DingTalk => "dingtalk",
             Self::WeCom => "wecom",
+            Self::WebChat => "webchat",
         }
     }
 
@@ -39,17 +44,21 @@ impl ChannelId {
             Self::Feishu => "飞书",
             Self::DingTalk => "钉钉",
             Self::WeCom => "企微",
+            Self::WebChat => "WebChat",
         }
     }
 
     /// 对应 sidecar 二进制的 target-triple-agnostic 前缀名。
     /// Tauri shell plugin 的 `externalBin: ["binaries/<name>"]` 会按当前
     /// target 自动拼 `-<triple>` 后缀选对应二进制。
-    pub fn sidecar_binary(&self) -> &'static str {
+    ///
+    /// 返回 `None` 表示该渠道**不走 sidecar**（如 WebChat 走 Rust 内建 HTTP 轮询）。
+    pub fn sidecar_binary(&self) -> Option<&'static str> {
         match self {
-            Self::Feishu => "feishu-bridge",
-            Self::DingTalk => "dingtalk-bridge",
-            Self::WeCom => "wecom-bridge",
+            Self::Feishu => Some("feishu-bridge"),
+            Self::DingTalk => Some("dingtalk-bridge"),
+            Self::WeCom => Some("wecom-bridge"),
+            Self::WebChat => None,
         }
     }
 
@@ -80,6 +89,17 @@ impl ChannelId {
                 failure_text_reply: false,
                 success_text_reply: false,
                 streaming_reply: true,
+                receive_images: true,
+                requires_event_config: false,
+            },
+            // WebChat ack 走独立 HTTP endpoint（/api/ack），不走 sidecar 反馈通道。
+            // 所有 sidecar 反馈能力都置 false，避免 queue.rs 误发空命令。
+            Self::WebChat => ChannelCapability {
+                reactions: false,
+                thread_reply: false,
+                failure_text_reply: false,
+                success_text_reply: false,
+                streaming_reply: false,
                 receive_images: true,
                 requires_event_config: false,
             },
@@ -131,6 +151,7 @@ pub fn parse_composite_id(id: &str) -> (ChannelId, &str) {
         Some(("feishu", rest)) => (ChannelId::Feishu, rest),
         Some(("dingtalk", rest)) => (ChannelId::DingTalk, rest),
         Some(("wecom", rest)) => (ChannelId::WeCom, rest),
+        Some(("webchat", rest)) => (ChannelId::WebChat, rest),
         _ => (ChannelId::Feishu, id),
     }
 }

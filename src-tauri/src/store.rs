@@ -55,6 +55,10 @@ pub struct Settings {
     pub wecom_bot_id: String,
     #[serde(default)]
     pub wecom_secret: String,
+    /// WebChat 中继 URL；空字符串表示用官方默认 `https://webchat-typebridge.parksben.xyz`。
+    /// 高级用户可以填自部署 URL（例如内网团队场景）。
+    #[serde(default)]
+    pub webchat_relay_url: String,
     /// 输入后自动提交。默认开启。
     #[serde(default = "default_true")]
     pub auto_submit: bool,
@@ -72,6 +76,7 @@ impl Default for Settings {
             dingtalk_client_secret: String::new(),
             wecom_bot_id: String::new(),
             wecom_secret: String::new(),
+            webchat_relay_url: String::new(),
             auto_submit: true,
             submit_key: SubmitKey::default(),
         }
@@ -114,6 +119,10 @@ pub fn get_settings(app: tauri::AppHandle<Wry>) -> Settings {
             .get("wecom_secret")
             .and_then(|v| v.as_str().map(String::from))
             .unwrap_or_default(),
+        webchat_relay_url: store
+            .get("webchat_relay_url")
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default(),
         auto_submit: store
             .get("auto_submit")
             .and_then(|v| v.as_bool())
@@ -131,6 +140,7 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
     store.set("dingtalk_client_secret", settings.dingtalk_client_secret);
     store.set("wecom_bot_id", settings.wecom_bot_id);
     store.set("wecom_secret", settings.wecom_secret);
+    store.set("webchat_relay_url", settings.webchat_relay_url.clone());
     store.set("auto_submit", settings.auto_submit);
     store.set(
         "submit_key",
@@ -140,6 +150,8 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
 
     if let Some(ctx) = app.try_state::<Arc<AppContext>>() {
         ctx.set_submit_config(settings.auto_submit, settings.submit_key);
+        // 同步给 webchat bridge：空字符串 = 用官方默认
+        ctx.webchat.set_relay_url(settings.webchat_relay_url);
     }
 
     Ok(())

@@ -11,6 +11,7 @@
 use crate::channel::ChannelId;
 use crate::history::HistoryStore;
 use crate::queue::{ingest_message, Injector};
+use crate::webchat::WebChatBridge;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -216,6 +217,8 @@ pub struct AppContext {
     pub history: Arc<HistoryStore>,
     pub injector: Arc<Injector>,
     pub bridges: Arc<SidecarBridges>,
+    /// WebChat 渠道桥（不走 sidecar，Rust 内建 HTTP 轮询）
+    pub webchat: Arc<WebChatBridge>,
     /// 等待中的 selftest 回执 sender，按渠道分槽。每个渠道同时最多一个在途。
     pub pending_selftests: Arc<TokioMutex<HashMap<ChannelId, oneshot::Sender<SelftestResult>>>>,
 }
@@ -256,6 +259,7 @@ impl AppContext {
             history,
             injector,
             bridges,
+            webchat: Arc::new(WebChatBridge::new()),
             pending_selftests: Arc::new(TokioMutex::new(HashMap::new())),
         })
     }
@@ -274,13 +278,19 @@ impl AppContext {
 /// 启动某个渠道的 sidecar 进程，绑定 stdin/stdout 到 AppContext。
 ///
 /// `envs` 是该渠道需要传给 Go sidecar 的环境变量（凭据）。
+///
+/// 注意：本函数仅适用于带 sidecar 二进制的渠道（feishu / dingtalk / wecom）。
+/// WebChat 不走 sidecar，由 [`crate::webchat`] 模块独立处理。
 async fn start_sidecar<R: Runtime>(
     app: AppHandle<R>,
     channel: ChannelId,
     envs: Vec<(String, String)>,
 ) -> Result<(), String> {
+    let bin = channel
+        .sidecar_binary()
+        .ok_or_else(|| format!("channel {} has no sidecar binary", channel.key()))?;
     let shell = app.shell();
-    let mut cmd = shell.sidecar(channel.sidecar_binary()).map_err(|e| e.to_string())?;
+    let mut cmd = shell.sidecar(bin).map_err(|e| e.to_string())?;
     for (k, v) in envs {
         cmd = cmd.env(&k, &v);
     }
