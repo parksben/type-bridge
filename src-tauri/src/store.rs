@@ -48,6 +48,13 @@ pub struct Settings {
     /// 钉钉 Client Secret 即 AppSecret。
     #[serde(default)]
     pub dingtalk_client_secret: String,
+    /// 企微智能机器人长连接凭据（v0.6 P2.3 接入）。
+    /// Bot ID 在企微管理后台智能机器人详情页获取，secret 是"长连接"模式
+    /// 专用 key（与"设置接收消息回调地址"模式下的 Token/EncodingAESKey 不同）。
+    #[serde(default)]
+    pub wecom_bot_id: String,
+    #[serde(default)]
+    pub wecom_secret: String,
     /// 输入后自动提交。默认开启。
     #[serde(default = "default_true")]
     pub auto_submit: bool,
@@ -63,6 +70,8 @@ impl Default for Settings {
             feishu_app_secret: String::new(),
             dingtalk_client_id: String::new(),
             dingtalk_client_secret: String::new(),
+            wecom_bot_id: String::new(),
+            wecom_secret: String::new(),
             auto_submit: true,
             submit_key: SubmitKey::default(),
         }
@@ -97,6 +106,14 @@ pub fn get_settings(app: tauri::AppHandle<Wry>) -> Settings {
             .get("dingtalk_client_secret")
             .and_then(|v| v.as_str().map(String::from))
             .unwrap_or_default(),
+        wecom_bot_id: store
+            .get("wecom_bot_id")
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default(),
+        wecom_secret: store
+            .get("wecom_secret")
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default(),
         auto_submit: store
             .get("auto_submit")
             .and_then(|v| v.as_bool())
@@ -112,6 +129,8 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
     store.set("feishu_app_secret", settings.feishu_app_secret);
     store.set("dingtalk_client_id", settings.dingtalk_client_id);
     store.set("dingtalk_client_secret", settings.dingtalk_client_secret);
+    store.set("wecom_bot_id", settings.wecom_bot_id);
+    store.set("wecom_secret", settings.wecom_secret);
     store.set("auto_submit", settings.auto_submit);
     store.set(
         "submit_key",

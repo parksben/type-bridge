@@ -32,7 +32,8 @@
     "category": "Utility",
     "externalBin": [
       "binaries/feishu-bridge",
-      "binaries/dingtalk-bridge"
+      "binaries/dingtalk-bridge",
+      "binaries/wecom-bridge"
     ]
   },
   "plugins": {

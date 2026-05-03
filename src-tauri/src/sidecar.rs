@@ -28,6 +28,14 @@ pub enum SidecarCommand {
     Reaction { message_id: String, emoji_type: String },
     /// 飞书内部 reply 命令；同上
     Reply { message_id: String, text: String },
+    /// 企微专用：同一 stream.id 原地更新流式消息（🟡 处理中 → ✅ 已输入 / ❌ 失败）。
+    /// Rust 只传 message_id + content + finish；req_id / stream_id 由 wecom-bridge
+    /// 内部 sync.Map 维护，封装在 Go 侧（详见 TECH_DESIGN §31.4）。
+    StreamingReply {
+        message_id: String,
+        content: String,
+        finish: bool,
+    },
     /// selftest：让 sidecar 执行该渠道的凭据 / scope 自检
     Selftest,
 }
@@ -115,7 +123,7 @@ impl SidecarBridges {
         let mut inner = HashMap::new();
         inner.insert(ChannelId::Feishu, Arc::new(SidecarBridge::default()));
         inner.insert(ChannelId::DingTalk, Arc::new(SidecarBridge::default()));
-        // WeCom 留白，P3 再加
+        inner.insert(ChannelId::WeCom, Arc::new(SidecarBridge::default()));
         Self { inner }
     }
 
@@ -524,6 +532,23 @@ pub async fn start_dingtalk<R: Runtime>(
         vec![
             ("DINGTALK_CLIENT_ID".to_string(), client_id),
             ("DINGTALK_CLIENT_SECRET".to_string(), client_secret),
+        ],
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn start_wecom<R: Runtime>(
+    app: AppHandle<R>,
+    bot_id: String,
+    secret: String,
+) -> Result<(), String> {
+    start_sidecar(
+        app,
+        ChannelId::WeCom,
+        vec![
+            ("WECOM_BOT_ID".to_string(), bot_id),
+            ("WECOM_SECRET".to_string(), secret),
         ],
     )
     .await

@@ -136,13 +136,21 @@ async fn process_one<R: Runtime>(
         serde_json::json!({"success": true, "channel": msg.channel}),
     );
     // 发 reaction 用平台原始 message_id；仅支持 reaction 的渠道（飞书）才发
-    if msg.channel.capability().reactions {
+    let cap = msg.channel.capability();
+    if cap.reactions {
         send_reaction(bridge, &msg.source_message_id, REACT_SENT);
     }
-    // 没有 reaction 能力的渠道（钉钉）靠 sessionWebhook 发一条 "✅ 已输入"
-    // 让用户知道消息被消费了——否则用户发完消息看桌面没反应，也看不到 IM
-    // 这边任何回执。失败态已经会回 "❌ 输入失败：..."，这里对齐成功态。
-    if msg.channel.capability().success_text_reply && !msg.source_message_id.starts_with("local-") {
+    // 反馈 precedence：streaming_reply > success_text_reply
+    //   - 企微：同一条 bot 消息原地更新为 ✅ 已输入（关闭流）
+    //   - 钉钉：发一条新的 "✅ 已输入" 文字回执
+    //   - 飞书：已通过 reaction 反馈，不再发文字
+    if cap.streaming_reply && !msg.source_message_id.starts_with("local-") {
+        bridge.send(&SidecarCommand::StreamingReply {
+            message_id: msg.source_message_id.clone(),
+            content: "✅ 已输入".to_string(),
+            finish: true,
+        });
+    } else if cap.success_text_reply && !msg.source_message_id.starts_with("local-") {
         bridge.send(&SidecarCommand::Reply {
             message_id: msg.source_message_id.clone(),
             text: "✅ 已输入".to_string(),
@@ -211,13 +219,21 @@ fn fail<R: Runtime>(
         serde_json::json!({"success": false, "reason": reason, "channel": msg.channel}),
     );
 
-    // 反馈仅对支持对应能力的渠道执行。飞书：reaction + thread-reply；
-    // 钉钉：仅 failure_text_reply（通过 sessionWebhook 发 text）。DingTalk /
-    // WeCom 的流式卡片反馈在 P2.1+ 后续版本接入。
-    if msg.channel.capability().reactions {
+    // 反馈 precedence（与成功路径一致）：
+    //   - 飞书 reactions=true → 贴 CRY 表情 + thread 文字回复原因
+    //   - 企微 streaming_reply=true → 同 stream.id 原地更新为 ❌ + finish 关闭流
+    //   - 钉钉 failure_text_reply=true → 发一条新 "❌ 输入失败：..." 文字回执
+    let cap = msg.channel.capability();
+    if cap.reactions {
         send_reaction(bridge, &msg.source_message_id, REACT_FAILED);
     }
-    if msg.channel.capability().failure_text_reply {
+    if cap.streaming_reply && !msg.source_message_id.starts_with("local-") {
+        bridge.send(&SidecarCommand::StreamingReply {
+            message_id: msg.source_message_id.clone(),
+            content: format!("❌ 输入失败：{}", reason),
+            finish: true,
+        });
+    } else if cap.failure_text_reply {
         bridge.send(&SidecarCommand::Reply {
             message_id: msg.source_message_id.clone(),
             text: format!("❌ 输入失败：{}", reason),
@@ -283,9 +299,19 @@ pub fn ingest_message<R: Runtime>(
     let _ = app.emit("typebridge://history-update", ());
     emit_status(app, &id, "queued", None);
 
-    // 给用户一个"已看到"的表情反馈——仅支持 reaction 的渠道（飞书）才发
-    if channel.capability().reactions {
+    // 给用户一个"已看到"的反馈。precedence：
+    //   - reactions (飞书)   → 贴 EYES 表情在原消息上
+    //   - streaming_reply (企微) → 发流式消息 "🟡 处理中..."（同 stream.id 后续 update）
+    //   - 其他渠道（钉钉）不发中间态，避免双条反馈刷屏
+    let cap = channel.capability();
+    if cap.reactions {
         send_reaction(bridge, &source_id, REACT_RECEIVED);
+    } else if cap.streaming_reply && !source_id.starts_with("local-") {
+        bridge.send(&SidecarCommand::StreamingReply {
+            message_id: source_id.clone(),
+            content: "🟡 处理中...".to_string(),
+            finish: false,
+        });
     }
 
     if let Err(e) = injector.enqueue(QueuedMessage {

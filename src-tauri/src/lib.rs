@@ -23,6 +23,7 @@ pub fn run() {
             store::save_settings,
             sidecar::start_feishu,
             sidecar::start_dingtalk,
+            sidecar::start_wecom,
             sidecar::stop_channel,
             sidecar::run_selftest,
             sidecar::get_history,
