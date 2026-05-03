@@ -121,3 +121,13 @@ input, textarea, button {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
 }
+
+/* 录音按钮脉冲阴影 */
+@keyframes pulse-record {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--tb-accent) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 18px color-mix(in srgb, var(--tb-accent) 0%, transparent);
+  }
+}
