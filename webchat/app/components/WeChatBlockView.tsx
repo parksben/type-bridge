@@ -1,11 +1,8 @@
+"use client";
+
 import { ExternalLink, MessageCircle, MoreHorizontal } from "lucide-react";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "请在外部浏览器打开 — TypeBridge WebChat",
-};
-
-export default function BlockedWeChatPage() {
+export default function WeChatBlockView() {
   return (
     <main className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-10 safe-area-top safe-area-bottom">
       <div className="max-w-sm w-full text-center">
@@ -61,15 +58,13 @@ export default function BlockedWeChatPage() {
               <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-[var(--tb-accent)] text-white text-xs font-semibold shrink-0 mt-0.5">
                 2
               </span>
-              <span>
-                选择「在浏览器打开」（iOS Safari / Android Chrome）
-              </span>
+              <span>选择「在浏览器打开」（iOS Safari / Android Chrome）</span>
             </li>
             <li className="flex items-start gap-2 list-none -ml-5 pl-0">
               <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-[var(--tb-accent)] text-white text-xs font-semibold shrink-0 mt-0.5">
                 3
               </span>
-              <span>在外部浏览器中重新打开此页面</span>
+              <span>在外部浏览器中继续此页面</span>
             </li>
           </ol>
         </div>

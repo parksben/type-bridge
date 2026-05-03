@@ -55,6 +55,10 @@ export async function GET(req: NextRequest) {
     const deadline = Date.now() + POLL_TIMEOUT_MS;
     while (Date.now() < deadline) {
       await new Promise((rs) => setTimeout(rs, POLL_INTERVAL_MS));
+      // 循环内也检查 session 是否已因 owner 心跳超时被 GC
+      const cur = await getSession(sessionId);
+      if (!cur) return err("NOT_FOUND", "session vanished", 404);
+      if (await gcSession(cur)) return err("EXPIRED", "session expired", 410);
       const r2 = await checkHandshake(sessionId);
       if (r2) return ok(r2);
     }
@@ -73,6 +77,10 @@ export async function GET(req: NextRequest) {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise((rs) => setTimeout(rs, POLL_INTERVAL_MS));
+    // 循环内也检查 session 健康：桌面端心跳缺失即立刻通知手机
+    const cur = await getSession(sessionId);
+    if (!cur) return err("NOT_FOUND", "session vanished", 404);
+    if (await gcSession(cur)) return err("EXPIRED", "session expired", 410);
     const r2 = await checkAcks(sessionId, since);
     if (r2.acks.length > 0) return ok(r2);
   }

@@ -69,7 +69,9 @@ export type AuxIndex = { sessionId: string };
 
 export const SESSION_TTL_MS = 5 * 60 * 1000;
 export const BOUND_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-export const OWNER_HEARTBEAT_GRACE_MS = 60 * 1000;
+// 桌面端心跳缺失超过此阈值，下一次 gcSession 触发时清理 session。
+// 必须大于桌面端心跳间隔（15s），留足网络抖动余量。
+export const OWNER_HEARTBEAT_GRACE_MS = 45 * 1000;
 export const MESSAGE_PULLED_GC_MS = 5 * 60 * 1000;
 export const MAX_OTP_ATTEMPTS = 5;
 

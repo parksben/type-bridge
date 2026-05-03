@@ -25,7 +25,8 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 const DEFAULT_RELAY_URL: &str = "https://webchat-typebridge.parksben.xyz";
-const HEARTBEAT_INTERVAL_SECS: u64 = 20;
+// 心跳必须明显小于中继 OWNER_HEARTBEAT_GRACE_MS (45s)，留 3x 余量
+const HEARTBEAT_INTERVAL_SECS: u64 = 15;
 const PULL_INTERVAL_MS: u64 = 1000;
 const PULL_IDLE_INTERVAL_MS: u64 = 3000;
 const HTTP_TIMEOUT_SECS: u64 = 30;

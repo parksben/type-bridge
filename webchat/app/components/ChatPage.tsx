@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Wifi, WifiOff } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import ComposerBar from "./ComposerBar";
 import {
@@ -176,30 +175,74 @@ export default function ChatPage({ sessionId, userToken, onSessionLost }: Props)
     >
       {/* Header */}
       <header
-        className="border-b safe-area-top px-4 py-3 flex items-center justify-between"
+        className="safe-area-top"
         style={{
           background: "var(--tb-surface)",
-          borderColor: "var(--tb-border)",
+          borderBottom: "1px solid var(--tb-border)",
+          boxShadow: "0 1px 0 rgba(0,0,0,0.02)",
         }}
       >
-        <div>
-          <p className="text-[15px] font-semibold text-[var(--tb-text)] leading-tight">
-            TypeBridge
-          </p>
-          <p className="text-[11px] text-[var(--tb-muted)] mt-0.5">
-            消息将注入到桌面当前聚焦的输入框
-          </p>
-        </div>
-        <div
-          className="flex items-center gap-1.5 text-[11px]"
-          style={{ color: online ? "var(--tb-success)" : "var(--tb-muted)" }}
-        >
-          {online ? (
-            <Wifi size={13} strokeWidth={2.2} />
-          ) : (
-            <WifiOff size={13} strokeWidth={2.2} />
-          )}
-          <span>{online ? "已连接" : "重连中"}</span>
+        <div className="px-4 py-2.5 flex items-center gap-3">
+          {/* Logo */}
+          <div
+            className="shrink-0 w-9 h-9 rounded-[10px] overflow-hidden flex items-center justify-center"
+            style={{
+              background: "var(--tb-bg)",
+              border: "1px solid var(--tb-border)",
+            }}
+          >
+            <img
+              src="/logo.png"
+              alt="TypeBridge"
+              width={30}
+              height={30}
+              className="object-contain"
+            />
+          </div>
+
+          {/* Title */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[15px] font-semibold tracking-tight text-[var(--tb-text)] leading-tight">
+                TypeBridge
+              </span>
+              <span
+                className="text-[10px] font-medium px-1.5 py-[1px] rounded"
+                style={{
+                  background: "color-mix(in srgb, var(--tb-accent) 14%, transparent)",
+                  color: "var(--tb-accent)",
+                }}
+              >
+                WebChat
+              </span>
+            </div>
+            <p className="text-[11px] text-[var(--tb-muted)] mt-0.5 truncate">
+              消息实时注入桌面当前聚焦的输入框
+            </p>
+          </div>
+
+          {/* Status pill */}
+          <div
+            className="shrink-0 flex items-center gap-1 px-2 py-[5px] rounded-full text-[10.5px] font-medium"
+            style={{
+              background: online
+                ? "color-mix(in srgb, var(--tb-success) 14%, transparent)"
+                : "var(--tb-bg)",
+              color: online ? "var(--tb-success)" : "var(--tb-muted)",
+              border: online
+                ? "1px solid color-mix(in srgb, var(--tb-success) 25%, transparent)"
+                : "1px solid var(--tb-border)",
+            }}
+          >
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{
+                background: online ? "var(--tb-success)" : "var(--tb-muted)",
+                animation: online ? "pulse-dot 2s ease-in-out infinite" : undefined,
+              }}
+            />
+            {online ? "已连接" : "重连中"}
+          </div>
         </div>
       </header>
 

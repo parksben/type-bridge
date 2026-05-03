@@ -1,11 +1,8 @@
+"use client";
+
 import { Smartphone, Monitor } from "lucide-react";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "请用手机访问 — TypeBridge WebChat",
-};
-
-export default function BlockedPCPage() {
+export default function PCBlockView() {
   return (
     <main className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-10 safe-area-top safe-area-bottom">
       <div className="max-w-sm w-full text-center">
