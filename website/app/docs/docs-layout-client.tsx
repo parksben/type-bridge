@@ -6,7 +6,7 @@ import { RightSidebar } from "./right-sidebar";
 
 export function DocsLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isTutorial = /^\/docs\/(feishu|dingtalk|wecom)/.test(pathname);
+  const isTutorial = /^\/docs\/(use-cases|feishu|dingtalk|wecom)/.test(pathname);
 
   if (!isTutorial) {
     return <>{children}</>;

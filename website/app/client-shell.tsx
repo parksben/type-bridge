@@ -118,6 +118,7 @@ function ThemeProvider({ children }: { children: ReactNode }) {
 
 const NAV_ITEMS = [
   { label: "功能特性", href: "/#features", external: false },
+  { label: "适用场景", href: "/docs/use-cases", external: false },
   { label: "使用文档", href: "/docs", external: false },
   { label: "下载", href: "/#download", external: false },
 ];
