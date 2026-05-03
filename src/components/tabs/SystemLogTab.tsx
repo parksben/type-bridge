@@ -32,6 +32,7 @@ const kindClass: Record<LogEntry["kind"], string> = {
 
 /// 按渠道渲染不同颜色的 [渠道] 前缀。与 ChannelTag 颜色保持一致。
 const CHANNEL_PREFIX_COLOR: Record<ChannelId, string> = {
+  webchat: "#7c3aed",
   feishu: "var(--accent)",
   dingtalk: "#1677ff",
   wecom: "#07c160",
