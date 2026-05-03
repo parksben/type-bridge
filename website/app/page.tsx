@@ -24,11 +24,11 @@ function HeroBanner() {
     <div className="hero-banner relative w-full mx-auto select-none overflow-hidden rounded-2xl border border-[var(--tb-border)]"
       style={{ minHeight: "340px" }}
     >
-      {/* Dark inner bg for contrast */}
-      <div className="absolute inset-0 bg-[#0a0a0f] dark:bg-[#060609]" />
+      {/* Inner bg — adapts to theme */}
+      <div className="absolute inset-0 bg-[var(--tb-bg)] dark:bg-[#0e0e10]" />
 
       {/* Grid pattern overlay */}
-      <div className="hero-grid-pattern absolute inset-0 opacity-[0.07]" />
+      <div className="hero-grid-pattern absolute inset-0 opacity-[0.04] dark:opacity-[0.07]" />
 
       {/* Ambient color orbs */}
       <div className="hero-orb hero-orb-blue" />
@@ -38,28 +38,24 @@ function HeroBanner() {
       {/* ── LEFT: IM sources ── */}
       <div className="absolute left-[8%] md:left-[10%] top-0 bottom-0 flex flex-col items-center justify-center gap-5 md:gap-8 z-10">
         <IMAppIcon name="飞书" color="#3370FF" delay="0s">
-          {/* Feishu logo — stylized double-loop */}
-          <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-            <path d="M16 4C10 4 5 8 5 14s5 10 11 14c6-4 11-10 11-14S22 4 16 4z" fill="#3370FF" opacity="0.9"/>
-            <path d="M16 8c-3 0-6 3-6 7s3 7 6 9c3-2 6-5 6-9s-3-7-6-7z" fill="white" opacity="0.85"/>
-            <circle cx="16" cy="14" r="2.5" fill="white"/>
+          {/* Feishu/Lark official logo — IconPark (ByteDance) */}
+          <svg viewBox="0 0 48 48" fill="none" className="w-7 h-7 md:w-8 md:h-8">
+            <g fillRule="evenodd" clipRule="evenodd" fill="#3370FF">
+              <path d="M41.0716 5.99409L3.31071 16.5187L12.3856 25.8126L20.7998 25.9594L30.4827 16.5187C30.2266 15.9943 30.0985 15.5552 30.0985 15.2013C30.0985 14.4074 30.4104 13.7786 30.8947 13.333C31.7241 12.57 32.7222 12.4558 33.8889 12.9905L41.0716 5.99409Z"/>
+              <path d="M42.1021 6.72842L31.5775 44.4893L22.2836 35.4144L22.1367 27.0002L31.5115 17.4816C32.0195 17.8454 32.5743 18.0105 33.1759 17.9769C34.0784 17.9264 34.6614 17.3813 34.9349 17.0602C35.2083 16.7392 35.5293 16.2051 35.5025 15.4113C35.4847 14.8821 35.3109 14.3941 34.9812 13.9472L42.1021 6.72842Z"/>
+            </g>
           </svg>
         </IMAppIcon>
         <IMAppIcon name="钉钉" color="#0089FF" delay="0.6s">
-          {/* DingTalk logo — hexagon with inner diamond */}
-          <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-            <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" fill="#0089FF" opacity="0.9"/>
-            <path d="M16 8l-7 4v8l7 4 7-4v-8l-7-4z" fill="white" opacity="0.85"/>
-            <path d="M16 12l-3 2v4l3 2 3-2v-4l-3-2z" fill="#0089FF" opacity="0.7"/>
+          {/* DingTalk official logo — Ant Design Icons */}
+          <svg viewBox="0 0 1024 1024" className="w-7 h-7 md:w-8 md:h-8">
+            <path fill="#0089FF" d="M573.7 252.5C422.5 197.4 201.3 96.7 201.3 96.7c-15.7-4.1-17.9 11.1-17.9 11.1c-5 61.1 33.6 160.5 53.6 182.8c19.9 22.3 319.1 113.7 319.1 113.7S326 357.9 270.5 341.9c-55.6-16-37.9 17.8-37.9 17.8c11.4 61.7 64.9 131.8 107.2 138.4c42.2 6.6 220.1 4 220.1 4s-35.5 4.1-93.2 11.9c-42.7 5.8-97 12.5-111.1 17.8c-33.1 12.5 24 62.6 24 62.6c84.7 76.8 129.7 50.5 129.7 50.5c33.3-10.7 61.4-18.5 85.2-24.2L565 743.1h84.6L603 928l205.3-271.9H700.8l22.3-38.7c.3.5.4.8.4.8S799.8 496.1 829 433.8l.6-1h-.1c5-10.8 8.6-19.7 10-25.8c17-71.3-114.5-99.4-265.8-154.5"/>
           </svg>
         </IMAppIcon>
         <IMAppIcon name="企微" color="#06BA6A" delay="1.2s">
-          {/* WeCom logo — double-arc with center dot */}
-          <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
-            <path d="M4 14C4 8 9 4 16 4s12 4 12 10" stroke="#06BA6A" strokeWidth="2.5" strokeLinecap="round" opacity="0.9"/>
-            <path d="M4 18c0 6 5 10 12 10s12-4 12-10" stroke="#06BA6A" strokeWidth="2.5" strokeLinecap="round" opacity="0.9"/>
-            <circle cx="16" cy="16" r="4" fill="#06BA6A" opacity="0.85"/>
-            <circle cx="16" cy="16" r="1.5" fill="white"/>
+          {/* WeCom (WeChat) official logo — Simple Icons */}
+          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8">
+            <path fill="#06BA6A" d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213c0 .163.13.295.29.295a.33.33 0 0 0 .167-.054l1.903-1.114a.86.86 0 0 1 .717-.098a10.2 10.2 0 0 0 2.837.403c.276 0 .543-.027.811-.05c-.857-2.578.157-4.972 1.932-6.446c1.703-1.415 3.882-1.98 5.853-1.838c-.576-3.583-4.196-6.348-8.596-6.348M5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178a1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18m5.34 2.867c-1.797-.052-3.746.512-5.28 1.786c-1.72 1.428-2.687 3.72-1.78 6.22c.942 2.453 3.666 4.229 6.884 4.229c.826 0 1.622-.12 2.361-.336a.72.72 0 0 1 .598.082l1.584.926a.3.3 0 0 0 .14.047c.134 0 .24-.111.24-.247c0-.06-.023-.12-.038-.177l-.327-1.233a.6.6 0 0 1-.023-.156a.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983a.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983a.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
           </svg>
         </IMAppIcon>
       </div>
@@ -110,17 +106,17 @@ function HeroBanner() {
       {/* ── RIGHT: Desktop target ── */}
       <div className="absolute right-[6%] md:right-[8%] top-1/2 -translate-y-1/2 z-10">
         <div className="hero-desktop-frame animate-float-desktop">
-          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.06]">
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-[var(--tb-border)]/40">
             <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
             <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
             <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-            <div className="flex-1 text-center text-[10px] text-white/30 font-medium tracking-wide">TypeBridge</div>
+            <div className="flex-1 text-center text-[10px] text-[var(--tb-muted)] font-medium tracking-wide">TypeBridge</div>
           </div>
           <div className="p-3 space-y-1.5">
-            <div className="h-1.5 w-3/4 rounded bg-white/[0.06]" />
-            <div className="h-1.5 w-1/2 rounded bg-white/[0.04]" />
-            <div className="relative mt-2 px-2.5 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04]">
-              <div className="h-1.5 w-4/5 rounded bg-white/25 hero-injected-text" />
+            <div className="h-1.5 w-3/4 rounded bg-[var(--tb-border)]/50" />
+            <div className="h-1.5 w-1/2 rounded bg-[var(--tb-border)]/30" />
+            <div className="relative mt-2 px-2.5 py-2 rounded-lg border border-[var(--tb-border)] bg-[var(--tb-surface)]">
+              <div className="h-1.5 w-4/5 rounded bg-[var(--tb-accent)]/25 hero-injected-text" />
               <div className="absolute right-2 top-1 w-[2px] h-3.5 bg-[var(--tb-accent)] animate-blink-cursor rounded-full" />
             </div>
           </div>
@@ -128,7 +124,7 @@ function HeroBanner() {
       </div>
 
       {/* Scanline overlay */}
-      <div className="hero-scanlines absolute inset-0 pointer-events-none" />
+      <div className="hero-scanlines absolute inset-0 pointer-events-none dark:opacity-50 opacity-0" />
     </div>
   );
 }
@@ -143,12 +139,12 @@ function IMAppIcon({ name, color, delay, children }: { name: string; color: stri
       <div className="hero-icon-ring" style={{ borderColor: color, animationDelay: delay }}>
         <div
           className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center overflow-hidden"
-          style={{ backgroundColor: color + "15", boxShadow: `0 0 24px 0 ${color}25` }}
+          style={{ backgroundColor: color + "18", boxShadow: `0 0 24px 0 ${color}20` }}
         >
           {children}
         </div>
       </div>
-      <span className="text-[10px] md:text-xs font-bold tracking-wide text-white/60 uppercase">{name}</span>
+      <span className="text-[10px] md:text-xs font-bold tracking-wide text-[var(--tb-muted)] uppercase">{name}</span>
     </div>
   );
 }
@@ -275,13 +271,6 @@ export default function HomePage() {
       <section className="relative px-6 pt-24 pb-16 md:pt-36 md:pb-24 overflow-hidden min-h-[560px] md:min-h-[640px]">
         <div className="absolute inset-0 hero-section-glow" />
         <div className="max-w-5xl mx-auto relative z-10">
-          {/* Badge row */}
-          <div className="flex justify-center mb-6 animate-fade-up">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium bg-orange-50 dark:bg-orange-950/50 text-[var(--tb-accent)] border border-orange-200 dark:border-orange-900/50">
-              macOS 13+
-            </span>
-          </div>
-
           {/* Headline */}
           <h1 className="text-center mb-6 animate-fade-up animate-delay-1">
             <span className="block text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
@@ -289,7 +278,7 @@ export default function HomePage() {
             </span>
             <span className="block text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08] mt-2">
               桌面端
-              <span className="font-brand text-[var(--tb-accent)] ml-1">
+              <span className="text-[var(--tb-accent)] ml-1 font-bold">
                 自动输入
               </span>
             </span>
@@ -335,7 +324,7 @@ export default function HomePage() {
           <div className="text-center mb-14">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
               工作
-              <span className="font-brand text-[var(--tb-accent)]">原理</span>
+              <span className="text-[var(--tb-accent)] font-bold">原理</span>
             </h2>
             <p className="text-[var(--tb-muted)] max-w-md mx-auto">
               从手机到桌面，只需三步
@@ -379,7 +368,7 @@ export default function HomePage() {
           <div className="text-center mb-14">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
               功能
-              <span className="font-brand text-[var(--tb-accent)]">特性</span>
+              <span className="text-[var(--tb-accent)] font-bold">特性</span>
             </h2>
             <p className="text-[var(--tb-muted)] max-w-md mx-auto">
               每个细节都为高效输入而设计
@@ -433,7 +422,7 @@ export default function HomePage() {
           <div className="mb-14">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
               接入
-              <span className="font-brand text-[var(--tb-accent)]">教程</span>
+              <span className="text-[var(--tb-accent)] font-bold">教程</span>
             </h2>
             <p className="text-[var(--tb-muted)] max-w-md mx-auto">
               手把手教你完成三大 IM 平台的机器人配置
@@ -515,7 +504,7 @@ export default function HomePage() {
         <div className="max-w-2xl mx-auto text-center relative z-10">
           <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
             下载
-            <span className="font-brand text-[var(--tb-accent)]">
+            <span className="text-[var(--tb-accent)] font-bold">
               TypeBridge
             </span>
           </h2>
@@ -565,7 +554,11 @@ export default function HomePage() {
       <footer className="px-6 py-8 border-t border-[var(--tb-border)]">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-brand text-lg text-[var(--tb-accent)] select-none">
+            <svg viewBox="0 0 64 64" className="w-5 h-5" fill="none">
+              <path d="M 16 46 L 16 22 A 16 16 0 0 1 48 22 L 48 46"
+                stroke="var(--tb-accent)" strokeWidth="7" strokeLinecap="round" fill="none"/>
+            </svg>
+            <span className="text-lg text-[var(--tb-accent)] font-bold select-none">
               TypeBridge
             </span>
             <span className="text-xs text-[var(--tb-muted)]">

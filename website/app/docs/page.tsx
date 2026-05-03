@@ -31,7 +31,7 @@ export default function DocsPage() {
         <div className="mb-14">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
             使用
-            <span className="font-brand text-[var(--tb-accent)]">文档</span>
+            <span className="text-[var(--tb-accent)] font-bold">文档</span>
           </h1>
           <p className="text-[var(--tb-muted)] text-lg leading-relaxed max-w-2xl">
             TypeBridge 支持飞书、钉钉、企业微信三大主流 IM
