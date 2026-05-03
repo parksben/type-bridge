@@ -1,8 +1,10 @@
 # TypeBridge
 
-> macOS 菜单栏应用：接收飞书机器人消息，自动写入你当前聚焦的输入框。
+> macOS 菜单栏应用：接收飞书 / 钉钉 / 企业微信机器人消息，自动写入你当前聚焦的输入框。
 
-典型场景：手机上用飞书发一段语音（转文字），桌面端同步将文本写入正在用的编辑器 / 终端 / 浏览器输入框，默认注入完即模拟一次 `Enter` 完成一键发送——实现"语音驱动桌面输入"。
+典型场景：手机上用任一家 IM 给机器人发一段语音（转文字），桌面端同步将文本写入正在用的编辑器 / 终端 / 浏览器输入框，默认注入完即模拟一次 `Enter` 完成一键发送——实现"语音驱动桌面输入"。
+
+三家消息进同一个 FIFO 队列，依次粘到当前焦点。消息入队 / 成功 / 失败都会给机器人侧一个可见反馈（飞书 emoji reaction；钉钉一次性 `✅ 已输入` / `❌ 输入失败`；企微同一条消息原地从 `🟡 处理中...` 更新为 `✅ 已输入` / `❌ 输入失败`）。
 
 🌐 产品官网：[typebridge.parksben.xyz](https://typebridge.parksben.xyz) — 包含使用文档和各渠道应用接入教程。
 
@@ -38,17 +40,20 @@
 # 安装前端依赖
 npm install
 
-# 首次编译 Go sidecar（aarch64-apple-darwin）
-cd feishu-bridge
-GOPROXY=https://goproxy.cn,direct go build \
-  -o ../src-tauri/binaries/feishu-bridge-aarch64-apple-darwin .
-cd ..
+# 首次编译三个 Go sidecar（aarch64-apple-darwin）
+for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
+  (cd "$bridge" && GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
+    go build -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
+done
 
 # 启动开发模式（首次 Rust 编译约 5–10 分钟，之后秒级增量）
 npm run tauri dev
 ```
 
-应用首次启动会自动弹出配置窗口，填入飞书**自建应用**的 App ID / App Secret 后点"测试连接"即可。
+应用首次启动会自动弹出配置窗口。在「连接 IM 应用」tab 下任选一家填好凭据即可：
+- 飞书：App ID / App Secret（仅支持自建应用）
+- 钉钉：Client ID / Client Secret（Stream Mode）
+- 企微：Bot ID / Secret（智能机器人长连接模式）
 
 ---
 
@@ -74,12 +79,13 @@ cd src-tauri && cargo check
 
 ### 修改 Go sidecar
 
-**`tauri dev` 不会自动重编 Go 代码。** 改完 `feishu-bridge/*.go` 必须手动重编，然后重启 `tauri dev`：
+**`tauri dev` 不会自动重编 Go 代码。** 改完 `{feishu,dingtalk,wecom}-bridge/*.go` 必须手动重编对应 sidecar，然后重启 `tauri dev`：
 
 ```bash
-cd feishu-bridge
-GOPROXY=https://goproxy.cn,direct go build \
-  -o ../src-tauri/binaries/feishu-bridge-aarch64-apple-darwin .
+# 例：改了 wecom-bridge
+cd wecom-bridge
+GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
+  go build -o ../src-tauri/binaries/wecom-bridge-aarch64-apple-darwin .
 ```
 
 ### 修改 `tauri.conf.json` 或 `capabilities/*.json`
@@ -185,6 +191,7 @@ type-bridge/
 │
 ├── feishu-bridge/                飞书 Go sidecar 源码
 ├── dingtalk-bridge/              钉钉 Go sidecar 源码
+├── wecom-bridge/                 企微 Go sidecar 源码（手写 WSS + AES 图片解密）
 │
 ├── website/                      产品官网 (Next.js)
 │   ├── netlify.toml              Netlify 零手动部署配置
