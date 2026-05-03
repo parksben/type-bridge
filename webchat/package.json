@@ -8,11 +8,12 @@
     "start": "next start"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
+    "@netlify/blobs": "^8.1.0",
+    "lucide-react": "^1.14.0",
     "next": "^15.2.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "lucide-react": "^1.14.0",
-    "@netlify/blobs": "^8.1.0"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.8.0",

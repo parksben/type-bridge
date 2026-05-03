@@ -1,17 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Loader2, Mic } from "lucide-react";
 import { createSpeech, isSpeechSupported, type SpeechController } from "@/app/lib/speech";
+import { isEngineInstalled } from "@/app/lib/wasm-speech";
+import VoiceEnginePicker from "./VoiceEnginePicker";
+import AudioRecorder from "./AudioRecorder";
 
 type Props = {
   onInterim?: (text: string) => void;
   onFinal: (text: string) => void;
-  /** 识别失败时的用户友好文案（组件内判断之后抛上去由 ComposerBar 展示） */
-  onError: (message: string) => void;
+  /** 展示给用户的降级引导 / 其他文案 */
+  onHint: (message: string) => void;
 };
 
-// Web Speech API error code → 用户友好文案
+const PREF_KEY = "typebridge_voice_engine"; // "wasm" | null
+
+type Mode =
+  | { kind: "idle" }
+  | { kind: "web-speech" }     // Web Speech API 进行中
+  | { kind: "recording" }      // WASM 录音器展开
+  | { kind: "picker"; reason?: string };
+
 function friendlyErrorMessage(code: string): string {
   switch (code) {
     case "not-allowed":
@@ -25,78 +35,144 @@ function friendlyErrorMessage(code: string): string {
       return "语音识别需要联网，请检查网络。";
     case "service-not-allowed":
     case "language-not-supported":
-      return "你的系统缺少中文语音引擎，请用手机输入法自带的麦克风按钮（搜狗 / 百度 / 讯飞 / 系统键盘都支持）。";
+      return "你的系统缺少中文语音引擎。";
     case "aborted":
       return "";
     default:
-      // 华为 / 小米等国产 Android 经常吐 "无法找到 Android 语音引擎" 之类文案
       if (code.includes("engine") || code.includes("引擎")) {
-        return "你的系统缺少中文语音引擎，请用手机输入法自带的麦克风按钮（搜狗 / 百度 / 讯飞 / 系统键盘都支持）。";
+        return "你的系统缺少中文语音引擎。";
       }
-      return "语音听写启动失败。建议改用手机输入法自带的麦克风按钮。";
+      return "浏览器语音听写启动失败。";
   }
 }
 
-export default function VoiceButton({ onInterim, onFinal, onError }: Props) {
-  const [supported, setSupported] = useState(false);
-  const [active, setActive] = useState(false);
+function readPref(): "wasm" | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.localStorage.getItem(PREF_KEY);
+    return v === "wasm" ? "wasm" : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePref(v: "wasm" | null) {
+  try {
+    if (v) window.localStorage.setItem(PREF_KEY, v);
+    else window.localStorage.removeItem(PREF_KEY);
+  } catch { /* ignore */ }
+}
+
+export default function VoiceButton({ onInterim, onFinal, onHint }: Props) {
+  const [browserSupported, setBrowserSupported] = useState(false);
+  const [mode, setMode] = useState<Mode>({ kind: "idle" });
   const ctrlRef = useRef<SpeechController | null>(null);
 
   useEffect(() => {
-    setSupported(isSpeechSupported());
+    setBrowserSupported(isSpeechSupported());
   }, []);
 
-  if (!supported) return null;
+  // 没有任何可行的 Web Speech API 入口 → 完全不展示按钮
+  // （此设备连 SpeechRecognition 接口都没有）
+  if (!browserSupported) return null;
 
-  function toggle() {
-    if (active) {
-      ctrlRef.current?.stop();
+  const preferWasm = readPref() === "wasm";
+  const wasmInstalled = isEngineInstalled();
+
+  function click() {
+    // 已选过 WASM 且模型已缓存 → 直接录音
+    if (preferWasm && wasmInstalled) {
+      setMode({ kind: "recording" });
       return;
     }
+
+    // 否则试 Web Speech（第一段）
+    tryWebSpeech();
+  }
+
+  function tryWebSpeech() {
     const c = createSpeech({
       lang: "zh-CN",
       onInterim: (t) => onInterim?.(t),
       onFinal: (t) => {
         onFinal(t);
-        setActive(false);
+        setMode({ kind: "idle" });
+        ctrlRef.current = null;
       },
       onError: (code) => {
-        setActive(false);
+        setMode({ kind: "idle" });
+        ctrlRef.current = null;
         const msg = friendlyErrorMessage(code);
-        if (msg) onError(msg);
+        if (!msg) return; // "aborted" 之类静默
+        // Web Speech 失败 → 弹 Picker，让用户选降级
+        setMode({ kind: "picker", reason: msg });
       },
       onEnd: () => {
-        setActive(false);
+        setMode({ kind: "idle" });
+        ctrlRef.current = null;
       },
     });
     if (!c) {
-      onError("你的浏览器不支持语音听写，请改用输入法自带的麦克风按钮。");
+      setMode({ kind: "picker", reason: "你的浏览器不支持标准语音听写。" });
       return;
     }
     ctrlRef.current = c;
     c.start();
-    setActive(true);
+    setMode({ kind: "web-speech" });
   }
 
+  function stopWebSpeech() {
+    ctrlRef.current?.stop();
+  }
+
+  const active = mode.kind === "web-speech";
+
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={active ? "停止听写" : "开始听写"}
-      className="w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0"
-      style={{
-        background: active ? "var(--tb-accent)" : "var(--tb-bg)",
-        color: active ? "white" : "var(--tb-muted)",
-        border: `1px solid ${active ? "var(--tb-accent)" : "var(--tb-border)"}`,
-      }}
-    >
-      {active ? (
-        <Loader2 size={18} strokeWidth={2.4} className="animate-spin" />
-      ) : (
-        <Mic size={18} strokeWidth={2.2} />
+    <>
+      <button
+        type="button"
+        onClick={active ? stopWebSpeech : click}
+        aria-label={active ? "停止听写" : "开始听写"}
+        className="w-10 h-10 rounded-full flex items-center justify-center transition-all shrink-0"
+        style={{
+          background: active ? "var(--tb-accent)" : "var(--tb-bg)",
+          color: active ? "white" : "var(--tb-muted)",
+          border: `1px solid ${active ? "var(--tb-accent)" : "var(--tb-border)"}`,
+        }}
+      >
+        {active ? (
+          <Loader2 size={18} strokeWidth={2.4} className="animate-spin" />
+        ) : (
+          <Mic size={18} strokeWidth={2.2} />
+        )}
+      </button>
+
+      {mode.kind === "picker" && (
+        <VoiceEnginePicker
+          reason={mode.reason}
+          onUseIme={() => {
+            setMode({ kind: "idle" });
+            onHint(
+              "已切回输入法语音。点击输入框，再点键盘上的麦克风按钮即可（搜狗 / 百度 / 讯飞 / 系统键盘都支持）。",
+            );
+          }}
+          onInstalled={() => {
+            writePref("wasm");
+            setMode({ kind: "recording" });
+          }}
+          onClose={() => setMode({ kind: "idle" })}
+        />
       )}
-    </button>
+
+      {mode.kind === "recording" && (
+        <AudioRecorder
+          onDone={(text) => {
+            setMode({ kind: "idle" });
+            if (text) onFinal(text);
+          }}
+          onCancel={() => setMode({ kind: "idle" })}
+        />
+      )}
+    </>
   );
 }
-
-export { MicOff };
