@@ -13,89 +13,135 @@ import {
   MessageSquareText,
   MousePointerClick,
   BookOpen,
-  CheckCircle2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-// ── App screenshot (placeholder) ───────────────────────────────
+// ── Hero concept banner ────────────────────────────────────────
 
-function AppScreenshot() {
+function HeroBanner() {
   return (
-    <div className="relative w-full max-w-[680px] mx-auto">
-      <div className="rounded-xl overflow-hidden border border-[var(--tb-border)] bg-[var(--tb-surface)] shadow-2xl shadow-black/10">
-        {/* Title bar */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--tb-border)]">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-400" />
-            <div className="w-3 h-3 rounded-full bg-amber-400" />
-            <div className="w-3 h-3 rounded-full bg-green-400" />
+    <div className="hero-banner relative w-full max-w-[720px] mx-auto h-[340px] md:h-[400px] select-none">
+      {/* Background glow */}
+      <div className="absolute inset-0 glow-orange opacity-30 rounded-3xl" />
+
+      {/* Device frame: Phone (left) */}
+      <div className="absolute left-[4%] top-1/2 -translate-y-1/2 w-[120px] md:w-[150px] hero-phone animate-float-phone">
+        <div className="rounded-2xl md:rounded-3xl border-2 border-[var(--tb-border)] bg-[var(--tb-surface)] shadow-xl overflow-hidden">
+          {/* Phone top bar */}
+          <div className="h-3 md:h-4 bg-[var(--tb-border)]/30" />
+          {/* Messages */}
+          <div className="p-2.5 md:p-3 space-y-2">
+            <MessageBubble text="你好，帮我查个资料" delay="0s" color="blue" />
+            <MessageBubble text="收到，马上发给你" delay="1.5s" color="sky" />
+            <MessageBubble text="这是你要的文档链接" delay="3s" color="green" />
           </div>
-          <div className="flex-1 text-center text-xs text-[var(--tb-muted)]">
-            TypeBridge
-          </div>
+          <div className="h-1.5 md:h-2 bg-[var(--tb-border)]/20" />
         </div>
-        {/* Placeholder content */}
-        <div className="aspect-[16/10] bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/20 flex items-center justify-center relative overflow-hidden">
-          <div className="absolute inset-0 flex">
-            <div className="w-[18%] border-r border-[var(--tb-border)] p-3 flex flex-col gap-2">
-              <div className="h-3 w-3/4 rounded bg-orange-200/50 dark:bg-orange-800/30" />
-              <div className="h-2 w-2/3 rounded bg-gray-200 dark:bg-gray-800 ml-2" />
-              <div className="h-2 w-2/3 rounded bg-gray-200 dark:bg-gray-800 ml-2" />
-              <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mt-3" />
-              <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mt-1" />
-              <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mt-1" />
-              <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-800 mt-1" />
-            </div>
-            <div className="flex-1 p-4 flex flex-col gap-3">
-              <div className="h-3 w-1/3 rounded bg-gray-200 dark:bg-gray-800" />
-              <div className="h-8 w-2/3 rounded bg-gray-100 dark:bg-gray-800/50" />
-              <div className="h-8 w-1/2 rounded bg-gray-100 dark:bg-gray-800/50" />
-              <div className="h-4 w-1/4 rounded bg-gray-200 dark:bg-gray-800 mt-2" />
-              <div className="h-2 w-3/4 rounded bg-gray-100 dark:bg-gray-800/30 mt-1" />
-              <div className="h-2 w-2/3 rounded bg-gray-100 dark:bg-gray-800/30" />
-              <div className="mt-3 border border-[var(--tb-border)] rounded-lg p-3">
-                <div className="flex justify-between">
-                  <div className="h-2 w-1/4 rounded bg-gray-200 dark:bg-gray-700" />
-                  <div className="h-2 w-12 rounded bg-orange-200/50 dark:bg-orange-800/30" />
-                </div>
-                <div className="h-2 w-2/3 rounded bg-gray-100 dark:bg-gray-800/30 mt-2" />
-              </div>
+      </div>
+
+      {/* Bridge area (center) — flowing particles and arc lines */}
+      <div className="absolute left-[32%] right-[25%] top-0 bottom-0 overflow-hidden">
+        {/* Colored arc lines representing data channels */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 200 400"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M 0,100 C 80,100 120,60 200,60"
+            fill="none"
+            strokeWidth="1.5"
+            className="hero-arc-line-blue"
+          />
+          <path
+            d="M 0,200 C 80,200 120,160 200,160"
+            fill="none"
+            strokeWidth="1.5"
+            className="hero-arc-line-sky"
+          />
+          <path
+            d="M 0,300 C 80,300 120,260 200,260"
+            fill="none"
+            strokeWidth="1.5"
+            className="hero-arc-line-green"
+          />
+        </svg>
+
+        {/* Flowing particles */}
+        <Particle delay="0s" top="20%" />
+        <Particle delay="0.8s" top="45%" />
+        <Particle delay="1.6s" top="70%" />
+        <Particle delay="0.4s" top="32%" />
+        <Particle delay="1.2s" top="58%" />
+        <Particle delay="2.0s" top="15%" />
+
+        {/* Center glow dot */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[var(--tb-accent)] opacity-60 animate-pulse-glow" />
+      </div>
+
+      {/* Device frame: Desktop cursor & input (right) */}
+      <div className="absolute right-[4%] top-1/2 -translate-y-1/2 w-[100px] md:w-[130px] hero-desktop animate-float-desktop">
+        <div className="rounded-xl md:rounded-2xl border-2 border-[var(--tb-border)] bg-[var(--tb-surface)] shadow-xl overflow-hidden">
+          <div className="flex items-center gap-1 px-2.5 md:px-3 py-1.5 md:py-2 border-b border-[var(--tb-border)]">
+            <div className="flex gap-1">
+              <div className="w-2 h-2 rounded-full bg-red-400/60" />
+              <div className="w-2 h-2 rounded-full bg-amber-400/60" />
+              <div className="w-2 h-2 rounded-full bg-green-400/60" />
             </div>
           </div>
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="bg-[var(--tb-surface)]/90 dark:bg-[var(--tb-surface)]/90 backdrop-blur-sm px-5 py-2.5 rounded-full border border-[var(--tb-border)] shadow-sm">
-              <p className="text-xs text-[var(--tb-muted)]">
-                应用截图 — 待替换为 TypeBridge 真机截图
-              </p>
+          <div className="p-2.5 md:p-3 space-y-2">
+            <div className="h-1.5 w-3/4 rounded bg-[var(--tb-border)]" />
+            <div className="relative bg-[var(--tb-surface)] border border-[var(--tb-border)] rounded-md p-2">
+              <div className="h-1.5 w-5/6 rounded bg-[var(--tb-muted)]/30" />
+              {/* Cursor blink */}
+              <div className="absolute right-1.5 top-1.5 w-0.5 h-3.5 bg-[var(--tb-accent)] animate-blink-cursor" />
             </div>
+            <div className="h-1.5 w-1/2 rounded bg-[var(--tb-border)]" />
           </div>
         </div>
       </div>
-      <div className="absolute -inset-4 -z-10 glow-orange opacity-40 rounded-2xl" />
+
+      {/* Channel labels along the bottom */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-3 md:gap-5">
+        <span className="hero-channel-tag text-blue-600/70 dark:text-blue-400/70 text-[10px] md:text-xs font-medium">飞书</span>
+        <span className="hero-channel-tag text-sky-600/70 dark:text-sky-400/70 text-[10px] md:text-xs font-medium">钉钉</span>
+        <span className="hero-channel-tag text-green-600/70 dark:text-green-400/70 text-[10px] md:text-xs font-medium">企业微信</span>
+      </div>
     </div>
   );
 }
 
-// ── Platform badge ─────────────────────────────────────────────
-
-function PlatformBadge({
-  label,
-  active,
+function MessageBubble({
+  text,
+  delay,
+  color,
 }: {
-  label: string;
-  active?: boolean;
+  text: string;
+  delay: string;
+  color: "blue" | "sky" | "green";
 }) {
+  const colorMap = {
+    blue: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300",
+    sky: "bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300",
+    green: "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300",
+  };
+
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-        active
-          ? "bg-orange-50 dark:bg-orange-950/50 text-[var(--tb-accent)] border-orange-200 dark:border-orange-900/50"
-          : "text-[var(--tb-muted)] border-[var(--tb-border)]"
-      }`}
+    <div
+      className={`text-[10px] md:text-xs px-2 py-1 rounded-lg ${colorMap[color]} animate-msg-float`}
+      style={{ animationDelay: delay }}
     >
-      <CheckCircle2 size={13} />
-      {label}
-    </span>
+      {text}
+    </div>
+  );
+}
+
+function Particle({ delay, top }: { delay: string; top: string }) {
+  return (
+    <div
+      className="hero-particle"
+      style={{ top, animationDelay: delay }}
+    />
   );
 }
 
@@ -203,7 +249,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen noise-bg">
       {/* ============ HERO ============ */}
-      <section className="relative px-6 pt-24 pb-16 md:pt-36 md:pb-24 overflow-hidden">
+      <section className="relative px-6 pt-24 pb-16 md:pt-36 md:pb-24 overflow-hidden min-h-[520px] md:min-h-[600px]">
         <div className="absolute inset-0 glow-orange opacity-50" />
         <div className="max-w-5xl mx-auto relative z-10">
           {/* Badge row */}
@@ -214,7 +260,7 @@ export default function HomePage() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-center mb-8 animate-fade-up animate-delay-1">
+          <h1 className="text-center mb-6 animate-fade-up animate-delay-1">
             <span className="block text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.08]">
               在手机上发消息，
             </span>
@@ -235,15 +281,8 @@ export default function HomePage() {
             支持文本、图片、图文混合。一条消息，桌面直达。
           </p>
 
-          {/* Platform badges */}
-          <div className="flex justify-center gap-2 mb-8 animate-fade-up animate-delay-2">
-            <PlatformBadge label="飞书" active />
-            <PlatformBadge label="钉钉" active />
-            <PlatformBadge label="企业微信" active />
-          </div>
-
           {/* CTA */}
-          <div className="flex justify-center gap-3 mb-12 animate-fade-up animate-delay-3">
+          <div className="flex justify-center gap-3 mb-10 animate-fade-up animate-delay-3">
             <a
               href="/download/arm64"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--tb-accent)] text-white font-semibold text-sm hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-orange-500/20"
@@ -260,9 +299,9 @@ export default function HomePage() {
             </a>
           </div>
 
-          {/* App Screenshot */}
+          {/* Concept banner (replaces app screenshot) */}
           <div className="animate-fade-up animate-delay-4">
-            <AppScreenshot />
+            <HeroBanner />
           </div>
         </div>
       </section>
