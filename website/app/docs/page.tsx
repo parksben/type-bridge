@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "使用文档 — TypeBridge",
   description:
-    "TypeBridge 使用文档中心。包含飞书、钉钉、企业微信三大渠道的接入教程，手把手教你完成机器人配置。",
+    "TypeBridge 使用文档中心。包含飞书、钉钉、企业微信、Web Chat 四大渠道的接入教程，手把手教你完成配置。",
 };
 
 import {
@@ -11,6 +11,7 @@ import {
   ArrowRight,
   MessageSquareText,
   Lightbulb,
+  Globe,
   CheckCircle2,
   ArrowLeft,
 } from "lucide-react";
@@ -41,7 +42,7 @@ export default function DocsPage() {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
           {/* Use Cases */}
           <a
             href="/docs/use-cases"
@@ -58,10 +59,32 @@ export default function DocsPage() {
             </h2>
             <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-4">
               语音转文字桌面直达、AI Coding Agent
-              语音搭档、跨设备文本流转、团队协作提效。
+              语音搭档、高频文档产出、跨设备文本流转、团队协作提效。
             </p>
             <div className="flex items-center gap-1.5 text-xs font-medium text-orange-600 dark:text-orange-400">
               了解场景 <ArrowRight size={13} />
+            </div>
+          </a>
+
+          {/* Web Chat */}
+          <a
+            href="/docs/webchat"
+            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-purple-400/40 transition-all duration-300 feature-card-glow"
+          >
+            <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+              <Globe
+                size={20}
+                className="text-purple-600 dark:text-purple-400"
+              />
+            </div>
+            <h2 className="font-semibold text-[17px] mb-2 group-hover:text-[var(--tb-accent)] transition-colors">
+              Web Chat 接入指南
+            </h2>
+            <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-4">
+              官方渠道，无需 IM 平台，打开浏览器即可使用。零配置，打开即用。
+            </p>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400">
+              开始教程 <ArrowRight size={13} />
             </div>
           </a>
 

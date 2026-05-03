@@ -3,17 +3,19 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "适用场景 — TypeBridge",
   description:
-    "TypeBridge 适用场景：语音转文字桌面直达、AI Coding Agent 语音搭档、跨设备文本流转、团队协作提效。找到你的场景，立刻开始使用。",
+    "TypeBridge 适用场景：语音转文字桌面直达、AI Coding Agent 语音搭档、高频文档产出、跨设备文本流转、团队协作提效。找到你的场景，立刻开始使用。",
 };
 
 import {
   Mic,
   Bot,
+  FileText,
   ArrowRightLeft,
   Users,
   ArrowRight,
   Download,
   MessageSquareText,
+  Globe,
   Sparkles,
 } from "lucide-react";
 
@@ -47,6 +49,21 @@ const SCENES = [
       "解放双手：编码时不想打断思路去打字？手机说一句话，AI 就开始干活",
     ],
     tip: "这是编码提效的全新范式——语音驱动 AI Agent。在复杂的重构或调试场景中，口头描述往往比打字更快、更自然。",
+  },
+  {
+    anchorId: "doc-production",
+    icon: FileText,
+    color: "purple",
+    title: "高频文档产出",
+    subtitle: "语音说的就是文档草稿",
+    description:
+      "对于需要持续产出文字内容的用户——撰写技术文档、起草方案报告、记录会议纪要——手机语音转文字 + TypeBridge 组成了一条\u201C语音 → 文档\u201D的高效管线。一边说话，内容一边实时流入电脑上的编辑器或文档，说出来的就是草稿，无需事后整理转录。",
+    details: [
+      '手机语音输入 → IM 机器人转写 → TypeBridge 实时注入 → 电脑文档/编辑器中逐行出现内容',
+      '典型场景：写技术文档时不想反复打字 → 手机边想边说 → Markdown 编辑器中实时生成草稿段落',
+      "配合「输入后自动提交」功能，每段语音说完后自动换行/提交——连续产出，一气呵成",
+    ],
+    tip: "高频产出场景下，语音输入的速度远超键盘打字（中文语音转文字可达 200+ 字/分钟）。对需要大量文字内容但又不想长时间坐在键盘前的用户，这是效率跃升。",
   },
   {
     anchorId: "cross-device",
@@ -97,6 +114,10 @@ function colorClasses(color: string) {
     green: {
       bg: "bg-green-50 dark:bg-green-950/30",
       icon: "text-green-600 dark:text-green-400",
+    },
+    purple: {
+      bg: "bg-purple-50 dark:bg-purple-950/30",
+      icon: "text-purple-600 dark:text-purple-400",
     },
   };
   return map[color] || map.accent;
@@ -226,7 +247,27 @@ export default function UseCasesPage() {
         </div>
 
         {/* Channel links */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <a
+            href="/docs/webchat"
+            className="group p-5 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-purple-400/40 transition-all"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Globe
+                size={16}
+                className="text-purple-600 dark:text-purple-400 shrink-0"
+              />
+              <span className="font-semibold text-sm group-hover:text-[var(--tb-accent)] transition-colors">
+                Web Chat 接入指南
+              </span>
+            </div>
+            <p className="text-xs text-[var(--tb-muted)] leading-relaxed">
+              官方渠道，无需 IM 平台，打开浏览器即可使用。
+            </p>
+            <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 mt-3">
+              开始教程 <ArrowRight size={12} />
+            </div>
+          </a>
           <a
             href="/docs/feishu"
             className="group p-5 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-blue-400/40 transition-all"
