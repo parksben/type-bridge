@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { AlertCircle, Send, X } from "lucide-react";
 import VoiceButton from "./VoiceButton";
 import ImagePicker from "./ImagePicker";
 import type { CompressResult } from "@/app/lib/image";
@@ -14,6 +14,7 @@ type Props = {
 export default function ComposerBar({ onSendText, onSendImage }: Props) {
   const [text, setText] = useState("");
   const [stagedImage, setStagedImage] = useState<CompressResult | null>(null);
+  const [voiceHint, setVoiceHint] = useState<string | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // 自适应高度
@@ -23,11 +24,17 @@ export default function ComposerBar({ onSendText, onSendImage }: Props) {
     taRef.current.style.height = `${Math.min(120, taRef.current.scrollHeight)}px`;
   }, [text]);
 
+  // 语音提示 8s 后自动消失
+  useEffect(() => {
+    if (!voiceHint) return;
+    const id = window.setTimeout(() => setVoiceHint(null), 8000);
+    return () => window.clearTimeout(id);
+  }, [voiceHint]);
+
   function send() {
     if (stagedImage) {
       onSendImage(stagedImage);
       setStagedImage(null);
-      // 不清 text；用户可能图配文一起想发，但 v1 只发图
       return;
     }
     const t = text.trim();
@@ -46,6 +53,34 @@ export default function ComposerBar({ onSendText, onSendImage }: Props) {
         borderColor: "var(--tb-border)",
       }}
     >
+      {/* 语音降级提示条 */}
+      {voiceHint && (
+        <div
+          className="px-3 py-2 flex items-start gap-2 text-[12px] leading-relaxed animate-fade-up"
+          style={{
+            background: "color-mix(in srgb, var(--tb-accent) 10%, transparent)",
+            borderBottom: "1px solid color-mix(in srgb, var(--tb-accent) 20%, transparent)",
+            color: "var(--tb-text)",
+          }}
+        >
+          <AlertCircle
+            size={13}
+            strokeWidth={2}
+            className="mt-0.5 shrink-0"
+            style={{ color: "var(--tb-accent)" }}
+          />
+          <span className="flex-1">{voiceHint}</span>
+          <button
+            type="button"
+            onClick={() => setVoiceHint(null)}
+            aria-label="关闭提示"
+            className="shrink-0 -m-1 p-1 text-[var(--tb-muted)]"
+          >
+            <X size={13} strokeWidth={2.2} />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-end gap-2 px-3 py-2.5">
         <ImagePicker
           staged={stagedImage}
@@ -68,7 +103,6 @@ export default function ComposerBar({ onSendText, onSendImage }: Props) {
             rows={1}
             disabled={!!stagedImage}
             onKeyDown={(e) => {
-              // 桌面端 Enter 发送（手机端不触发，物理键盘兼容）
               if (e.key === "Enter" && !e.shiftKey && !("ontouchstart" in window)) {
                 e.preventDefault();
                 send();
@@ -84,6 +118,7 @@ export default function ComposerBar({ onSendText, onSendImage }: Props) {
           <VoiceButton
             onInterim={(t) => setText(t)}
             onFinal={(t) => setText(t)}
+            onError={(msg) => setVoiceHint(msg)}
           />
         )}
 
