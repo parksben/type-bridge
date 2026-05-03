@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Cpu,
   Download,
+  Globe,
   Keyboard,
   Loader2,
   Mic,
@@ -18,20 +19,34 @@ import {
 } from "@/app/lib/wasm-speech";
 
 type Props = {
-  /** Web Speech 识别失败的具体文案（来自 VoiceButton 的 error handler） */
+  /** "choose"：用户主动选；"fallback"：Web Speech 失败后弹 */
+  pickerMode?: "choose" | "fallback";
+  /** fallback 模式下的错误文案 */
   reason?: string;
-  /** 用户选了"使用输入法麦克风"；上层应展示一次性引导 */
+  /** 浏览器是否支持 SpeechRecognition —— choose 模式下据此决定是否展示"浏览器自带"选项 */
+  webSpeechAvailable?: boolean;
+  /** 用户选"使用输入法麦克风" */
   onUseIme: () => void;
+  /** 用户选"使用浏览器自带语音"（仅 choose 模式 + webSpeechAvailable 时可用） */
+  onUseWebSpeech?: () => void;
   /** WASM 引擎已安装完成，可以开始录音 */
   onInstalled: () => void;
-  /** 关闭面板（未选 / 取消） */
+  /** 关闭面板 */
   onClose: () => void;
 };
 
 type Stage = "picker" | "confirm" | "installing" | "error";
 
-/** 一个底部弹出面板，三阶段串联：选项 → 下载确认 → 进度。 */
-export default function VoiceEnginePicker({ reason, onUseIme, onInstalled, onClose }: Props) {
+/** 底部弹出面板，三阶段串联：选项 → 下载确认 → 进度。 */
+export default function VoiceEnginePicker({
+  pickerMode = "fallback",
+  reason,
+  webSpeechAvailable = false,
+  onUseIme,
+  onUseWebSpeech,
+  onInstalled,
+  onClose,
+}: Props) {
   const [stage, setStage] = useState<Stage>("picker");
   const [progress, setProgress] = useState<InstallProgress | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -62,7 +77,7 @@ export default function VoiceEnginePicker({ reason, onUseIme, onInstalled, onClo
     }
   }, [onInstalled]);
 
-  // —— 进度文案拼装 ——
+  // —— 进度文案 ——
   let progressText = "准备中…";
   let percent = 0;
   if (progress) {
@@ -99,17 +114,17 @@ export default function VoiceEnginePicker({ reason, onUseIme, onInstalled, onClo
           boxShadow: "0 -8px 24px rgba(0,0,0,0.10)",
         }}
       >
-        {/* Close handle */}
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
           <span className="w-10 h-1 rounded-full mx-auto" style={{ background: "var(--tb-border)" }} />
         </div>
 
         {stage === "picker" && (
           <PickerView
+            pickerMode={pickerMode}
             reason={reason}
-            onPickIme={() => {
-              onUseIme();
-            }}
+            webSpeechAvailable={webSpeechAvailable}
+            onPickIme={onUseIme}
+            onPickWebSpeech={onUseWebSpeech}
             onPickWasm={() => setStage("confirm")}
             onClose={onClose}
           />
@@ -140,16 +155,29 @@ export default function VoiceEnginePicker({ reason, onUseIme, onInstalled, onClo
 }
 
 function PickerView({
+  pickerMode,
   reason,
+  webSpeechAvailable,
   onPickIme,
+  onPickWebSpeech,
   onPickWasm,
   onClose,
 }: {
+  pickerMode: "choose" | "fallback";
   reason?: string;
+  webSpeechAvailable: boolean;
   onPickIme: () => void;
+  onPickWebSpeech?: () => void;
   onPickWasm: () => void;
   onClose: () => void;
 }) {
+  const showWebSpeech = pickerMode === "choose" && webSpeechAvailable && !!onPickWebSpeech;
+  const headerTitle = pickerMode === "choose" ? "选择语音输入方式" : "浏览器语音识别不可用";
+  const headerDesc =
+    pickerMode === "choose"
+      ? "不同手机支持的语音方案不同，选一个你习惯的。选好后会记住。"
+      : (reason || "你的系统可能缺少中文语音引擎。选一种替代方案：");
+
   return (
     <div className="px-5 pt-3 pb-5">
       <div className="flex items-start gap-2 mb-4">
@@ -157,14 +185,14 @@ function PickerView({
           size={16}
           strokeWidth={2}
           className="shrink-0 mt-0.5"
-          style={{ color: "var(--tb-accent)" }}
+          style={{ color: pickerMode === "fallback" ? "var(--tb-accent)" : "var(--tb-muted)" }}
         />
         <div className="flex-1">
           <p className="text-[15px] font-semibold mb-1 text-[var(--tb-text)]">
-            浏览器语音识别不可用
+            {headerTitle}
           </p>
           <p className="text-[13px] text-[var(--tb-muted)] leading-relaxed">
-            {reason || "你的系统可能缺少中文语音引擎。选一种替代方案："}
+            {headerDesc}
           </p>
         </div>
         <button
@@ -177,6 +205,7 @@ function PickerView({
         </button>
       </div>
 
+      {/* 选项 1：输入法麦克风 — 所有场景都有 */}
       <button
         type="button"
         onClick={onPickIme}
@@ -202,6 +231,35 @@ function PickerView({
         </div>
       </button>
 
+      {/* 选项 2：浏览器自带 — 仅 choose 模式 + 浏览器支持时展示 */}
+      {showWebSpeech && (
+        <button
+          type="button"
+          onClick={onPickWebSpeech}
+          className="w-full text-left rounded-xl p-4 mb-2.5 flex items-start gap-3 transition-colors active:opacity-80"
+          style={{
+            background: "var(--tb-surface)",
+            border: "1px solid var(--tb-border)",
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "var(--tb-bg)" }}
+          >
+            <Globe size={20} strokeWidth={1.8} className="text-[var(--tb-muted)]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px] font-medium text-[var(--tb-text)]">
+              使用浏览器自带语音
+            </p>
+            <p className="text-[12px] text-[var(--tb-muted)] leading-relaxed mt-0.5">
+              iOS Safari / 原生 Chrome 推荐，零安装；部分国产安卓机型可能不可用。
+            </p>
+          </div>
+        </button>
+      )}
+
+      {/* 选项 3：WASM 本地引擎 — 所有场景都有 */}
       <button
         type="button"
         onClick={onPickWasm}
@@ -229,7 +287,7 @@ function PickerView({
                 color: "var(--tb-accent)",
               }}
             >
-              推荐
+              兼容性最好
             </span>
           </div>
           <p className="text-[12px] text-[var(--tb-muted)] leading-relaxed mt-0.5">
@@ -240,7 +298,7 @@ function PickerView({
 
       <div className="flex items-center gap-1.5 mt-4 text-[11px] text-[var(--tb-muted)]">
         <Shield size={11} strokeWidth={2} />
-        <span>两种方式都不会把音频上传到任何服务器</span>
+        <span>三种方式都不会把音频上传到任何服务器</span>
       </div>
     </div>
   );
