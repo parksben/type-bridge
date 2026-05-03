@@ -60,6 +60,7 @@ impl ChannelId {
                 reactions: true,
                 thread_reply: true,
                 failure_text_reply: true,
+                success_text_reply: false,
                 receive_images: true,
                 requires_event_config: true,
             },
@@ -67,6 +68,7 @@ impl ChannelId {
                 reactions: false,
                 thread_reply: false,
                 failure_text_reply: true,
+                success_text_reply: true,
                 receive_images: true,
                 requires_event_config: false,
             },
@@ -74,6 +76,7 @@ impl ChannelId {
                 reactions: false,
                 thread_reply: false,
                 failure_text_reply: true,
+                success_text_reply: false,
                 receive_images: true,
                 requires_event_config: false,
             },
@@ -92,6 +95,10 @@ pub struct ChannelCapability {
     /// 只是内部实现不同：飞书走 thread reply；钉钉用 sessionWebhook 发 text；
     /// 企微走 aibot_respond_msg 帧。
     pub failure_text_reply: bool,
+    /// 是否在注入成功时也回一条 "✅ 已输入"。仅对没有 reaction 能力的渠道开启
+    /// —— 飞书已经有 ✅ 表情反馈，没必要再发一条文字；钉钉没有 reaction，
+    /// 只能靠文字让用户知道消息被消费了。
+    pub success_text_reply: bool,
     /// 是否支持接收图片消息
     pub receive_images: bool,
     /// 是否需要用户在平台后台单独配置"事件订阅"（飞书独有）
