@@ -3,6 +3,7 @@
 import {
   MessageSquareText,
   Lightbulb,
+  Globe,
   ChevronRight,
 } from "lucide-react";
 
@@ -16,6 +17,14 @@ const USE_CASES = [
 ];
 
 const CHANNELS = [
+  {
+    href: "/docs/webchat",
+    label: "Web Chat 接入指南",
+    channel: "Web Chat",
+    color: "purple",
+    badge: "官方渠道",
+    icon: "globe",
+  },
   {
     href: "/docs/feishu",
     label: "飞书接入指南",
@@ -69,6 +78,13 @@ function channelColorClass(color: string, active: boolean) {
       border: "border-green-200",
       borderDark: "dark:border-green-900/40",
     },
+    purple: {
+      bg: "bg-purple-50",
+      bgDark: "dark:bg-purple-950/40",
+      text: "text-purple-700 dark:text-purple-400",
+      border: "border-purple-200",
+      borderDark: "dark:border-purple-900/40",
+    },
   };
   const c = map[color];
   if (active) {
@@ -121,13 +137,14 @@ export function LeftSidebar({ currentPath }: { currentPath: string }) {
         <ul className="space-y-0.5">
           {CHANNELS.map((ch) => {
             const active = currentPath === ch.href;
+            const ChannelIcon = ch.icon === "globe" ? Globe : MessageSquareText;
             return (
               <li key={ch.href}>
                 <a
                   href={ch.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all duration-200 ${channelColorClass(ch.color, active)}`}
                 >
-                  <MessageSquareText size={16} className="shrink-0" />
+                  <ChannelIcon size={16} className="shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="truncate">{ch.label}</div>
                     <div className="text-[10px] opacity-60">{ch.badge}</div>

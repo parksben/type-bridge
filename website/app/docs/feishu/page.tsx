@@ -228,11 +228,11 @@ export default function FeishuGuidePage() {
       {/* Navigation */}
       <div className="flex items-center justify-between pt-8 border-t border-[var(--tb-border)]">
         <a
-          href="/docs"
+          href="/docs/webchat"
           className="inline-flex items-center gap-2 text-sm text-[var(--tb-muted)] hover:text-[var(--tb-text)] transition-colors"
         >
           <ArrowLeft size={15} />
-          返回文档中心
+          Web Chat 接入指南
         </a>
         <a
           href="/docs/dingtalk"

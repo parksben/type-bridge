@@ -12,6 +12,7 @@ import {
   Shield,
   MessageSquareText,
   Lightbulb,
+  Globe,
   MousePointerClick,
   BookOpen,
   ArrowLeftRight,
@@ -287,7 +288,7 @@ export default function HomePage() {
 
           {/* Subtitle */}
           <p className="text-center max-w-xl mx-auto mb-4 text-[var(--tb-muted)] text-base md:text-lg leading-relaxed animate-fade-up animate-delay-2">
-            通过飞书 / 钉钉 / 企业微信机器人消息，把内容自动注入到 Mac
+            通过飞书 / 钉钉 / 企业微信 / Web Chat 机器人消息，把内容自动注入到 Mac
             当前聚焦的输入框中。
           </p>
           <p className="text-center max-w-xl mx-auto mb-6 text-[var(--tb-muted)] text-sm leading-relaxed animate-fade-up animate-delay-2">
@@ -430,7 +431,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
             {/* Use cases */}
             <a
               href="/docs/use-cases"
@@ -443,10 +444,28 @@ export default function HomePage() {
                 适用场景
               </h3>
               <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-3">
-                语音转文字桌面直达、AI Coding Agent 搭档、跨设备文本流转。
+                语音转文字桌面直达、AI Coding Agent 搭档、高频文档产出、跨设备文本流转。
               </p>
               <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400">
                 了解场景 <ArrowRight size={13} />
+              </span>
+            </a>
+
+            <a
+              href="/docs/webchat"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-purple-400/40 transition-all duration-300 text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                <Globe size={20} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="font-semibold text-[15px] mb-1.5 group-hover:text-[var(--tb-accent)] transition-colors">
+                Web Chat 接入指南
+              </h3>
+              <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-3">
+                官方渠道，无需 IM 平台，打开浏览器即可使用。
+              </p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-400">
+                查看教程 <ArrowRight size={13} />
               </span>
             </a>
 
