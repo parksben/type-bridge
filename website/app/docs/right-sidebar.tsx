@@ -76,7 +76,7 @@ export function RightSidebar() {
 
   return (
     <aside className="w-[200px] shrink-0 hidden lg:block">
-      <nav className="sticky top-20 py-4 pl-4">
+      <nav className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto py-4 pl-4 scrollbar-thin">
         <div className="flex items-center gap-2 mb-3">
           <Hash size={14} className="text-[var(--tb-muted)]" />
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--tb-muted)]">

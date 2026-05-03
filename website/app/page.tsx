@@ -13,134 +13,157 @@ import {
   MessageSquareText,
   MousePointerClick,
   BookOpen,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-// ── Hero concept banner ────────────────────────────────────────
+// ── Hero Banner — animated principle diagram ────────────────────
 
 function HeroBanner() {
   return (
-    <div className="hero-banner relative w-full max-w-[720px] mx-auto h-[340px] md:h-[400px] select-none">
-      {/* Background glow */}
-      <div className="absolute inset-0 glow-orange opacity-30 rounded-3xl" />
+    <div className="hero-banner relative w-full mx-auto select-none overflow-hidden rounded-2xl border border-[var(--tb-border)]"
+      style={{ minHeight: "340px" }}
+    >
+      {/* Dark inner bg for contrast */}
+      <div className="absolute inset-0 bg-[#0a0a0f] dark:bg-[#060609]" />
 
-      {/* Device frame: Phone (left) */}
-      <div className="absolute left-[4%] top-1/2 -translate-y-1/2 w-[120px] md:w-[150px] hero-phone animate-float-phone">
-        <div className="rounded-2xl md:rounded-3xl border-2 border-[var(--tb-border)] bg-[var(--tb-surface)] shadow-xl overflow-hidden">
-          {/* Phone top bar */}
-          <div className="h-3 md:h-4 bg-[var(--tb-border)]/30" />
-          {/* Messages */}
-          <div className="p-2.5 md:p-3 space-y-2">
-            <MessageBubble text="你好，帮我查个资料" delay="0s" color="blue" />
-            <MessageBubble text="收到，马上发给你" delay="1.5s" color="sky" />
-            <MessageBubble text="这是你要的文档链接" delay="3s" color="green" />
-          </div>
-          <div className="h-1.5 md:h-2 bg-[var(--tb-border)]/20" />
-        </div>
+      {/* Grid pattern overlay */}
+      <div className="hero-grid-pattern absolute inset-0 opacity-[0.07]" />
+
+      {/* Ambient color orbs */}
+      <div className="hero-orb hero-orb-blue" />
+      <div className="hero-orb hero-orb-sky" />
+      <div className="hero-orb hero-orb-green" />
+
+      {/* ── LEFT: IM sources ── */}
+      <div className="absolute left-[8%] md:left-[10%] top-0 bottom-0 flex flex-col items-center justify-center gap-5 md:gap-8 z-10">
+        <IMAppIcon name="飞书" color="#3370FF" delay="0s">
+          {/* Feishu logo — stylized double-loop */}
+          <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
+            <path d="M16 4C10 4 5 8 5 14s5 10 11 14c6-4 11-10 11-14S22 4 16 4z" fill="#3370FF" opacity="0.9"/>
+            <path d="M16 8c-3 0-6 3-6 7s3 7 6 9c3-2 6-5 6-9s-3-7-6-7z" fill="white" opacity="0.85"/>
+            <circle cx="16" cy="14" r="2.5" fill="white"/>
+          </svg>
+        </IMAppIcon>
+        <IMAppIcon name="钉钉" color="#0089FF" delay="0.6s">
+          {/* DingTalk logo — hexagon with inner diamond */}
+          <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
+            <path d="M16 2L4 9v14l12 7 12-7V9L16 2z" fill="#0089FF" opacity="0.9"/>
+            <path d="M16 8l-7 4v8l7 4 7-4v-8l-7-4z" fill="white" opacity="0.85"/>
+            <path d="M16 12l-3 2v4l3 2 3-2v-4l-3-2z" fill="#0089FF" opacity="0.7"/>
+          </svg>
+        </IMAppIcon>
+        <IMAppIcon name="企微" color="#06BA6A" delay="1.2s">
+          {/* WeCom logo — double-arc with center dot */}
+          <svg viewBox="0 0 32 32" fill="none" className="w-full h-full">
+            <path d="M4 14C4 8 9 4 16 4s12 4 12 10" stroke="#06BA6A" strokeWidth="2.5" strokeLinecap="round" opacity="0.9"/>
+            <path d="M4 18c0 6 5 10 12 10s12-4 12-10" stroke="#06BA6A" strokeWidth="2.5" strokeLinecap="round" opacity="0.9"/>
+            <circle cx="16" cy="16" r="4" fill="#06BA6A" opacity="0.85"/>
+            <circle cx="16" cy="16" r="1.5" fill="white"/>
+          </svg>
+        </IMAppIcon>
       </div>
 
-      {/* Bridge area (center) — flowing particles and arc lines */}
-      <div className="absolute left-[32%] right-[25%] top-0 bottom-0 overflow-hidden">
-        {/* Colored arc lines representing data channels */}
-        <svg
-          className="absolute inset-0 w-full h-full"
-          viewBox="0 0 200 400"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M 0,100 C 80,100 120,60 200,60"
-            fill="none"
-            strokeWidth="1.5"
-            className="hero-arc-line-blue"
-          />
-          <path
-            d="M 0,200 C 80,200 120,160 200,160"
-            fill="none"
-            strokeWidth="1.5"
-            className="hero-arc-line-sky"
-          />
-          <path
-            d="M 0,300 C 80,300 120,260 200,260"
-            fill="none"
-            strokeWidth="1.5"
-            className="hero-arc-line-green"
-          />
+      {/* ── CENTER: Bridge arcs + particles ── */}
+      <div className="absolute left-[22%] md:left-[24%] right-[18%] md:right-[20%] top-0 bottom-0 overflow-hidden">
+        {/* SVG arcs */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 400" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="arc-blue" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#3370FF" />
+              <stop offset="100%" stopColor="#3370FF" stopOpacity="0.1" />
+            </linearGradient>
+            <linearGradient id="arc-sky" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#0089FF" />
+              <stop offset="100%" stopColor="#0089FF" stopOpacity="0.1" />
+            </linearGradient>
+            <linearGradient id="arc-green" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#06BA6A" />
+              <stop offset="100%" stopColor="#06BA6A" stopOpacity="0.1" />
+            </linearGradient>
+          </defs>
+          <path d="M 0,80 C 80,80 150,150 300,120" fill="none" strokeWidth="1.8" stroke="url(#arc-blue)" className="hero-arc-dash" />
+          <path d="M 0,200 C 80,200 150,200 300,200" fill="none" strokeWidth="1.8" stroke="url(#arc-sky)" className="hero-arc-dash hero-arc-dash-delay-1" />
+          <path d="M 0,320 C 80,320 150,250 300,280" fill="none" strokeWidth="1.8" stroke="url(#arc-green)" className="hero-arc-dash hero-arc-dash-delay-2" />
+          {/* Glow echoes */}
+          <path d="M 0,80 C 80,80 150,150 300,120" fill="none" strokeWidth="4" stroke="#3370FF" opacity="0.08" />
+          <path d="M 0,200 C 80,200 150,200 300,200" fill="none" strokeWidth="4" stroke="#0089FF" opacity="0.08" />
+          <path d="M 0,320 C 80,320 150,250 300,280" fill="none" strokeWidth="4" stroke="#06BA6A" opacity="0.08" />
         </svg>
 
-        {/* Flowing particles */}
-        <Particle delay="0s" top="20%" />
-        <Particle delay="0.8s" top="45%" />
-        <Particle delay="1.6s" top="70%" />
-        <Particle delay="0.4s" top="32%" />
-        <Particle delay="1.2s" top="58%" />
-        <Particle delay="2.0s" top="15%" />
+        {/* Data particles */}
+        <HeroParticle color="#3370FF" top="18%" delay="0s" />
+        <HeroParticle color="#3370FF" top="20%" delay="1.5s" />
+        <HeroParticle color="#0089FF" top="48%" delay="0.3s" />
+        <HeroParticle color="#0089FF" top="50%" delay="1.8s" />
+        <HeroParticle color="#06BA6A" top="76%" delay="0.6s" />
+        <HeroParticle color="#06BA6A" top="78%" delay="2.1s" />
 
-        {/* Center glow dot */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[var(--tb-accent)] opacity-60 animate-pulse-glow" />
-      </div>
-
-      {/* Device frame: Desktop cursor & input (right) */}
-      <div className="absolute right-[4%] top-1/2 -translate-y-1/2 w-[100px] md:w-[130px] hero-desktop animate-float-desktop">
-        <div className="rounded-xl md:rounded-2xl border-2 border-[var(--tb-border)] bg-[var(--tb-surface)] shadow-xl overflow-hidden">
-          <div className="flex items-center gap-1 px-2.5 md:px-3 py-1.5 md:py-2 border-b border-[var(--tb-border)]">
-            <div className="flex gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-400/60" />
-              <div className="w-2 h-2 rounded-full bg-amber-400/60" />
-              <div className="w-2 h-2 rounded-full bg-green-400/60" />
-            </div>
-          </div>
-          <div className="p-2.5 md:p-3 space-y-2">
-            <div className="h-1.5 w-3/4 rounded bg-[var(--tb-border)]" />
-            <div className="relative bg-[var(--tb-surface)] border border-[var(--tb-border)] rounded-md p-2">
-              <div className="h-1.5 w-5/6 rounded bg-[var(--tb-muted)]/30" />
-              {/* Cursor blink */}
-              <div className="absolute right-1.5 top-1.5 w-0.5 h-3.5 bg-[var(--tb-accent)] animate-blink-cursor" />
-            </div>
-            <div className="h-1.5 w-1/2 rounded bg-[var(--tb-border)]" />
+        {/* Bridge center node */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+          <div className="hero-bridge-node">
+            <ArrowLeftRight size={18} className="text-white" />
           </div>
         </div>
       </div>
 
-      {/* Channel labels along the bottom */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-3 md:gap-5">
-        <span className="hero-channel-tag text-blue-600/70 dark:text-blue-400/70 text-[10px] md:text-xs font-medium">飞书</span>
-        <span className="hero-channel-tag text-sky-600/70 dark:text-sky-400/70 text-[10px] md:text-xs font-medium">钉钉</span>
-        <span className="hero-channel-tag text-green-600/70 dark:text-green-400/70 text-[10px] md:text-xs font-medium">企业微信</span>
+      {/* ── RIGHT: Desktop target ── */}
+      <div className="absolute right-[6%] md:right-[8%] top-1/2 -translate-y-1/2 z-10">
+        <div className="hero-desktop-frame animate-float-desktop">
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.06]">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+            <div className="flex-1 text-center text-[10px] text-white/30 font-medium tracking-wide">TypeBridge</div>
+          </div>
+          <div className="p-3 space-y-1.5">
+            <div className="h-1.5 w-3/4 rounded bg-white/[0.06]" />
+            <div className="h-1.5 w-1/2 rounded bg-white/[0.04]" />
+            <div className="relative mt-2 px-2.5 py-2 rounded-lg border border-white/[0.12] bg-white/[0.04]">
+              <div className="h-1.5 w-4/5 rounded bg-white/25 hero-injected-text" />
+              <div className="absolute right-2 top-1 w-[2px] h-3.5 bg-[var(--tb-accent)] animate-blink-cursor rounded-full" />
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Scanline overlay */}
+      <div className="hero-scanlines absolute inset-0 pointer-events-none" />
     </div>
   );
 }
 
-function MessageBubble({
-  text,
-  delay,
-  color,
-}: {
-  text: string;
-  delay: string;
-  color: "blue" | "sky" | "green";
-}) {
-  const colorMap = {
-    blue: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300",
-    sky: "bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300",
-    green: "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300",
-  };
-
+/** IM app icon with glow ring */
+function IMAppIcon({ name, color, delay, children }: { name: string; color: string; delay: string; children: React.ReactNode }) {
   return (
     <div
-      className={`text-[10px] md:text-xs px-2 py-1 rounded-lg ${colorMap[color]} animate-msg-float`}
-      style={{ animationDelay: delay }}
+      className="flex flex-col items-center gap-2 animate-fade-up"
+      style={{ animationDelay: delay, opacity: 0 }}
     >
-      {text}
+      <div className="hero-icon-ring" style={{ borderColor: color, animationDelay: delay }}>
+        <div
+          className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center overflow-hidden"
+          style={{ backgroundColor: color + "15", boxShadow: `0 0 24px 0 ${color}25` }}
+        >
+          {children}
+        </div>
+      </div>
+      <span className="text-[10px] md:text-xs font-bold tracking-wide text-white/60 uppercase">{name}</span>
     </div>
   );
 }
 
-function Particle({ delay, top }: { delay: string; top: string }) {
+/** Data particle */
+function HeroParticle({ color, top, delay }: { color: string; top: string; delay: string }) {
   return (
     <div
-      className="hero-particle"
-      style={{ top, animationDelay: delay }}
+      className="hero-flow-particle"
+      style={{
+        top,
+        animationDelay: delay,
+        backgroundColor: color,
+        boxShadow: `0 0 8px 3px ${color}50`,
+      }}
     />
   );
 }
@@ -160,10 +183,10 @@ function FeatureCard({
 }) {
   return (
     <div
-      className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 animate-fade-up"
+      className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 animate-fade-up feature-card-glow"
       style={{ animationDelay: `${delay}s` }}
     >
-      <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm">
         <Icon size={20} className="text-[var(--tb-accent)]" />
       </div>
       <h3 className="font-semibold text-[15px] mb-1.5">{title}</h3>
@@ -192,9 +215,9 @@ function StepItem({
       className="flex flex-col items-center text-center animate-fade-up"
       style={{ animationDelay: `${delay}s` }}
     >
-      <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center mb-4 relative">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/30 flex items-center justify-center mb-4 relative shadow-sm">
         <Icon size={24} className="text-[var(--tb-accent)]" />
-        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--tb-accent)] text-white text-xs flex items-center justify-center font-semibold">
+        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--tb-accent)] text-white text-xs flex items-center justify-center font-bold shadow-lg shadow-orange-500/25">
           {step}
         </span>
       </div>
@@ -218,7 +241,7 @@ function DownloadCard({
   return (
     <a
       href={`/download/${arch}`}
-      className="flex-1 max-w-[260px] mx-auto sm:mx-0 inline-flex items-center justify-between gap-3 px-5 py-4 rounded-xl bg-[var(--tb-surface)] border border-[var(--tb-border)] hover:border-orange-300 dark:hover:border-orange-800 transition-all group"
+      className="flex-1 max-w-[260px] mx-auto sm:mx-0 inline-flex items-center justify-between gap-3 px-5 py-4 rounded-xl bg-[var(--tb-surface)] border border-[var(--tb-border)] hover:border-[var(--tb-accent)]/40 transition-all group feature-card-glow"
     >
       <div className="text-left">
         <div className="font-semibold text-sm">{label}</div>
@@ -249,8 +272,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen noise-bg">
       {/* ============ HERO ============ */}
-      <section className="relative px-6 pt-24 pb-16 md:pt-36 md:pb-24 overflow-hidden min-h-[520px] md:min-h-[600px]">
-        <div className="absolute inset-0 glow-orange opacity-50" />
+      <section className="relative px-6 pt-24 pb-16 md:pt-36 md:pb-24 overflow-hidden min-h-[560px] md:min-h-[640px]">
+        <div className="absolute inset-0 hero-section-glow" />
         <div className="max-w-5xl mx-auto relative z-10">
           {/* Badge row */}
           <div className="flex justify-center mb-6 animate-fade-up">
@@ -285,7 +308,7 @@ export default function HomePage() {
           <div className="flex justify-center gap-3 mb-10 animate-fade-up animate-delay-3">
             <a
               href="/download/arm64"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--tb-accent)] text-white font-semibold text-sm hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-orange-500/20"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--tb-accent)] text-white font-semibold text-sm hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[var(--tb-accent)]/25"
             >
               <Download size={17} />
               免费下载
@@ -320,7 +343,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-7 left-[calc(16.67%+28px)] right-[calc(16.67%+28px)] h-[2px] bg-gradient-to-r from-orange-300 via-orange-200 to-orange-300 dark:from-orange-800 dark:via-orange-700 dark:to-orange-800" />
+            <div className="hidden md:block absolute top-7 left-[calc(16.67%+28px)] right-[calc(16.67%+28px)] h-[2px] bg-gradient-to-r from-[var(--tb-accent)]/40 via-[var(--tb-accent)]/20 to-[var(--tb-accent)]/40" />
             <StepItem
               step={1}
               icon={MessageSquareText}
@@ -349,9 +372,10 @@ export default function HomePage() {
       {/* ============ 功能特性 ============ */}
       <section
         id="features"
-        className="px-6 py-20 md:py-28 bg-[var(--tb-surface)] border-y border-[var(--tb-border)]"
+        className="px-6 py-20 md:py-28 bg-[var(--tb-surface)] border-y border-[var(--tb-border)] relative overflow-hidden"
       >
-        <div className="max-w-5xl mx-auto">
+        <div className="absolute inset-0 section-glow-accent pointer-events-none" />
+        <div className="max-w-5xl mx-auto relative z-10">
           <div className="text-center mb-14">
             <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
               功能
@@ -419,7 +443,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
             <a
               href="/docs/feishu"
-              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 text-left"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 text-left"
             >
               <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
                 <MessageSquareText size={20} className="text-blue-600 dark:text-blue-400" />
@@ -437,7 +461,7 @@ export default function HomePage() {
 
             <a
               href="/docs/dingtalk"
-              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 text-left"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 text-left"
             >
               <div className="w-10 h-10 rounded-lg bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
                 <MessageSquareText size={20} className="text-sky-600 dark:text-sky-400" />
@@ -455,7 +479,7 @@ export default function HomePage() {
 
             <a
               href="/docs/wecom"
-              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-300 dark:hover:border-orange-800 transition-all duration-300 text-left"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 text-left"
             >
               <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
                 <MessageSquareText size={20} className="text-green-600 dark:text-green-400" />
@@ -474,7 +498,7 @@ export default function HomePage() {
 
           <a
             href="/docs"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--tb-border)] text-sm font-medium text-[var(--tb-muted)] hover:text-[var(--tb-text)] hover:border-orange-300 dark:hover:border-orange-800 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--tb-border)] text-sm font-medium text-[var(--tb-muted)] hover:text-[var(--tb-text)] hover:border-[var(--tb-accent)]/40 transition-all"
           >
             <BookOpen size={16} />
             浏览全部文档
@@ -485,9 +509,10 @@ export default function HomePage() {
       {/* ============ 下载 ============ */}
       <section
         id="download"
-        className="px-6 py-20 md:py-28 bg-[var(--tb-surface)] border-y border-[var(--tb-border)]"
+        className="px-6 py-20 md:py-28 bg-[var(--tb-surface)] border-y border-[var(--tb-border)] relative overflow-hidden"
       >
-        <div className="max-w-2xl mx-auto text-center">
+        <div className="absolute inset-0 section-glow-download pointer-events-none" />
+        <div className="max-w-2xl mx-auto text-center relative z-10">
           <h2 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight">
             下载
             <span className="font-brand text-[var(--tb-accent)]">

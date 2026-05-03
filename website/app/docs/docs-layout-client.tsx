@@ -13,7 +13,7 @@ export function DocsLayoutClient({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex items-start max-w-screen-xl mx-auto px-6 pt-16">
+    <div className="flex max-w-screen-xl mx-auto px-6 pt-16">
       <LeftSidebar currentPath={pathname} />
       <main className="flex-1 min-w-0 py-16 md:py-24">{children}</main>
       <RightSidebar />

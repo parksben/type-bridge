@@ -63,7 +63,7 @@ function channelColorClass(color: string, active: boolean) {
 export function LeftSidebar({ currentPath }: { currentPath: string }) {
   return (
     <aside className="w-[220px] shrink-0 hidden lg:block">
-      <nav className="sticky top-20 py-4 pr-4">
+      <nav className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto py-4 pr-4 scrollbar-thin">
         <div className="mb-3 px-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--tb-muted)]">
             渠道文档
