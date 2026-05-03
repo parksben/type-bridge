@@ -114,7 +114,7 @@ export default function WeComConnectionTab() {
 
   async function openWeComAdmin() {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl("https://work.weixin.qq.com").catch(() => {});
+    await openUrl("https://work.weixin.qq.com/wework_admin/frame#/aiHelper/list?tab=manage").catch(() => {});
   }
 
   async function openUrlFromChecklist(url: string) {
@@ -152,7 +152,7 @@ export default function WeComConnectionTab() {
               onClick={openWeComAdmin}
               className="text-accent hover:underline inline-flex items-center gap-0.5"
             >
-              企业微信管理后台
+              企微机器人管理后台
               <ExternalLink size={10} strokeWidth={2} />
             </button>{" "}
             创建智能机器人，开启「API 模式」→「长连接」，复制 Bot ID / Secret 到下方。
@@ -296,7 +296,7 @@ export default function WeComConnectionTab() {
                 onClick={openWeComAdmin}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                企业微信管理后台
+                企微机器人管理后台
                 <ExternalLink size={10} strokeWidth={2} />
               </button>{" "}
               确认智能机器人的「API 模式」已选「长连接」；或点「测试连接」验证凭据可用。

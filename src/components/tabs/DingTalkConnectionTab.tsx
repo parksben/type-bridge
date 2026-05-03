@@ -115,7 +115,7 @@ export default function DingTalkConnectionTab() {
 
   async function openDingTalkDevPortal() {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl("https://open-dev.dingtalk.com").catch(() => {});
+    await openUrl("https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app").catch(() => {});
   }
 
   async function openUrlFromChecklist(url: string) {
