@@ -77,13 +77,14 @@ export interface Settings {
   feishu_app_secret: string;
   dingtalk_client_id: string;
   dingtalk_client_secret: string;
+  wecom_bot_id: string;
+  wecom_secret: string;
   auto_submit: boolean;
   submit_key: SubmitKey;
 }
 
 interface AppStore {
   /// 每渠道独立的连接状态。仅"已配置凭据且启动过 sidecar"的渠道存在 key。
-  /// P1：feishu + dingtalk；wecom 待 P3。
   channelConnected: Partial<Record<ChannelId, boolean>>;
   autoSubmit: boolean;
   submitKey: SubmitKey;

@@ -2,7 +2,7 @@ import { Info } from "lucide-react";
 import { useAppStore, CHANNEL_LABEL, type ChannelId } from "../store";
 import ConnectionTab from "./tabs/ConnectionTab";
 import DingTalkConnectionTab from "./tabs/DingTalkConnectionTab";
-import ComingSoonTab from "./tabs/ComingSoonTab";
+import WeComConnectionTab from "./tabs/WeComConnectionTab";
 
 const CHANNELS: ChannelId[] = ["feishu", "dingtalk", "wecom"];
 
@@ -71,7 +71,7 @@ export default function ConnectionHub() {
       <div className="flex-1 overflow-hidden">
         {activeConnectionChannel === "feishu" && <ConnectionTab />}
         {activeConnectionChannel === "dingtalk" && <DingTalkConnectionTab />}
-        {activeConnectionChannel === "wecom" && <ComingSoonTab platform="wecom" />}
+        {activeConnectionChannel === "wecom" && <WeComConnectionTab />}
       </div>
     </div>
   );

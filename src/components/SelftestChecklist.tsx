@@ -222,7 +222,51 @@ function FooterGuide({
     );
   }
 
-  // WeCom 留白，P3 落地
+  if (channel === "wecom") {
+    return (
+      <div
+        className="flex items-start gap-2 px-3 py-2.5 text-[11.5px] leading-relaxed"
+        style={{
+          borderTop: "1px solid var(--border)",
+          background: "var(--surface)",
+        }}
+      >
+        <Info size={12} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
+        <div className="flex-1">
+          <div className="text-text font-medium">
+            长连接模式需在企业微信管理后台开启
+          </div>
+          <div className="text-muted text-[11px] mt-0.5">
+            API probe 只能验证 WSS 握手是否通过，请按以下对照配置
+          </div>
+          <ol className="mt-1.5 flex flex-col gap-1 text-text">
+            <li className="flex items-baseline gap-1.5">
+              <span className="text-accent font-mono text-[10.5px]">①</span>
+              <span>
+                <span className="font-medium">API 模式</span>：管理后台 → 智能机器人 → 开启
+              </span>
+            </li>
+            <li className="flex items-baseline gap-1.5">
+              <span className="text-accent font-mono text-[10.5px]">②</span>
+              <span>
+                <span className="font-medium">模式选择</span>：选择"长连接"（非"设置接收消息回调地址"）
+              </span>
+            </li>
+          </ol>
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              onClick={() => onOpenUrl("https://work.weixin.qq.com")}
+              className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
+            >
+              去企业微信管理后台
+              <ExternalLink size={10} strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
 
@@ -248,6 +292,12 @@ function credentialTerms(channel: ChannelId): { idLabel: string; tokenName: stri
         idLabel: "Client ID / Client Secret",
         tokenName: "access_token",
         host: "api.dingtalk.com",
+      };
+    case "wecom":
+      return {
+        idLabel: "Bot ID / Secret",
+        tokenName: "WSS 订阅",
+        host: "openws.work.weixin.qq.com",
       };
     default:
       return {
