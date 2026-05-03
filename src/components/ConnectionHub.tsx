@@ -3,8 +3,15 @@ import { useAppStore, CHANNEL_LABEL, type ChannelId } from "../store";
 import ConnectionTab from "./tabs/ConnectionTab";
 import DingTalkConnectionTab from "./tabs/DingTalkConnectionTab";
 import WeComConnectionTab from "./tabs/WeComConnectionTab";
+import ChannelIcon from "./ChannelIcon";
 
 const CHANNELS: ChannelId[] = ["feishu", "dingtalk", "wecom"];
+
+const CHANNEL_BRAND_COLOR: Record<ChannelId, string> = {
+  feishu: "#3370FF",
+  dingtalk: "#1677ff",
+  wecom: "#07c160",
+};
 
 /// 「连接IM应用」tab 的壳：
 ///   顶部 intro 说明 → 横向渠道子 tab → 当前渠道的配置面板（独立滚动）
@@ -53,6 +60,12 @@ export default function ConnectionHub() {
                   style={{ background: "var(--success)" }}
                 />
               )}
+              <span
+                className="inline-flex items-center"
+                style={{ color: CHANNEL_BRAND_COLOR[ch] }}
+              >
+                <ChannelIcon channel={ch} size={13} />
+              </span>
               <span className={active ? "font-medium" : ""}>
                 {CHANNEL_LABEL[ch]}
               </span>
