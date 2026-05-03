@@ -94,10 +94,10 @@ export default function ConnectionTab() {
         appId: appId.trim(),
         appSecret: appSecret.trim(),
       });
-      addLog({ kind: "connect", text: "正在启动长连接..." });
+      addLog({ kind: "connect", channel: "feishu", text: "正在启动长连接..." });
     } catch (e) {
       setStarting(false);
-      addLog({ kind: "error", text: `启动失败: ${e}` });
+      addLog({ kind: "error", channel: "feishu", text: `启动失败: ${e}` });
     }
   }
 
@@ -113,6 +113,7 @@ export default function ConnectionTab() {
         : -1;
       addLog({
         kind: allOk ? "connect" : "error",
+        channel: "feishu",
         text: allOk
           ? "连接测试通过：全部 API scope 校验成功"
           : res.credentials_ok
@@ -126,7 +127,7 @@ export default function ConnectionTab() {
         credentials_reason: String(e),
         probes: [],
       });
-      addLog({ kind: "error", text: `连接测试异常：${e}` });
+      addLog({ kind: "error", channel: "feishu", text: `连接测试异常：${e}` });
     } finally {
       setSelftesting(false);
     }
