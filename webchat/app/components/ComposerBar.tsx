@@ -116,7 +116,6 @@ export default function ComposerBar({ onSendText, onSendImage }: Props) {
 
         {!stagedImage && (
           <VoiceButton
-            onInterim={(t) => setText(t)}
             onFinal={(t) => setText(t)}
             onHint={(msg) => setVoiceHint(msg)}
           />
