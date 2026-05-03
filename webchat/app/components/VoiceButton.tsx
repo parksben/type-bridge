@@ -14,13 +14,15 @@ type Props = {
   onHint: (message: string) => void;
 };
 
-const PREF_KEY = "typebridge_voice_engine"; // "wasm" | null
+const PREF_KEY = "typebridge_voice_engine"; // "wasm" | "web-speech" | null
+
+type Pref = "wasm" | "web-speech" | null;
 
 type Mode =
   | { kind: "idle" }
-  | { kind: "web-speech" }     // Web Speech API 进行中
-  | { kind: "recording" }      // WASM 录音器展开
-  | { kind: "picker"; reason?: string };
+  | { kind: "web-speech" }
+  | { kind: "recording" }
+  | { kind: "picker"; pickerMode: "choose" | "fallback"; reason?: string };
 
 function friendlyErrorMessage(code: string): string {
   switch (code) {
@@ -36,29 +38,38 @@ function friendlyErrorMessage(code: string): string {
     case "service-not-allowed":
     case "language-not-supported":
     case "engine-timeout":
+    case "engine-silent":
     case "start-failed":
-      return "你的系统缺少中文语音引擎。";
+      return "你的系统缺少中文语音引擎，或浏览器阻止了语音识别。";
     case "aborted":
       return "";
     default:
       if (code.includes("engine") || code.includes("引擎") || code.includes("timeout")) {
-        return "你的系统缺少中文语音引擎。";
+        return "你的系统缺少中文语音引擎，或浏览器阻止了语音识别。";
       }
       return "浏览器语音听写启动失败。";
   }
 }
 
-function readPref(): "wasm" | null {
+function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  // iPadOS 13+ 的 Safari 默认 UA 是 "MacIntel" desktop-like，用 maxTouchPoints 识别
+  const isIPadOS = ua.includes("Macintosh") && navigator.maxTouchPoints > 1;
+  return /iPhone|iPad|iPod/i.test(ua) || isIPadOS;
+}
+
+function readPref(): Pref {
   if (typeof window === "undefined") return null;
   try {
     const v = window.localStorage.getItem(PREF_KEY);
-    return v === "wasm" ? "wasm" : null;
+    return v === "wasm" || v === "web-speech" ? v : null;
   } catch {
     return null;
   }
 }
 
-function writePref(v: "wasm" | null) {
+function writePref(v: Pref) {
   try {
     if (v) window.localStorage.setItem(PREF_KEY, v);
     else window.localStorage.removeItem(PREF_KEY);
@@ -66,30 +77,47 @@ function writePref(v: "wasm" | null) {
 }
 
 export default function VoiceButton({ onInterim, onFinal, onHint }: Props) {
-  const [browserSupported, setBrowserSupported] = useState(false);
+  const [browserSupported, setBrowserSupported] = useState<boolean | null>(null);
+  const [ios, setIos] = useState(false);
   const [mode, setMode] = useState<Mode>({ kind: "idle" });
   const ctrlRef = useRef<SpeechController | null>(null);
 
   useEffect(() => {
     setBrowserSupported(isSpeechSupported());
+    setIos(isIOS());
   }, []);
 
-  // 没有任何可行的 Web Speech API 入口 → 完全不展示按钮
-  // （此设备连 SpeechRecognition 接口都没有）
-  if (!browserSupported) return null;
-
-  const preferWasm = readPref() === "wasm";
+  // 决策：什么时候**完全不**渲染按钮？
+  // - 不支持 SpeechRecognition **且** 未装 WASM 引擎 → 用户实际上没任何可用方案
+  // - 否则都展示按钮（Web Speech / WASM / 输入法 都算可用）
+  if (browserSupported === null) return null; // hydration 之前
   const wasmInstalled = isEngineInstalled();
+  if (!browserSupported && !wasmInstalled) return null;
 
   function click() {
-    // 已选过 WASM 且模型已缓存 → 直接录音
-    if (preferWasm && wasmInstalled) {
+    const pref = readPref();
+
+    // 偏好 1：WASM 已装 → 直接录音
+    if (pref === "wasm" && wasmInstalled) {
       setMode({ kind: "recording" });
       return;
     }
 
-    // 否则试 Web Speech（第一段）
-    tryWebSpeech();
+    // 偏好 2：用户选过浏览器自带 → 试 Web Speech
+    if (pref === "web-speech" && browserSupported) {
+      tryWebSpeech();
+      return;
+    }
+
+    // 无偏好：iOS 默认试 Web Speech（实测可靠、零摩擦）
+    // 其他平台（Android / 鸿蒙等，Web Speech 可靠性差）→ 直接弹 Picker 让用户选
+    if (!pref && ios && browserSupported) {
+      tryWebSpeech();
+      return;
+    }
+
+    // 默认走 Picker：让用户选方式
+    setMode({ kind: "picker", pickerMode: "choose" });
   }
 
   function tryWebSpeech() {
@@ -105,22 +133,23 @@ export default function VoiceButton({ onInterim, onFinal, onHint }: Props) {
         ctrlRef.current = null;
         const msg = friendlyErrorMessage(code);
         if (!msg) {
-          // "aborted" 等静默情况
+          // "aborted" 等静默
           setMode({ kind: "idle" });
           return;
         }
-        // 一次性切到 picker，避免 setMode(idle) → setMode(picker) 的中间闪烁
-        setMode({ kind: "picker", reason: msg });
+        // 之前用户偏好是 web-speech，现在失败了 → 清偏好避免下次还走这条路卡住
+        if (readPref() === "web-speech") writePref(null);
+        // 一次性切到 picker（fallback 模式不再展示"浏览器自带"选项）
+        setMode({ kind: "picker", pickerMode: "fallback", reason: msg });
       },
       onEnd: () => {
-        // 注意：speech.ts 会在 errored 时不触发 onEnd，因此此处 setMode(idle)
-        // 不会误把 picker 重置掉。保留 idle 是 Web Speech 正常结束 / stop() 的路径。
+        // speech.ts 保证 errored 时不再触发 onEnd，所以 setMode(idle) 不会覆盖 picker
         setMode({ kind: "idle" });
         ctrlRef.current = null;
       },
     });
     if (!c) {
-      setMode({ kind: "picker", reason: "你的浏览器不支持标准语音听写。" });
+      setMode({ kind: "picker", pickerMode: "fallback", reason: "你的浏览器不支持标准语音听写。" });
       return;
     }
     ctrlRef.current = c;
@@ -156,12 +185,21 @@ export default function VoiceButton({ onInterim, onFinal, onHint }: Props) {
 
       {mode.kind === "picker" && (
         <VoiceEnginePicker
+          pickerMode={mode.pickerMode}
           reason={mode.reason}
+          webSpeechAvailable={browserSupported === true}
           onUseIme={() => {
             setMode({ kind: "idle" });
             onHint(
-              "已切回输入法语音。点击输入框，再点键盘上的麦克风按钮即可（搜狗 / 百度 / 讯飞 / 系统键盘都支持）。",
+              "点击输入框，再点键盘上的麦克风按钮即可（搜狗 / 百度 / 讯飞 / 系统键盘都支持）。",
             );
+          }}
+          onUseWebSpeech={() => {
+            writePref("web-speech");
+            setMode({ kind: "idle" });
+            // 关闭 picker 后立即启动 Web Speech；setTimeout 避免同步 setState 批处理
+            // 把 picker 还没消失就开始录音的状态合并掉
+            setTimeout(() => tryWebSpeech(), 50);
           }}
           onInstalled={() => {
             writePref("wasm");

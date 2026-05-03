@@ -43,8 +43,9 @@ type Options = {
   onEnd?: () => void;
 };
 
-// 5s 内引擎未启动 → 认定为"系统缺引擎"。够用户应对权限弹窗 + 正常引擎冷启动。
-const START_TIMEOUT_MS = 5000;
+// 3s 内引擎未启动（未收到 onaudiostart / onspeechstart / onresult）→ 认定缺引擎。
+// 正常浏览器一般在 500ms-1.5s 内 onaudiostart；3s 已足够保守。
+const START_TIMEOUT_MS = 3000;
 
 export function createSpeech(opts: Options): SpeechController | null {
   if (!isSpeechSupported()) return null;
@@ -57,9 +58,14 @@ export function createSpeech(opts: Options): SpeechController | null {
   // 标志：error 已触发时 onend 不再走 onEnd 分支（避免 VoiceButton 里把 picker
   // 重置回 idle 的竞态）
   let errored = false;
-  // 标志：引擎已确认启动（收到 onstart / onaudiostart / 任何 result）
+  // 标志：引擎**真正**在工作（不只是接口调用成功 = onstart，而是音频采集启动 /
+  // 开始拾音 / 已出结果）。
+  // 华为 / MIUI 浏览器的 quirk：缺 Google 语音服务时会 fire onstart 但之后
+  // 永远没 onaudiostart / onresult / onerror / onend。所以 onstart 不算
+  // "started"，否则超时 timer 会被 onstart 提前清掉，导致 fallback 失效。
   let started = false;
-  // 超时 timer：start() 后 5s 内未 started 就主动兜底
+  let gotResult = false;
+  // 超时 timer：start() 后 START_TIMEOUT_MS 内未 started 就主动兜底
   let startTimer: ReturnType<typeof setTimeout> | null = null;
 
   function clearStartTimer() {
@@ -73,6 +79,7 @@ export function createSpeech(opts: Options): SpeechController | null {
     cancelled = false;
     errored = false;
     started = false;
+    gotResult = false;
     lastInterim = "";
     recog = new Ctor();
     recog.lang = opts.lang || "zh-CN";
@@ -80,10 +87,8 @@ export function createSpeech(opts: Options): SpeechController | null {
     recog.interimResults = true;
     recog.maxAlternatives = 1;
 
-    recog.onstart = () => {
-      started = true;
-      clearStartTimer();
-    };
+    // 注意：onstart 故意不设 started=true —— 见上方注释
+    recog.onstart = () => { /* noop */ };
     recog.onaudiostart = () => {
       started = true;
       clearStartTimer();
@@ -95,6 +100,7 @@ export function createSpeech(opts: Options): SpeechController | null {
 
     recog.onresult = (e: AnyRecog) => {
       started = true;
+      gotResult = true;
       clearStartTimer();
       if (cancelled) return;
       let interim = "";
@@ -125,18 +131,28 @@ export function createSpeech(opts: Options): SpeechController | null {
 
     recog.onend = () => {
       clearStartTimer();
-      // 若已通过 error 分支通知上层，就不再 fire onEnd（否则 VoiceButton
-      // 会把刚切到的 picker mode 又重置为 idle）
-      if (!cancelled && !errored) {
-        if (lastInterim) opts.onFinal?.(lastInterim);
-        opts.onEnd?.();
+      if (cancelled || errored) {
+        recog = null;
+        return;
       }
+      // onend 触发但既没 started 也没 result —— 引擎啥都没干就结束了
+      // （某些 Android ROM 的另一种失败模式）
+      if (!started && !gotResult) {
+        errored = true;
+        opts.onError?.("engine-silent");
+        recog = null;
+        return;
+      }
+      // 正常：把最后一段 interim 作为 final（用户说完了但引擎未标记 isFinal）
+      if (lastInterim && !gotResult) {
+        opts.onFinal?.(lastInterim);
+      }
+      opts.onEnd?.();
       recog = null;
     };
 
     try {
       recog.start();
-      // 兜底：START_TIMEOUT_MS 内没 started 就主动触发 engine-timeout
       startTimer = setTimeout(() => {
         if (!started && !errored && !cancelled) {
           errored = true;
