@@ -3,11 +3,14 @@ import { useAppStore, CHANNEL_LABEL, type ChannelId } from "../store";
 import ConnectionTab from "./tabs/ConnectionTab";
 import DingTalkConnectionTab from "./tabs/DingTalkConnectionTab";
 import WeComConnectionTab from "./tabs/WeComConnectionTab";
+import WebChatConnectionTab from "./tabs/WebChatConnectionTab";
 import ChannelIcon from "./ChannelIcon";
 
-const CHANNELS: ChannelId[] = ["feishu", "dingtalk", "wecom"];
+// WebChat 在最左侧（默认 tab）— TypeBridge 官方渠道，零配置可用
+const CHANNELS: ChannelId[] = ["webchat", "feishu", "dingtalk", "wecom"];
 
 const CHANNEL_BRAND_COLOR: Record<ChannelId, string> = {
+  webchat: "#7c3aed",
   feishu: "#3370FF",
   dingtalk: "#1677ff",
   wecom: "#07c160",
@@ -17,7 +20,7 @@ const CHANNEL_BRAND_COLOR: Record<ChannelId, string> = {
 ///   顶部 intro 说明 → 横向渠道子 tab → 当前渠道的配置面板（独立滚动）
 ///
 /// 子 tab 选中状态存 Zustand（activeConnectionChannel）——切走 sidebar tab
-/// 再回来保留上下文；默认飞书。
+/// 再回来保留上下文；默认 WebChat（零配置即用）。
 export default function ConnectionHub() {
   const { activeConnectionChannel, setActiveConnectionChannel, channelConnected } =
     useAppStore();
@@ -34,7 +37,7 @@ export default function ConnectionHub() {
         }}
       >
         <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
-        <span>通过连接 IM 应用的机器人来实现输入桥接</span>
+        <span>通过连接 IM 应用的机器人或扫码官方 WebChat 网页来实现输入桥接</span>
       </div>
 
       {/* 横向渠道子 tab */}
@@ -82,6 +85,7 @@ export default function ConnectionHub() {
 
       {/* 当前渠道面板，占据剩余高度独立滚动 */}
       <div className="flex-1 overflow-hidden">
+        {activeConnectionChannel === "webchat" && <WebChatConnectionTab />}
         {activeConnectionChannel === "feishu" && <ConnectionTab />}
         {activeConnectionChannel === "dingtalk" && <DingTalkConnectionTab />}
         {activeConnectionChannel === "wecom" && <WeComConnectionTab />}

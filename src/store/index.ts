@@ -2,9 +2,11 @@ import { create } from "zustand";
 
 /// 渠道标识——与 Rust ChannelId enum 的 serde 键对齐（见 src-tauri/src/channel.rs）。
 /// v0.6 P0 引入；P0 阶段历史消息全部来自飞书，新字段主要供前端类型兼容。
-export type ChannelId = "feishu" | "dingtalk" | "wecom";
+/// v0.7 起增加 webchat（TypeBridge 官方网页扫码渠道，不走 sidecar）。
+export type ChannelId = "webchat" | "feishu" | "dingtalk" | "wecom";
 
 export const CHANNEL_LABEL: Record<ChannelId, string> = {
+  webchat: "WebChat",
   feishu: "飞书",
   dingtalk: "钉钉",
   wecom: "企微",
@@ -79,6 +81,8 @@ export interface Settings {
   dingtalk_client_secret: string;
   wecom_bot_id: string;
   wecom_secret: string;
+  /// WebChat 中继 URL；空字符串 = 用官方默认。
+  webchat_relay_url: string;
   auto_submit: boolean;
   submit_key: SubmitKey;
 }
@@ -118,7 +122,7 @@ export const useAppStore = create<AppStore>((set) => ({
   history: [],
   hiddenHistoryIds: new Set(),
   activeTab: "connection",
-  activeConnectionChannel: "feishu",
+  activeConnectionChannel: "webchat",
 
   setChannelConnected: (channel, connected) =>
     set((state) => ({

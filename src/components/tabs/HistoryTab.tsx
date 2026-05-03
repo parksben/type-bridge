@@ -97,7 +97,7 @@ export default function HistoryTab() {
             active={channelFilter === "all"}
             onClick={() => setChannelFilter("all")}
           />
-          {(["feishu", "dingtalk", "wecom"] as ChannelId[]).map((ch) => {
+          {(["webchat", "feishu", "dingtalk", "wecom"] as ChannelId[]).map((ch) => {
             const count = channelCounts[ch];
             if (count === undefined) return null; // 无此渠道消息 → 不显示 chip
             return (
