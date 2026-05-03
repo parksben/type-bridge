@@ -9,12 +9,10 @@ import {
 } from "../store";
 import SideBar from "./SideBar";
 import ErrorBoundary from "./ErrorBoundary";
-import ConnectionTab from "./tabs/ConnectionTab";
-import DingTalkConnectionTab from "./tabs/DingTalkConnectionTab";
+import ConnectionHub from "./ConnectionHub";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
 import InputSettingsTab from "./tabs/InputSettingsTab";
-import ComingSoonTab from "./tabs/ComingSoonTab";
 
 export default function MainWindow() {
   const { activeTab, setChannelConnected, addLog } = useAppStore();
@@ -80,18 +78,8 @@ export default function MainWindow() {
       <SideBar />
       <div className="flex-1 overflow-hidden">
         {activeTab === "connection" && (
-          <ErrorBoundary label="连接飞书 Bot tab">
-            <ConnectionTab />
-          </ErrorBoundary>
-        )}
-        {activeTab === "connection-dingtalk" && (
-          <ErrorBoundary label="连接钉钉 Bot tab">
-            <DingTalkConnectionTab />
-          </ErrorBoundary>
-        )}
-        {activeTab === "connection-wecom" && (
-          <ErrorBoundary label="连接企微 Bot tab">
-            <ComingSoonTab platform="wecom" />
+          <ErrorBoundary label="连接IM应用 tab">
+            <ConnectionHub />
           </ErrorBoundary>
         )}
         {activeTab === "history" && (

@@ -1,0 +1,78 @@
+import { Info } from "lucide-react";
+import { useAppStore, CHANNEL_LABEL, type ChannelId } from "../store";
+import ConnectionTab from "./tabs/ConnectionTab";
+import DingTalkConnectionTab from "./tabs/DingTalkConnectionTab";
+import ComingSoonTab from "./tabs/ComingSoonTab";
+
+const CHANNELS: ChannelId[] = ["feishu", "dingtalk", "wecom"];
+
+/// 「连接IM应用」tab 的壳：
+///   顶部 intro 说明 → 横向渠道子 tab → 当前渠道的配置面板（独立滚动）
+///
+/// 子 tab 选中状态存 Zustand（activeConnectionChannel）——切走 sidebar tab
+/// 再回来保留上下文；默认飞书。
+export default function ConnectionHub() {
+  const { activeConnectionChannel, setActiveConnectionChannel, channelConnected } =
+    useAppStore();
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* 顶部 intro 说明 */}
+      <div
+        className="flex items-center gap-2 px-6 py-3 text-[12.5px]"
+        style={{
+          background: "var(--surface-2)",
+          borderBottom: "1px solid var(--border)",
+          color: "var(--muted)",
+        }}
+      >
+        <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
+        <span>通过连接 IM 应用的机器人来实现输入桥接</span>
+      </div>
+
+      {/* 横向渠道子 tab */}
+      <div
+        className="flex items-center px-6"
+        style={{ borderBottom: "1px solid var(--border)" }}
+      >
+        {CHANNELS.map((ch) => {
+          const active = ch === activeConnectionChannel;
+          const connected = channelConnected[ch] === true;
+          return (
+            <button
+              key={ch}
+              onClick={() => setActiveConnectionChannel(ch)}
+              className={`relative flex items-center gap-1.5 px-3 h-10 text-[13px] transition-colors ${
+                active ? "text-text" : "text-muted hover:text-text"
+              }`}
+            >
+              {/* 渠道已连接时加个小绿点 */}
+              {connected && (
+                <span
+                  className="inline-block w-1.5 h-1.5 rounded-full"
+                  style={{ background: "var(--success)" }}
+                />
+              )}
+              <span className={active ? "font-medium" : ""}>
+                {CHANNEL_LABEL[ch]}
+              </span>
+              {active && (
+                <span
+                  className="absolute left-2 right-2 bottom-0 h-[2px] rounded-t-sm"
+                  style={{ background: "var(--accent)" }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 当前渠道面板，占据剩余高度独立滚动 */}
+      <div className="flex-1 overflow-hidden">
+        {activeConnectionChannel === "feishu" && <ConnectionTab />}
+        {activeConnectionChannel === "dingtalk" && <DingTalkConnectionTab />}
+        {activeConnectionChannel === "wecom" && <ComingSoonTab platform="wecom" />}
+      </div>
+    </div>
+  );
+}

@@ -48,12 +48,10 @@ export interface HistoryMessage {
 }
 
 export type TabId =
-  | "connection"            // 连接飞书 Bot
-  | "connection-dingtalk"   // 连接钉钉 Bot（占位）
-  | "connection-wecom"      // 连接企微 Bot（占位）
-  | "input"                 // 输入设置
-  | "history"               // 历史消息
-  | "logs";                 // 系统日志
+  | "connection"  // 连接IM应用（内容页再用横向子 tab 切渠道）
+  | "input"       // 输入设置
+  | "history"     // 历史消息
+  | "logs";       // 系统日志
 
 export interface SubmitKey {
   key: string;      // KeyboardEvent.code (e.g. "Enter", "KeyA", "Space")
@@ -93,11 +91,15 @@ interface AppStore {
   history: HistoryMessage[];
   hiddenHistoryIds: Set<string>;
   activeTab: TabId;
+  /// 「连接IM应用」tab 内部横向子 tab 的选中渠道。切走 sidebar tab 再回来
+  /// 保留选中——用户半途去改输入设置或看历史不会丢上下文。
+  activeConnectionChannel: ChannelId;
 
   setChannelConnected: (channel: ChannelId, connected: boolean) => void;
   setAutoSubmit: (v: boolean) => void;
   setSubmitKey: (k: SubmitKey) => void;
   setActiveTab: (tab: TabId) => void;
+  setActiveConnectionChannel: (ch: ChannelId) => void;
   addLog: (entry: Omit<LogEntry, "time">) => void;
   clearLogs: () => void;
   setHistory: (items: HistoryMessage[]) => void;
@@ -115,6 +117,7 @@ export const useAppStore = create<AppStore>((set) => ({
   history: [],
   hiddenHistoryIds: new Set(),
   activeTab: "connection",
+  activeConnectionChannel: "feishu",
 
   setChannelConnected: (channel, connected) =>
     set((state) => ({
@@ -123,6 +126,8 @@ export const useAppStore = create<AppStore>((set) => ({
   setAutoSubmit: (autoSubmit) => set({ autoSubmit }),
   setSubmitKey: (submitKey) => set({ submitKey }),
   setActiveTab: (activeTab) => set({ activeTab }),
+  setActiveConnectionChannel: (activeConnectionChannel) =>
+    set({ activeConnectionChannel }),
 
   addLog: (entry) =>
     set((state) => ({
