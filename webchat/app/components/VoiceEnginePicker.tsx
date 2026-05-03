@@ -1,53 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AlertCircle,
-  Cpu,
-  Download,
-  Globe,
-  Keyboard,
-  Loader2,
-  Mic,
-  Shield,
-  X,
-} from "lucide-react";
+import { AlertCircle, Cpu, Download, Loader2, Mic, Shield, X } from "lucide-react";
 import {
   installEngine,
   markEngineInstalled,
   type InstallProgress,
 } from "@/app/lib/wasm-speech";
 
+// 用户首次点击麦克风按钮时弹出。文件名保留 VoiceEnginePicker 是历史原因，
+// 实际上现在只有一个 "安装本地语音引擎" 功能，不再是多选项 picker。
+
 type Props = {
-  /** "choose"：用户主动选；"fallback"：Web Speech 失败后弹 */
-  pickerMode?: "choose" | "fallback";
-  /** fallback 模式下的错误文案 */
-  reason?: string;
-  /** 浏览器是否支持 SpeechRecognition —— choose 模式下据此决定是否展示"浏览器自带"选项 */
-  webSpeechAvailable?: boolean;
-  /** 用户选"使用输入法麦克风" */
-  onUseIme: () => void;
-  /** 用户选"使用浏览器自带语音"（仅 choose 模式 + webSpeechAvailable 时可用） */
-  onUseWebSpeech?: () => void;
-  /** WASM 引擎已安装完成，可以开始录音 */
   onInstalled: () => void;
-  /** 关闭面板 */
   onClose: () => void;
 };
 
-type Stage = "picker" | "confirm" | "installing" | "error";
+type Stage = "intro" | "installing" | "error";
 
-/** 底部弹出面板，三阶段串联：选项 → 下载确认 → 进度。 */
-export default function VoiceEnginePicker({
-  pickerMode = "fallback",
-  reason,
-  webSpeechAvailable = false,
-  onUseIme,
-  onUseWebSpeech,
-  onInstalled,
-  onClose,
-}: Props) {
-  const [stage, setStage] = useState<Stage>("picker");
+export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
+  const [stage, setStage] = useState<Stage>("intro");
   const [progress, setProgress] = useState<InstallProgress | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const cancelledRef = useRef(false);
@@ -77,7 +49,7 @@ export default function VoiceEnginePicker({
     }
   }, [onInstalled]);
 
-  // —— 进度文案 ——
+  // 进度文案
   let progressText = "准备中…";
   let percent = 0;
   if (progress) {
@@ -99,7 +71,10 @@ export default function VoiceEnginePicker({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      style={{ background: "color-mix(in srgb, var(--tb-bg) 70%, transparent)", backdropFilter: "blur(4px)" }}
+      style={{
+        background: "color-mix(in srgb, var(--tb-bg) 70%, transparent)",
+        backdropFilter: "blur(4px)",
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget && stage !== "installing") onClose();
       }}
@@ -118,20 +93,8 @@ export default function VoiceEnginePicker({
           <span className="w-10 h-1 rounded-full mx-auto" style={{ background: "var(--tb-border)" }} />
         </div>
 
-        {stage === "picker" && (
-          <PickerView
-            pickerMode={pickerMode}
-            reason={reason}
-            webSpeechAvailable={webSpeechAvailable}
-            onPickIme={onUseIme}
-            onPickWebSpeech={onUseWebSpeech}
-            onPickWasm={() => setStage("confirm")}
-            onClose={onClose}
-          />
-        )}
-        {stage === "confirm" && (
-          <ConfirmView onCancel={() => setStage("picker")} onConfirm={startInstall} />
-        )}
+        {stage === "intro" && <IntroView onCancel={onClose} onConfirm={startInstall} />}
+
         {stage === "installing" && (
           <InstallingView
             progressText={progressText}
@@ -142,6 +105,7 @@ export default function VoiceEnginePicker({
             }}
           />
         )}
+
         {stage === "error" && (
           <ErrorView
             message={errorMsg || "下载失败"}
@@ -154,157 +118,7 @@ export default function VoiceEnginePicker({
   );
 }
 
-function PickerView({
-  pickerMode,
-  reason,
-  webSpeechAvailable,
-  onPickIme,
-  onPickWebSpeech,
-  onPickWasm,
-  onClose,
-}: {
-  pickerMode: "choose" | "fallback";
-  reason?: string;
-  webSpeechAvailable: boolean;
-  onPickIme: () => void;
-  onPickWebSpeech?: () => void;
-  onPickWasm: () => void;
-  onClose: () => void;
-}) {
-  const showWebSpeech = pickerMode === "choose" && webSpeechAvailable && !!onPickWebSpeech;
-  const headerTitle = pickerMode === "choose" ? "选择语音输入方式" : "浏览器语音识别不可用";
-  const headerDesc =
-    pickerMode === "choose"
-      ? "不同手机支持的语音方案不同，选一个你习惯的。选好后会记住。"
-      : (reason || "你的系统可能缺少中文语音引擎。选一种替代方案：");
-
-  return (
-    <div className="px-5 pt-3 pb-5">
-      <div className="flex items-start gap-2 mb-4">
-        <AlertCircle
-          size={16}
-          strokeWidth={2}
-          className="shrink-0 mt-0.5"
-          style={{ color: pickerMode === "fallback" ? "var(--tb-accent)" : "var(--tb-muted)" }}
-        />
-        <div className="flex-1">
-          <p className="text-[15px] font-semibold mb-1 text-[var(--tb-text)]">
-            {headerTitle}
-          </p>
-          <p className="text-[13px] text-[var(--tb-muted)] leading-relaxed">
-            {headerDesc}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="关闭"
-          className="shrink-0 -m-1 p-1 text-[var(--tb-muted)]"
-        >
-          <X size={16} strokeWidth={2} />
-        </button>
-      </div>
-
-      {/* 选项 1：输入法麦克风 — 所有场景都有 */}
-      <button
-        type="button"
-        onClick={onPickIme}
-        className="w-full text-left rounded-xl p-4 mb-2.5 flex items-start gap-3 transition-colors active:opacity-80"
-        style={{
-          background: "var(--tb-surface)",
-          border: "1px solid var(--tb-border)",
-        }}
-      >
-        <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: "var(--tb-bg)" }}
-        >
-          <Keyboard size={20} strokeWidth={1.8} className="text-[var(--tb-muted)]" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-medium text-[var(--tb-text)]">
-            使用输入法麦克风
-          </p>
-          <p className="text-[12px] text-[var(--tb-muted)] leading-relaxed mt-0.5">
-            搜狗 / 百度 / 讯飞 / 系统键盘都自带麦克风按钮，点键盘上的麦克风即可。
-          </p>
-        </div>
-      </button>
-
-      {/* 选项 2：浏览器自带 — 仅 choose 模式 + 浏览器支持时展示 */}
-      {showWebSpeech && (
-        <button
-          type="button"
-          onClick={onPickWebSpeech}
-          className="w-full text-left rounded-xl p-4 mb-2.5 flex items-start gap-3 transition-colors active:opacity-80"
-          style={{
-            background: "var(--tb-surface)",
-            border: "1px solid var(--tb-border)",
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "var(--tb-bg)" }}
-          >
-            <Globe size={20} strokeWidth={1.8} className="text-[var(--tb-muted)]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-medium text-[var(--tb-text)]">
-              使用浏览器自带语音
-            </p>
-            <p className="text-[12px] text-[var(--tb-muted)] leading-relaxed mt-0.5">
-              iOS Safari / 原生 Chrome 推荐，零安装；部分国产安卓机型可能不可用。
-            </p>
-          </div>
-        </button>
-      )}
-
-      {/* 选项 3：WASM 本地引擎 — 所有场景都有 */}
-      <button
-        type="button"
-        onClick={onPickWasm}
-        className="w-full text-left rounded-xl p-4 flex items-start gap-3 transition-colors active:opacity-80"
-        style={{
-          background: "color-mix(in srgb, var(--tb-accent) 8%, var(--tb-surface))",
-          border: "1px solid color-mix(in srgb, var(--tb-accent) 25%, var(--tb-border))",
-        }}
-      >
-        <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: "color-mix(in srgb, var(--tb-accent) 16%, transparent)" }}
-        >
-          <Cpu size={20} strokeWidth={1.8} className="text-[var(--tb-accent)]" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-[14px] font-medium text-[var(--tb-text)]">
-              安装 TypeBridge 本地引擎
-            </p>
-            <span
-              className="text-[10px] font-medium px-1.5 py-[1px] rounded"
-              style={{
-                background: "color-mix(in srgb, var(--tb-accent) 18%, transparent)",
-                color: "var(--tb-accent)",
-              }}
-            >
-              兼容性最好
-            </span>
-          </div>
-          <p className="text-[12px] text-[var(--tb-muted)] leading-relaxed mt-0.5">
-            一次下载 ~40MB 到浏览器，离线识别，<span className="text-[var(--tb-text)]">下次打开直接用</span>。
-          </p>
-        </div>
-      </button>
-
-      <div className="flex items-center gap-1.5 mt-4 text-[11px] text-[var(--tb-muted)]">
-        <Shield size={11} strokeWidth={2} />
-        <span>三种方式都不会把音频上传到任何服务器</span>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmView({
+function IntroView({
   onCancel,
   onConfirm,
 }: {
@@ -313,38 +127,55 @@ function ConfirmView({
 }) {
   return (
     <div className="px-5 pt-3 pb-5">
-      <div className="flex items-center justify-center mb-4 mt-2">
+      <div className="flex items-start gap-3 mb-4">
         <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: "color-mix(in srgb, var(--tb-accent) 14%, transparent)" }}
         >
-          <Download size={24} strokeWidth={2} className="text-[var(--tb-accent)]" />
+          <Cpu size={22} strokeWidth={2} className="text-[var(--tb-accent)]" />
         </div>
+        <div className="flex-1">
+          <p className="text-[16px] font-semibold text-[var(--tb-text)] mb-1">
+            启用语音输入
+          </p>
+          <p className="text-[13px] text-[var(--tb-muted)] leading-relaxed">
+            语音功能需要先在手机浏览器里下载一个 <strong className="text-[var(--tb-text)]">~40MB</strong> 的本地语音引擎。
+            <br />
+            下载后保存在浏览器，<span className="text-[var(--tb-text)]">下次打开直接用，不再下载</span>。
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="关闭"
+          className="shrink-0 -m-1 p-1 text-[var(--tb-muted)]"
+        >
+          <X size={16} strokeWidth={2} />
+        </button>
       </div>
 
-      <p className="text-[16px] font-semibold text-center mb-1 text-[var(--tb-text)]">
-        下载 TypeBridge 本地语音引擎
-      </p>
-      <p className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-5">
-        首次下载大约
-        <span className="font-semibold text-[var(--tb-text)] mx-1">40 MB</span>
-        模型文件。
-        <br />
-        下载完后保存在浏览器里，下次打开直接用，不再下载。
-      </p>
-
       <div
-        className="rounded-lg p-3 mb-5 text-[12px] leading-relaxed"
+        className="rounded-lg p-3 mb-5"
         style={{
           background: "var(--tb-bg)",
           border: "1px solid var(--tb-border)",
-          color: "var(--tb-muted)",
         }}
       >
-        <div className="flex items-start gap-2">
-          <Mic size={12} strokeWidth={2} className="mt-0.5 shrink-0" style={{ color: "var(--tb-accent)" }} />
-          <span>基于 Whisper tiny 模型，支持中文。识别在手机本地完成，音频不离开你的手机。</span>
-        </div>
+        <ul className="flex flex-col gap-2 text-[12px] text-[var(--tb-muted)] leading-relaxed">
+          <li className="flex items-start gap-2">
+            <Mic size={12} strokeWidth={2} className="mt-0.5 shrink-0" style={{ color: "var(--tb-accent)" }} />
+            <span>
+              基于 Whisper tiny 开源模型，支持中文。识别完全在
+              <span className="text-[var(--tb-text)]">你的手机本地</span>完成。
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <Shield size={12} strokeWidth={2} className="mt-0.5 shrink-0" style={{ color: "var(--tb-accent)" }} />
+            <span>
+              音频不会离开你的手机，不上传到任何服务器。
+            </span>
+          </li>
+        </ul>
       </div>
 
       <div className="flex gap-2">
@@ -399,13 +230,12 @@ function InstallingView({
       </div>
 
       <p className="text-[16px] font-semibold text-center mb-1 text-[var(--tb-text)]">
-        正在下载 WebAssembly 引擎
+        正在下载语音引擎
       </p>
       <p className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-5">
         首次下载会慢一点，下次打开直接从浏览器缓存读取。
       </p>
 
-      {/* 进度条 */}
       <div
         className="h-2 rounded-full overflow-hidden mb-2"
         style={{ background: "var(--tb-bg)", border: "1px solid var(--tb-border)" }}
