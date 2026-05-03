@@ -1,4 +1,5 @@
 use tauri::{
+    image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     App, Manager, Runtime, WindowEvent,
@@ -10,8 +11,11 @@ pub fn setup_tray<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
 
     let menu = Menu::with_items(app, &[&show_main, &quit])?;
 
+    let tray_icon = Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
+        .expect("failed to load tray icon");
+
     TrayIconBuilder::with_id("main-tray")
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(tray_icon)
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show_main" => {

@@ -1,16 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
   <defs>
-    <!-- Monochrome warm orange for light menu bar -->
+    <!-- Orange gradient background for filled tray icon -->
     <linearGradient id="trayGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#f2682b"/>
       <stop offset="100%" stop-color="#d9480f"/>
     </linearGradient>
   </defs>
-  <!-- Simplified bridge arch for tray — minimal but recognizable -->
-  <path d="
-    M 18 44
-    L 18 24
-    A 14 14 0 0 1 46 24
-    L 46 44
-  " stroke="url(#trayGrad)" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <!-- Rounded rectangle background -->
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="url(#trayGrad)"/>
+  <!-- White bridge arch — inverted from app icon -->
+  <path d="M 16 46 L 16 22 A 16 16 0 0 1 48 22 L 48 46"
+    stroke="white" stroke-width="7" stroke-linecap="round" fill="none"/>
 </svg>
