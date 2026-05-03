@@ -10,6 +10,7 @@ import {
   BookOpen,
   ArrowRight,
   MessageSquareText,
+  Lightbulb,
   CheckCircle2,
   ArrowLeft,
 } from "lucide-react";
@@ -34,13 +35,36 @@ export default function DocsPage() {
             <span className="text-[var(--tb-accent)] font-bold">文档</span>
           </h1>
           <p className="text-[var(--tb-muted)] text-lg leading-relaxed max-w-2xl">
-            TypeBridge 支持飞书、钉钉、企业微信三大主流 IM
-            平台。选择你使用的渠道，按照教程完成机器人配置，即可让消息直达桌面输入框。
+            了解 TypeBridge 的适用场景，选择你使用的 IM 渠道，
+            按照教程完成机器人配置，即可让消息直达桌面输入框。
           </p>
         </div>
 
-        {/* Channel cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Use Cases */}
+          <a
+            href="/docs/use-cases"
+            className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-400/40 transition-all duration-300 feature-card-glow"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+              <Lightbulb
+                size={20}
+                className="text-orange-600 dark:text-orange-400"
+              />
+            </div>
+            <h2 className="font-semibold text-[17px] mb-2 group-hover:text-[var(--tb-accent)] transition-colors">
+              适用场景
+            </h2>
+            <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-4">
+              语音转文字桌面直达、AI Coding Agent
+              语音搭档、跨设备文本流转、团队协作提效。
+            </p>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-orange-600 dark:text-orange-400">
+              了解场景 <ArrowRight size={13} />
+            </div>
+          </a>
+
           {/* Feishu */}
           <a
             href="/docs/feishu"

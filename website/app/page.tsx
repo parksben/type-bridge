@@ -11,6 +11,7 @@ import {
   Monitor,
   Shield,
   MessageSquareText,
+  Lightbulb,
   MousePointerClick,
   BookOpen,
   ArrowLeftRight,
@@ -425,11 +426,30 @@ export default function HomePage() {
               <span className="text-[var(--tb-accent)] font-bold">教程</span>
             </h2>
             <p className="text-[var(--tb-muted)] max-w-md mx-auto">
-              手把手教你完成三大 IM 平台的机器人配置
+              了解适用场景，选择 IM 渠道，完成机器人配置
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            {/* Use cases */}
+            <a
+              href="/docs/use-cases"
+              className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-orange-400/40 transition-all duration-300 text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                <Lightbulb size={20} className="text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="font-semibold text-[15px] mb-1.5 group-hover:text-[var(--tb-accent)] transition-colors">
+                适用场景
+              </h3>
+              <p className="text-sm text-[var(--tb-muted)] leading-relaxed mb-3">
+                语音转文字桌面直达、AI Coding Agent 搭档、跨设备文本流转。
+              </p>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400">
+                了解场景 <ArrowRight size={13} />
+              </span>
+            </a>
+
             <a
               href="/docs/feishu"
               className="group p-6 rounded-xl border border-[var(--tb-border)] bg-[var(--tb-surface)] hover:border-[var(--tb-accent)]/40 transition-all duration-300 text-left"

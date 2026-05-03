@@ -2,8 +2,18 @@
 
 import {
   MessageSquareText,
+  Lightbulb,
   ChevronRight,
 } from "lucide-react";
+
+const USE_CASES = [
+  {
+    href: "/docs/use-cases",
+    label: "适用场景",
+    color: "accent",
+    badge: "场景介绍",
+  },
+];
 
 const CHANNELS = [
   {
@@ -28,6 +38,13 @@ const CHANNELS = [
     badge: "自建应用",
   },
 ];
+
+function useCaseColorClass(active: boolean) {
+  if (active) {
+    return "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-l-[3px] border-l-current";
+  }
+  return "text-[var(--tb-muted)] hover:text-[var(--tb-accent)] hover:bg-orange-50/50 dark:hover:bg-orange-950/20";
+}
 
 function channelColorClass(color: string, active: boolean) {
   const map: Record<string, { bg: string; text: string; border: string; bgDark: string; borderDark: string }> = {
@@ -64,9 +81,40 @@ export function LeftSidebar({ currentPath }: { currentPath: string }) {
   return (
     <aside className="w-[220px] shrink-0 hidden lg:block">
       <nav className="sticky top-20 h-[calc(100vh-80px)] overflow-y-auto py-4 pr-4 scrollbar-thin">
+        {/* Section: 适用场景 */}
         <div className="mb-3 px-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--tb-muted)]">
-            渠道文档
+            适用场景
+          </p>
+        </div>
+        <ul className="space-y-0.5">
+          {USE_CASES.map((uc) => {
+            const active = currentPath === uc.href;
+            return (
+              <li key={uc.href}>
+                <a
+                  href={uc.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all duration-200 ${useCaseColorClass(active)}`}
+                >
+                  <Lightbulb size={16} className="shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{uc.label}</div>
+                    <div className="text-[10px] opacity-60">{uc.badge}</div>
+                  </div>
+                  {active && <ChevronRight size={14} className="shrink-0" />}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Divider */}
+        <div className="my-4 mx-3 border-t border-[var(--tb-border)]" />
+
+        {/* Section: 接入方式 */}
+        <div className="mb-3 px-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--tb-muted)]">
+            接入方式
           </p>
         </div>
 
