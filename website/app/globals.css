@@ -113,3 +113,106 @@ body {
   border-top: 1px solid;
   border-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tb-accent) 30%, transparent), transparent) 1;
 }
+
+/* ============ Hero Banner Animations ============ */
+
+/* Floating phone */
+@keyframes float-phone {
+  0%, 100% { transform: translateY(-50%) translateY(0px); }
+  50% { transform: translateY(-50%) translateY(-8px); }
+}
+.animate-float-phone {
+  animation: float-phone 4s ease-in-out infinite;
+}
+
+/* Floating desktop */
+@keyframes float-desktop {
+  0%, 100% { transform: translateY(-50%) translateY(0px); }
+  50% { transform: translateY(-50%) translateY(-5px); }
+}
+.animate-float-desktop {
+  animation: float-desktop 4.5s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+/* Message bubble float-in */
+@keyframes msg-float {
+  0% { opacity: 0; transform: translateX(-12px); }
+  10% { opacity: 1; transform: translateX(0); }
+  90% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0.5; }
+}
+.animate-msg-float {
+  animation: msg-float 6s ease-in-out infinite;
+  opacity: 0;
+}
+
+/* Blinking cursor */
+@keyframes blink-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.animate-blink-cursor {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+/* Pulse glow on center dot */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 6px 2px color-mix(in srgb, var(--tb-accent) 40%, transparent); }
+  50% { box-shadow: 0 0 16px 6px color-mix(in srgb, var(--tb-accent) 70%, transparent); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Arc lines - dash animation */
+@keyframes arc-dash {
+  to { stroke-dashoffset: -40; }
+}
+.hero-arc-line-blue {
+  stroke: #3370FF;
+  opacity: 0.4;
+  stroke-dasharray: 8 4;
+  animation: arc-dash 2s linear infinite;
+}
+.hero-arc-line-sky {
+  stroke: #0089FF;
+  opacity: 0.4;
+  stroke-dasharray: 8 4;
+  animation: arc-dash 2s linear infinite;
+  animation-delay: 0.3s;
+}
+.hero-arc-line-green {
+  stroke: #06BA6A;
+  opacity: 0.4;
+  stroke-dasharray: 8 4;
+  animation: arc-dash 2s linear infinite;
+  animation-delay: 0.6s;
+}
+
+/* Flow particles */
+@keyframes flow-particle {
+  0% { left: 5%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 95%; opacity: 0; }
+}
+.hero-particle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tb-accent) 90%, transparent);
+  box-shadow: 0 0 6px 2px color-mix(in srgb, var(--tb-accent) 50%, transparent);
+  animation: flow-particle 3s ease-in-out infinite;
+  opacity: 0;
+}
+
+/* Channel tags subtle float */
+.hero-channel-tag {
+  opacity: 0;
+  animation: msg-float 6s ease-in-out infinite;
+}
+.hero-channel-tag:nth-child(1) { animation-delay: 0s; }
+.hero-channel-tag:nth-child(2) { animation-delay: 2s; }
+.hero-channel-tag:nth-child(3) { animation-delay: 4s; }

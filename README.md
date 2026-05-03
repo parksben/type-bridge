@@ -4,6 +4,8 @@
 
 典型场景：手机上用飞书发一段语音（转文字），桌面端同步将文本写入正在用的编辑器 / 终端 / 浏览器输入框，默认注入完即模拟一次 `Enter` 完成一键发送——实现"语音驱动桌面输入"。
 
+🌐 产品官网：[typebridge.parksben.xyz](https://typebridge.parksben.xyz) — 包含使用文档和各渠道应用接入教程。
+
 详细功能规格见 [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)，技术方案见 [docs/TECH_DESIGN.md](docs/TECH_DESIGN.md)。
 
 ---
