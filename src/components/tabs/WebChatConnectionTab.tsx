@@ -10,6 +10,7 @@ import {
   PowerOff,
   RotateCw,
   ScanLine,
+  ShieldCheck,
   Smartphone,
   Timer,
 } from "lucide-react";
@@ -155,7 +156,7 @@ export default function WebChatConnectionTab() {
     }
   }
 
-  // 顶部介绍 banner — 各 phase 共用，仅文案略有差异
+  // 顶部介绍 banner — 各 phase 共用
   const introBanner = (
     <div
       className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
@@ -166,11 +167,7 @@ export default function WebChatConnectionTab() {
     >
       <Info size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
       <div className="flex-1 text-text">
-        TypeBridge 官方网页扫码渠道。点「启动会话」生成二维码 + 6 位 OTP，手机扫码进{" "}
-        <span className="font-mono text-accent">
-          {snap?.relay_url || "webchat-typebridge.parksben.xyz"}
-        </span>{" "}
-        输入 OTP 即可发消息，无需任何 IM 配置。
+        TypeBridge 官方网页扫码渠道。点「启动会话」生成二维码，手机扫码后输入 6 位验证码即可发消息，无需任何 IM 配置。
       </div>
     </div>
   );
@@ -256,19 +253,28 @@ function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
         )}
       </button>
 
-      <div
-        className="flex items-start gap-2 rounded-md px-3 py-2 text-[11.5px] leading-relaxed"
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          color: "var(--muted)",
-        }}
-      >
-        <Info size={11} strokeWidth={1.75} className="shrink-0 mt-0.5" />
-        <span>
-          消息走 TypeBridge 官方中继转发，不持久化（pull 后立即删，硬性 TTL ≤ 5 分钟）；
-          语音转文本完全在手机浏览器内完成，音频不离开手机。
-        </span>
+      <div className="flex flex-col gap-1.5">
+        <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+          <ShieldCheck size={12} strokeWidth={1.75} />
+          免责声明
+        </label>
+        <ul
+          className="rounded-lg px-3.5 py-2.5 text-[12px] leading-relaxed flex flex-col gap-1"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            color: "var(--muted)",
+          }}
+        >
+          <li className="flex gap-2">
+            <span className="shrink-0 text-accent">·</span>
+            <span>中继仅转发消息，不留存任何用户数据。</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="shrink-0 text-accent">·</span>
+            <span>语音识别在手机本地完成，音频不上传到任何服务器。</span>
+          </li>
+        </ul>
       </div>
     </>
   );
