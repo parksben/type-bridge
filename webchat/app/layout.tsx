@@ -36,9 +36,28 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const buildRef = process.env.NEXT_PUBLIC_BUILD_REF || "dev";
   return (
     <html lang="zh-CN">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        {children}
+        {/* 固定右下角的 build 标识，帮助排查缓存 / 部署问题。
+            pointer-events: none 避免挡住任何按钮交互。 */}
+        <div
+          aria-hidden="true"
+          className="fixed bottom-0 right-0 z-0 pointer-events-none select-none font-mono"
+          style={{
+            padding: "2px 6px",
+            fontSize: 9,
+            color: "var(--tb-muted)",
+            opacity: 0.35,
+            paddingRight: "max(6px, env(safe-area-inset-right))",
+            paddingBottom: "max(2px, env(safe-area-inset-bottom))",
+          }}
+        >
+          build {buildRef}
+        </div>
+      </body>
     </html>
   );
 }
