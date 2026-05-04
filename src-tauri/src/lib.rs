@@ -70,6 +70,9 @@ pub fn run() {
             let ctx = AppContext::new(app.handle().clone(), submit_config);
             app.manage(ctx);
 
+            // 注册全局 ack 桥接：injection queue 的 message-status → WebChat Socket.IO ack
+            webchat::install_ack_listener(app.handle());
+
             // 启动后广播一次辅助功能权限状态，前端 ConnectionTab 据此决定是否
             // 展示 banner；前端后续会每 3s 主动 check_accessibility 轮询直到授予
             let granted = injector::check_accessibility();

@@ -15,9 +15,9 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::path::BaseDirectory;
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Emitter, EventTarget, Listener, Manager, Runtime};
 
 use crate::webchat_server::WebChatServer;
 
@@ -96,6 +96,15 @@ impl WebChatSnapshot {
 pub struct WebChatBridge {
     server: Mutex<Option<Arc<WebChatServer>>>,
     last_error: Mutex<Option<String>>,
+}
+
+/// queue worker emit 的 typebridge://message-status event payload（与 queue.rs 对齐）。
+#[derive(Debug, Deserialize)]
+struct MessageStatusEvent {
+    id: String,
+    status: String,
+    #[serde(default)]
+    reason: Option<String>,
 }
 
 impl Default for WebChatBridge {
@@ -179,6 +188,43 @@ impl WebChatBridge {
         }
         *self.last_error.lock().unwrap() = None;
     }
+
+    /// 当前持有的 server（供全局 ack listener 查询）。
+    fn current_server(&self) -> Option<Arc<WebChatServer>> {
+        self.server.lock().ok().and_then(|g| g.clone())
+    }
+}
+
+/// 注册一次全局 listener，把 injection queue 的 typebridge://message-status 事件
+/// 桥接到当前 WebChat server 的 Socket.IO ack 回调（deliver_ack）。
+/// 在 lib.rs setup 里调一次即可，listener 随 AppHandle 生命周期持久。
+pub fn install_ack_listener<R: Runtime>(app: &AppHandle<R>) {
+    let handle = app.clone();
+    app.listen_any("typebridge://message-status", move |event| {
+        let payload_raw = event.payload();
+        let payload: MessageStatusEvent = match serde_json::from_str(payload_raw) {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+        // 只关心最终态（注入成功 / 失败 / 被取消），不处理 "processing"
+        match payload.status.as_str() {
+            "sent" | "failed" | "cancelled" => {}
+            _ => return,
+        };
+
+        // 非 webchat 渠道的消息也会走这里，但 deliver_ack 内部按 id 查 pending_acks
+        // 找不到就 no-op，不影响其他渠道。
+        let ctx = match handle.try_state::<Arc<crate::sidecar::AppContext>>() {
+            Some(s) => s.inner().clone(),
+            None => return,
+        };
+        if let Some(server) = ctx.webchat.current_server() {
+            let success = payload.status == "sent";
+            server.deliver_ack(&payload.id, success, payload.reason);
+        }
+    });
+    // 让 rustc 知道 EventTarget 不是 dead import；保留给未来有需要定向 listener 时用
+    let _ = std::any::TypeId::of::<EventTarget>();
 }
 
 /// 解析 webchat-local/dist 的绝对路径。
