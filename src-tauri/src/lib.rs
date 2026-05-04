@@ -30,6 +30,7 @@ pub fn run() {
             sidecar::get_history,
             sidecar::get_history_dir,
             sidecar::delete_history_message,
+            sidecar::clear_all_history,
             sidecar::retry_history_message,
             sidecar::copy_text_to_clipboard,
             sidecar::copy_image_to_clipboard,

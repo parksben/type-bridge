@@ -631,11 +631,29 @@ pub fn get_history_dir() -> String {
 #[tauri::command]
 pub fn delete_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> bool {
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    // 先标记队列中该 id 为取消 —— 如果消息还在 mpsc 里排队未注入，worker 拿到
+    // 会跳过。如果已在注入中或已完成，此调用无副作用。
+    ctx.injector.cancel(&id);
     let removed = ctx.history.delete(&id).is_some();
     if removed {
         let _ = app.emit("typebridge://history-update", ());
     }
     removed
+}
+
+/// 清空全部历史。返回被清除的条数，同时把所有 id 标记为取消，阻止队列里
+/// 尚未注入的对应条目继续注入。用户语义："我已经不想看到这些了，也别继续往桌面上
+/// 注入"。
+#[tauri::command]
+pub fn clear_all_history<R: Runtime>(app: AppHandle<R>) -> usize {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    let ids = ctx.history.clear_all();
+    let n = ids.len();
+    ctx.injector.cancel_many(&ids);
+    if n > 0 {
+        let _ = app.emit("typebridge://history-update", ());
+    }
+    n
 }
 
 /// 纯文本复制到系统剪贴板，用于消息历史卡片的"复制"按钮

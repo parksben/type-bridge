@@ -57,7 +57,6 @@ pub struct WebChatSnapshot {
     pub phase: WebChatPhase,
     pub session_id: Option<String>,
     pub otp: Option<String>,
-    pub aux_code: Option<String>,
     pub expires_at: Option<i64>,
     pub bound_device_ua: Option<String>,
     pub bound_at: Option<i64>,
@@ -73,7 +72,6 @@ struct InternalState {
     owner_token: Option<String>,
     user_token_signed: bool,
     otp: Option<String>,
-    aux_code: Option<String>,
     expires_at: Option<i64>,
     bound_device_ua: Option<String>,
     bound_at: Option<i64>,
@@ -88,7 +86,6 @@ impl Default for InternalState {
             owner_token: None,
             user_token_signed: false,
             otp: None,
-            aux_code: None,
             expires_at: None,
             bound_device_ua: None,
             bound_at: None,
@@ -160,7 +157,6 @@ impl WebChatBridge {
             phase: s.phase,
             session_id: s.session_id,
             otp: s.otp,
-            aux_code: s.aux_code,
             expires_at: s.expires_at,
             bound_device_ua: s.bound_device_ua,
             bound_at: s.bound_at,
@@ -180,9 +176,8 @@ impl WebChatBridge {
         // 1. 先停掉旧会话
         self.stop().await;
 
-        // 2. 本地生成 sessionId（中继签发） / OTP / auxCode；OTP 哈希后发给中继
+        // 2. 本地生成 sessionId（中继签发） / OTP；OTP 哈希后发给中继（明文不出本机）
         let otp = generate_otp();
-        let aux_code = generate_aux_code();
         let otp_hash = sha256_hex(otp.as_bytes());
 
         // 3. 注册
@@ -192,7 +187,6 @@ impl WebChatBridge {
             .post(format!("{}/api/register", relay))
             .json(&serde_json::json!({
                 "otpHash": otp_hash,
-                "auxCode": aux_code,
             }))
             .send()
             .await
@@ -208,7 +202,6 @@ impl WebChatBridge {
             s.session_id = Some(data.session_id.clone());
             s.owner_token = Some(data.owner_token.clone());
             s.otp = Some(otp.clone());
-            s.aux_code = Some(aux_code.clone());
             s.expires_at = Some(data.expires_at);
             s.bound_device_ua = None;
             s.bound_at = None;
@@ -711,8 +704,6 @@ enum PullOutcome {
 // 工具函数
 // ──────────────────────────────────────────────────────────────
 
-const BASE32: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-
 fn random_bytes(len: usize) -> Vec<u8> {
     let mut v = vec![0u8; len];
     rand::thread_rng().fill_bytes(&mut v);
@@ -723,11 +714,6 @@ fn generate_otp() -> String {
     let bytes = random_bytes(4);
     let n = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
     format!("{:06}", n % 1_000_000)
-}
-
-fn generate_aux_code() -> String {
-    let bytes = random_bytes(8);
-    bytes.iter().map(|&b| BASE32[(b % 32) as usize] as char).collect()
 }
 
 fn generate_token() -> String {

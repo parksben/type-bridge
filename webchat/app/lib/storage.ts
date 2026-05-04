@@ -3,7 +3,6 @@
 // 两个 namespace：
 //   - sessions      key: <sessionId>           value: Session
 //   - messages      key: <sessionId>/<messageId>  value: Message
-//   - aux-index     key: <auxCode>             value: { sessionId }
 //
 // 所有 endpoint 入口先调一次 inlineGc()，惰性删过期 session / 已消费 message，
 // 避免依赖 cron job。
@@ -21,11 +20,10 @@ export type Session = {
   boundExpiresAt: number | null;      // 握手成功后 TTL（默认 24 小时）
   ownerTokenHash: string;
   userTokenHash: string | null;
-  auxCode: string;                    // 8 字符 base32 friendly
   otpHash: string;                    // sha256(otp)
   otpAttempts: number;                // 0..5；5 表示已锁
   otpLocked: boolean;
-  ownerLastSeenAt: number;            // heartbeat 更新；60s 无心跳即 GC
+  ownerLastSeenAt: number;            // heartbeat 更新；45s 无心跳即 GC
   boundDeviceUa: string | null;
   boundAt: number | null;
   /** 待裁决的握手请求 — OTP 明文短暂存于此供桌面端 poll-handshake 取走校验。
@@ -61,8 +59,6 @@ export type StoredMessage = {
   ack: { success: boolean; reason?: string; at: number } | null;
 };
 
-export type AuxIndex = { sessionId: string };
-
 // ──────────────────────────────────────────────────────────────
 // 常量
 // ──────────────────────────────────────────────────────────────
@@ -85,9 +81,6 @@ function sessionsStore() {
 function messagesStore() {
   return getStore({ name: "webchat-messages", consistency: "strong" });
 }
-function auxStore() {
-  return getStore({ name: "webchat-aux", consistency: "strong" });
-}
 
 // ──────────────────────────────────────────────────────────────
 // Sessions
@@ -104,19 +97,6 @@ export async function saveSession(session: Session): Promise<void> {
 
 export async function deleteSession(sessionId: string): Promise<void> {
   await sessionsStore().delete(sessionId);
-}
-
-export async function setAuxIndex(auxCode: string, sessionId: string): Promise<void> {
-  await auxStore().setJSON(auxCode, { sessionId } satisfies AuxIndex);
-}
-
-export async function lookupAux(auxCode: string): Promise<string | null> {
-  const data = (await auxStore().get(auxCode, { type: "json" })) as AuxIndex | null;
-  return data?.sessionId ?? null;
-}
-
-export async function deleteAuxIndex(auxCode: string): Promise<void> {
-  await auxStore().delete(auxCode);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -162,21 +142,18 @@ export async function gcSession(session: Session): Promise<boolean> {
   // owner 心跳超时
   if (now - session.ownerLastSeenAt > OWNER_HEARTBEAT_GRACE_MS) {
     await deleteSession(session.sessionId);
-    await deleteAuxIndex(session.auxCode);
     return true;
   }
 
   // 未握手且超过 5 分钟
   if (!session.userTokenHash && now > session.expiresAt) {
     await deleteSession(session.sessionId);
-    await deleteAuxIndex(session.auxCode);
     return true;
   }
 
   // 已握手且超过 24 小时
   if (session.boundExpiresAt && now > session.boundExpiresAt) {
     await deleteSession(session.sessionId);
-    await deleteAuxIndex(session.auxCode);
     return true;
   }
 

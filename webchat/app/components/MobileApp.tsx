@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, QrCode } from "lucide-react";
 import HandshakeForm from "./HandshakeForm";
 import ChatPage from "./ChatPage";
-import AuxCodeEntry from "./AuxCodeEntry";
 import ErrorScreen from "./ErrorScreen";
 import { pollAcks, pollHandshake, submitHandshake, RelayError } from "../lib/relay";
 
@@ -179,7 +178,7 @@ export default function MobileApp() {
   function reload() {
     clearStoredSession();
     // 清掉 URL ?s= 避免刷新后又用同一个已失效 sessionId 走握手
-    // 再次看到「会话已过期」误导。没有 session 时 MobileApp 会引导到辅助码输入。
+    // 再次看到「会话已过期」误导
     const url = new URL(window.location.href);
     url.searchParams.delete("s");
     window.history.replaceState({}, "", url.toString());
@@ -202,14 +201,19 @@ export default function MobileApp() {
 
   if (state.kind === "no-session") {
     return (
-      <AuxCodeEntry
-        onResolve={(sessionId) => {
-          const url = new URL(window.location.href);
-          url.searchParams.set("s", sessionId);
-          window.history.replaceState({}, "", url.toString());
-          setState({ kind: "handshake", sessionId });
-        }}
-      />
+      <main className="min-h-[100dvh] flex flex-col items-center justify-center px-8 safe-area-top safe-area-bottom">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+          style={{ background: "color-mix(in srgb, var(--tb-accent) 12%, transparent)" }}>
+          <QrCode size={28} strokeWidth={1.8} className="text-[var(--tb-accent)]" />
+        </div>
+        <h1 className="text-[18px] font-semibold text-[var(--tb-text)] mb-2">
+          请用桌面 App 扫码
+        </h1>
+        <p className="text-[13.5px] text-[var(--tb-muted)] text-center leading-relaxed max-w-xs">
+          请在 Mac 打开 TypeBridge、进入「WebChat」面板，
+          用这台手机扫描桌面上的二维码即可开始聊天。
+        </p>
+      </main>
     );
   }
 

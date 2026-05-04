@@ -45,11 +45,6 @@ export function newHandshakeId(): string {
   return "hs_" + bytesToBase32(randomBytes(16), 16);
 }
 
-/** 8 字符 base32 辅助会话码（约 40 bit 熵；够用，且配合 5 分钟 TTL 无法穷举） */
-export function newAuxCode(): string {
-  return bytesToBase32(randomBytes(8), 8);
-}
-
 /** 32 字节 random → base64url，~256 bit 熵 */
 export function newToken(): string {
   return bytesToBase64Url(randomBytes(32));
