@@ -25,10 +25,14 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 const DEFAULT_RELAY_URL: &str = "https://webchat-typebridge.parksben.xyz";
-// 心跳必须明显小于中继 OWNER_HEARTBEAT_GRACE_MS (45s)，留 3x 余量
-const HEARTBEAT_INTERVAL_SECS: u64 = 15;
+// Heartbeat 搭车到 pull：/api/pull 服务端在处理时会自动更新 ownerLastSeenAt，
+// 所以只要 pull 持续执行就不需要额外心跳。这里保留常量作为"pull 长时间
+// 未成功时"的兜底窗口说明，不再被主循环使用。
+const _HEARTBEAT_GRACE_SECS: u64 = 30;
 const PULL_INTERVAL_MS: u64 = 1000;
-const PULL_IDLE_INTERVAL_MS: u64 = 3000;
+// 空闲阈值从 3s 放大到 10s：idle 会话占用的 Function-time 降 3 倍，
+// 免费档并发承载量显著提升。10s < 中继 owner GC 阈值 45s，不会误伤。
+const PULL_IDLE_INTERVAL_MS: u64 = 10000;
 const HTTP_TIMEOUT_SECS: u64 = 30;
 const HTTP_LONG_POLL_TIMEOUT_SECS: u64 = 15;
 
@@ -408,20 +412,15 @@ impl WebChatBridge {
         cancel: &CancellationToken,
     ) {
         let mut idle_streak = 0u32;
-        let mut last_heartbeat = std::time::Instant::now();
 
         loop {
             if cancel.is_cancelled() {
                 return;
             }
 
-            // heartbeat
-            if last_heartbeat.elapsed().as_secs() >= HEARTBEAT_INTERVAL_SECS {
-                self.heartbeat().await;
-                last_heartbeat = std::time::Instant::now();
-            }
-
-            // pull
+            // heartbeat 搭车到 pull：/api/pull 服务端会自动 touch
+            // ownerLastSeenAt，桌面端无需再单独打 /api/heartbeat。
+            // pull 网络错误时靠下面 sleep(2s) + continue，通常 45s 内一定恢复。
             let pulled = self.pull_once(app).await;
             match pulled {
                 PullOutcome::Messages(n) if n > 0 => {
@@ -583,22 +582,6 @@ impl WebChatBridge {
                 tracing::warn!("[webchat] unknown message kind: {}", other);
             }
         }
-    }
-
-    async fn heartbeat(&self) {
-        let (sid, owner_token) = {
-            let g = self.state.lock().unwrap();
-            match (g.session_id.clone(), g.owner_token.clone()) {
-                (Some(s), Some(t)) => (s, t),
-                _ => return,
-            }
-        };
-        let _ = self
-            .http
-            .post(format!("{}/api/heartbeat?sessionId={}", self.relay_url(), urlencode(&sid)))
-            .bearer_auth(&owner_token)
-            .send()
-            .await;
     }
 
     /// 当队列 worker emit message-status 之后，把对应的 ack 回写给中继。
