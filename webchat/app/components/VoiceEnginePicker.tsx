@@ -18,9 +18,26 @@ type Props = {
 
 type Stage = "intro" | "installing" | "error";
 
+// UI 里用 state 记住最近一次 progress 的关键数据（而不是用单次 InstallProgress event）
+// 这样非 "progress" 类型事件（retrying 等）不会把 percent / bytes 清零
+type ProgressState = {
+  percent: number;
+  loaded: number;
+  total: number;
+};
+
 export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
   const [stage, setStage] = useState<Stage>("intro");
-  const [progress, setProgress] = useState<InstallProgress | null>(null);
+  const [progressState, setProgressState] = useState<ProgressState>({
+    percent: 0,
+    loaded: 0,
+    total: 42 * 1024 * 1024,
+  });
+  const [retryInfo, setRetryInfo] = useState<{
+    attempt: number;
+    maxAttempts: number;
+    delaySecs: number;
+  } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
@@ -30,15 +47,41 @@ export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
     };
   }, []);
 
+  const handleProgress = useCallback((p: InstallProgress) => {
+    if (cancelledRef.current) return;
+    switch (p.kind) {
+      case "progress":
+        setProgressState({
+          percent: p.percent,
+          loaded: p.totalLoaded,
+          total: p.totalBytes,
+        });
+        setRetryInfo(null); // 收到真实进度即清掉 retry 态
+        break;
+      case "retrying":
+        setRetryInfo({
+          attempt: p.attempt,
+          maxAttempts: p.maxAttempts,
+          delaySecs: p.delaySecs,
+        });
+        break;
+      case "ready":
+        setProgressState((s) => ({ ...s, percent: 100 }));
+        setRetryInfo(null);
+        break;
+      // initiate / download / done 不改 UI state，保留 progress 显示
+      default:
+        break;
+    }
+  }, []);
+
   const startInstall = useCallback(async () => {
     setStage("installing");
     setErrorMsg(null);
-    setProgress(null);
+    setProgressState({ percent: 0, loaded: 0, total: 42 * 1024 * 1024 });
+    setRetryInfo(null);
     try {
-      await installEngine((p) => {
-        if (cancelledRef.current) return;
-        setProgress(p);
-      });
+      await installEngine(handleProgress);
       if (cancelledRef.current) return;
       markEngineInstalled();
       onInstalled();
@@ -47,40 +90,7 @@ export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
       setErrorMsg((e as Error).message || "下载失败，请检查网络后重试");
       setStage("error");
     }
-  }, [onInstalled]);
-
-  // 进度文案 + 条宽度计算（基于新的累计进度协议，无抖动）
-  let progressText = "准备中…";
-  let progressSubText: string | null = null;
-  let percent = 0;
-  let retrying = false;
-  if (progress) {
-    switch (progress.kind) {
-      case "progress":
-        percent = Math.max(0, Math.min(99, progress.percent));
-        progressText = `${formatBytes(progress.totalLoaded)} / ${formatBytes(progress.totalBytes)}`;
-        progressSubText = `${percent.toFixed(0)}% · ${progress.currentFile || ""}`;
-        break;
-      case "download":
-        progressText = `正在下载 ${progress.file || "模型文件"}…`;
-        break;
-      case "done":
-        progressText = `${progress.file || "文件"} 完成，继续…`;
-        break;
-      case "initiate":
-        progressText = `准备下载 ${progress.file || "模型"}…`;
-        break;
-      case "ready":
-        progressText = "加载完成";
-        percent = 100;
-        break;
-      case "retrying":
-        retrying = true;
-        progressText = `网络不稳，第 ${progress.attempt}/${progress.maxAttempts} 次重试…`;
-        progressSubText = `${progress.delaySecs}s 后自动重试 · 已下完的文件会跳过，不会重下`;
-        break;
-    }
-  }
+  }, [handleProgress, onInstalled]);
 
   return (
     <div
@@ -111,10 +121,8 @@ export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
 
         {stage === "installing" && (
           <InstallingView
-            progressText={progressText}
-            progressSubText={progressSubText}
-            percent={percent}
-            retrying={retrying}
+            progressState={progressState}
+            retryInfo={retryInfo}
             onCancel={() => {
               cancelledRef.current = true;
               onClose();
@@ -222,25 +230,25 @@ function IntroView({
 }
 
 function InstallingView({
-  progressText,
-  progressSubText,
-  percent,
-  retrying,
+  progressState,
+  retryInfo,
   onCancel,
 }: {
-  progressText: string;
-  progressSubText: string | null;
-  percent: number;
-  retrying: boolean;
+  progressState: ProgressState;
+  retryInfo: { attempt: number; maxAttempts: number; delaySecs: number } | null;
   onCancel: () => void;
 }) {
+  const { percent, loaded, total } = progressState;
+  const isRetrying = retryInfo !== null;
+  const pctRound = Math.floor(percent);
+
   return (
     <div className="px-5 pt-3 pb-5">
       <div className="flex items-center justify-center mb-4 mt-2">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center"
           style={{
-            background: retrying
+            background: isRetrying
               ? "color-mix(in srgb, var(--tb-muted) 14%, transparent)"
               : "color-mix(in srgb, var(--tb-accent) 14%, transparent)",
           }}
@@ -248,49 +256,55 @@ function InstallingView({
           <Loader2
             size={22}
             strokeWidth={2}
-            className={retrying ? "animate-spin text-[var(--tb-muted)]" : "animate-spin text-[var(--tb-accent)]"}
+            className={
+              isRetrying
+                ? "animate-spin text-[var(--tb-muted)]"
+                : "animate-spin text-[var(--tb-accent)]"
+            }
           />
         </div>
       </div>
 
       <p className="text-[16px] font-semibold text-center mb-1 text-[var(--tb-text)]">
-        {retrying ? "网络不稳，正在自动重试" : "正在下载语音引擎"}
+        {isRetrying ? "网络不稳，正在自动重试" : "正在下载语音引擎"}
       </p>
       <p className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-5">
-        首次下载会慢一点，下次打开直接从浏览器缓存读取。
+        {isRetrying
+          ? `${retryInfo.delaySecs}s 后重试（第 ${retryInfo.attempt}/${retryInfo.maxAttempts} 次）· 已下完的会跳过`
+          : "首次下载会慢一点，下次打开直接从浏览器缓存读取"}
       </p>
 
-      <div
-        className="h-2 rounded-full overflow-hidden mb-2"
-        style={{
-          background: "var(--tb-bg)",
-          border: "1px solid var(--tb-border)",
-        }}
-      >
+      {/* 进度条 + 右侧百分比 */}
+      <div className="flex items-center gap-3 mb-2">
         <div
-          className="h-full transition-all duration-300"
+          className="flex-1 h-2.5 rounded-full overflow-hidden"
           style={{
-            width: `${percent}%`,
-            background: retrying ? "var(--tb-muted)" : "var(--tb-accent)",
-            opacity: retrying ? 0.5 : 1,
+            background: "var(--tb-bg)",
+            border: "1px solid var(--tb-border)",
           }}
-        />
-      </div>
-      <p
-        className="text-[12px] text-[var(--tb-text)] font-mono truncate mb-0.5"
-        title={progressText}
-      >
-        {progressText}
-      </p>
-      {progressSubText && (
-        <p
-          className="text-[10.5px] text-[var(--tb-muted)] font-mono truncate mb-3"
-          title={progressSubText}
         >
-          {progressSubText}
-        </p>
-      )}
-      <div className="mt-5" />
+          <div
+            className="h-full transition-all duration-300 ease-out"
+            style={{
+              width: `${percent}%`,
+              background: isRetrying ? "var(--tb-muted)" : "var(--tb-accent)",
+              opacity: isRetrying ? 0.5 : 1,
+            }}
+          />
+        </div>
+        <span
+          className="text-[13px] font-mono font-medium tabular-nums shrink-0"
+          style={{ color: isRetrying ? "var(--tb-muted)" : "var(--tb-text)", minWidth: 36, textAlign: "right" }}
+        >
+          {pctRound}%
+        </span>
+      </div>
+
+      <p
+        className="text-[12px] text-[var(--tb-muted)] font-mono mb-5 text-center"
+      >
+        {formatBytes(loaded)} / {formatBytes(total)}
+      </p>
 
       <button
         type="button"
