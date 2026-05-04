@@ -12,9 +12,11 @@
 //! 消息入队时的 ack 由 server 层处理（当前先立即 ack success，待 P2b-2
 //! 阶段补完注入结果回流）。
 
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
+use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::webchat_server::WebChatServer;
@@ -133,9 +135,10 @@ impl WebChatBridge {
     }
 
     /// 启动一个新 server。若已有 server 在跑，先关掉。
-    pub async fn start(
+    pub async fn start<R: Runtime>(
         &self,
         ctx: Arc<crate::sidecar::AppContext>,
+        app: &AppHandle<R>,
     ) -> Result<(), String> {
         // 停掉旧的
         let old = {
@@ -147,8 +150,13 @@ impl WebChatBridge {
         }
         *self.last_error.lock().unwrap() = None;
 
+        // 解析 SPA 资源路径：
+        // - 生产模式：Tauri bundler 会把 webchat-local/dist 放到 .app 的 Resources 里
+        // - dev 模式：直接指向 <project-root>/webchat-local/dist，开发者需事先构建一次
+        let spa_dir = resolve_spa_dir(app);
+
         // 启新的
-        match WebChatServer::start(ctx).await {
+        match WebChatServer::start(ctx, spa_dir).await {
             Ok(server) => {
                 *self.server.lock().unwrap() = Some(Arc::new(server));
                 Ok(())
@@ -173,6 +181,25 @@ impl WebChatBridge {
     }
 }
 
+/// 解析 webchat-local/dist 的绝对路径。
+/// Tauri 2 的 resolve 在 production bundle 里会命中 Resources/，dev 模式
+/// 下如果 resources 还没 bundle（只是 `cargo run`），会 fallback 到源码目录。
+fn resolve_spa_dir<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+    // 优先尝试 Resource 路径（生产 build）
+    if let Ok(p) = app.path().resolve("webchat-local/dist", BaseDirectory::Resource) {
+        if p.exists() {
+            return p;
+        }
+    }
+    // dev fallback：项目根下的 webchat-local/dist（`cargo run` 从 src-tauri/ 执行）
+    // CARGO_MANIFEST_DIR 指向 src-tauri/，其 parent 是项目根
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    PathBuf::from(manifest_dir)
+        .parent()
+        .map(|p| p.join("webchat-local").join("dist"))
+        .unwrap_or_else(|| PathBuf::from("webchat-local/dist"))
+}
+
 // ──────────────────────────────────────────────────────────────
 // Tauri commands
 // ──────────────────────────────────────────────────────────────
@@ -189,7 +216,7 @@ pub async fn start_webchat<R: Runtime>(
         .state::<Arc<crate::sidecar::AppContext>>()
         .inner()
         .clone();
-    ctx.webchat.start(ctx.clone()).await?;
+    ctx.webchat.start(ctx.clone(), &app).await?;
     let snap = ctx.webchat.snapshot();
     emit_session_update(&app, &snap);
     Ok(snap)

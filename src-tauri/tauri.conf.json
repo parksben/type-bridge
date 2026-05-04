@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "(cd webchat-local && npm install --silent && npm run build) && npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -34,7 +34,10 @@
       "binaries/feishu-bridge",
       "binaries/dingtalk-bridge",
       "binaries/wecom-bridge"
-    ]
+    ],
+    "resources": {
+      "../webchat-local/dist": "webchat-local/dist"
+    }
   },
   "plugins": {
     "shell": {

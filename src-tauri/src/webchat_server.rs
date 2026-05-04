@@ -24,6 +24,7 @@
 //! - 后续所有事件（text/image）必须带 userToken，server 查哈希匹配
 
 use std::net::{IpAddr, SocketAddr};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -39,6 +40,7 @@ use socketioxide::SocketIo;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
+use tower_http::services::{ServeDir, ServeFile};
 
 use crate::channel::ChannelId;
 use crate::history::{HistoryMessage, MessageStatus};
@@ -77,7 +79,9 @@ pub struct WebChatServer {
 
 impl WebChatServer {
     /// 启动一个新 server。
-    pub async fn start(ctx: Arc<AppContext>) -> Result<Self, String> {
+    /// `spa_dir` 指向 webchat-local 的构建产物目录（含 index.html），由外部 resolve
+    /// tauri resource 后传进来。若目录不存在，server 也能起来，但静态资源路由会 404。
+    pub async fn start(ctx: Arc<AppContext>, spa_dir: PathBuf) -> Result<Self, String> {
         let lan_ip = crate::webchat_net::primary_lan_ip()
             .ok_or_else(|| "未检测到可用的局域网 IP（请先连接 WiFi 或以太网）".to_string())?;
         let wifi_name = crate::webchat_net::current_wifi_ssid();
@@ -105,12 +109,21 @@ impl WebChatServer {
             .build_layer();
         io.ns("/", on_connect);
 
-        // 组 axum router
+        // 静态资源：用 tower-http ServeDir 提供 webchat-local/dist/ 下所有文件；
+        // SPA 路由 fallback 到 index.html，让前端 React Router（如有）自行处理
+        let index_path = spa_dir.join("index.html");
+        let serve_dir = ServeDir::new(&spa_dir)
+            .append_index_html_on_directories(true)
+            .fallback(ServeFile::new(&index_path));
+
+        // 如果 SPA 目录不存在（dev 未构建前端等），给一个占位 fallback，避免
+        // server 完全没响应
         let router = axum::Router::new()
-            .route("/", get(serve_index))
             .route("/healthz", get(healthz))
+            .route("/__placeholder", get(serve_placeholder))
             .layer(io_layer)
-            .layer(tower_http::cors::CorsLayer::very_permissive());
+            .layer(tower_http::cors::CorsLayer::very_permissive())
+            .fallback_service(serve_dir);
 
         // 端口递增 fallback
         let (listener, port) = bind_with_fallback(lan_ip).await?;
@@ -511,30 +524,18 @@ fn mime_to_ext(mime: &str) -> &'static str {
 // HTTP 路由 handlers
 // ──────────────────────────────────────────────────────────────
 
-async fn serve_index() -> impl IntoResponse {
-    // P3 之前用占位页：P3 阶段改为从 Tauri resource 读 webchat-local/dist/index.html
+async fn serve_placeholder() -> impl IntoResponse {
+    // 只有 webchat-local/dist 完全不存在时才会走到这；实际路由用 fallback ServeDir
     Html(
         r#"<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>TypeBridge · WebChat</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-         margin: 0; padding: 2rem; background: #fff8ed; color: #333; }
-  .box { max-width: 32rem; margin: 3rem auto; padding: 1.5rem; border-radius: 12px;
-         background: #fff; border: 1px solid #eadfcb; }
-  h1 { font-size: 18px; margin: 0 0 .5rem 0; }
-  p { font-size: 13.5px; line-height: 1.6; color: #555; }
-</style>
 </head>
-<body>
-  <div class="box">
-    <h1>WebChat 正在构建中</h1>
-    <p>桌面端本地 Server 已经起来了，但移动端前端 SPA 还没完成（P3 阶段）。</p>
-    <p>当前 commit 仅提供本地 server 协议框架。请扫码前先等我们把前端部分也做完。</p>
-  </div>
+<body style="font-family: -apple-system, sans-serif; padding: 2rem; background: #fff8ed;">
+  <h1 style="font-size: 18px;">WebChat server 已启动，但前端资源未找到</h1>
+  <p style="color: #666;">请先构建 webchat-local: <code>cd webchat-local &amp;&amp; npm run build</code></p>
 </body>
 </html>"#,
     )
