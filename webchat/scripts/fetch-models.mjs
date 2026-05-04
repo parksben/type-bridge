@@ -22,8 +22,10 @@ const ROOT = join(__dirname, "..");
 const HF_BASE = "https://huggingface.co";
 const MODEL = "Xenova/whisper-tiny";
 
-// transformers.js 默认 q8 dtype + Whisper 模型需要的文件清单。
-// 404 的文件会被跳过（某些 optional config 并不存在于所有模型仓库）。
+// Whisper 模型需要的文件清单。运行时由 wasm-speech.ts 里 dtype: "int8" 指定
+// transformers.js 加载 int8 变体。这里只下 int8（~30MB），不下其他 dtype 的备份，
+// 避免 deploy 体积膨胀。如果将来要切 dtype，改这里 + wasm-speech.ts 同步。
+// 404 文件自动跳过（某些可选 config 不存在于所有模型仓库）。
 const MODEL_FILES = [
   "config.json",
   "generation_config.json",
@@ -35,8 +37,8 @@ const MODEL_FILES = [
   "added_tokens.json",
   "merges.txt",
   "vocab.json",
-  "onnx/encoder_model_quantized.onnx",
-  "onnx/decoder_model_merged_quantized.onnx",
+  "onnx/encoder_model_int8.onnx",
+  "onnx/decoder_model_merged_int8.onnx",
 ];
 
 async function exists(p) {

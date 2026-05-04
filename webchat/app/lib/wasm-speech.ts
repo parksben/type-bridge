@@ -42,11 +42,15 @@ export type InstallProgress =
 const MODEL_ID = "Xenova/whisper-tiny";
 const DEFAULT_MAX_RETRIES = 3;
 
-/** whisper-tiny q8 全部资源约 42 MB（encoder 9MB + decoder 30MB + metadata 3MB）。
+/** whisper-tiny int8 全部资源约 35 MB（encoder 8MB + decoder 25MB + metadata 2MB）。
  *  用这个做分母算进度百分比，loaded 单调递增 → percent 天然单调递增，
  *  不会出现"文件加入时分母变大、百分比回退"的抖动。
- *  如果实际文件总量略小/略大（±5MB），只是最后一段进度略快/略慢，用户无感。 */
-const ESTIMATED_TOTAL_BYTES = 42 * 1024 * 1024;
+ *  如果实际文件总量略小/略大（±5MB），只是最后一段进度略快/略慢，用户无感。
+ *
+ *  历史：曾经用 q8 (quantized)，但 Xenova/whisper-tiny 的 q8 onnx 文件和
+ *  onnxruntime-web 新版存在不兼容（MatMulNBits scale 找不到），推理会话初始化
+ *  时会挂。切到 int8 变体避开这个 bug —— 同样小，更稳。 */
+const ESTIMATED_TOTAL_BYTES = 35 * 1024 * 1024;
 
 // 懒初始化的 pipeline 实例
 let transcriberPromise: Promise<unknown> | null = null;
@@ -105,6 +109,19 @@ export async function installEngine(
 ): Promise<void> {
   const maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
   let lastError: unknown = null;
+
+  // 如果之前 installEngine 已经成功过（transcriberPromise 是 fulfilled），复用即可。
+  // 如果之前失败过（rejected），这里清掉避免 installOnce 内部直接 throw 看起来像
+  // "重试按钮无反应"的 bug。
+  if (transcriberPromise) {
+    try {
+      await transcriberPromise;
+      onProgress?.({ kind: "ready" });
+      return;
+    } catch {
+      transcriberPromise = null;
+    }
+  }
 
   // 跨 retry 共享进度状态。每个文件当前 loaded/total，累加算总进度。
   const files = new Map<string, { loaded: number; total: number }>();
@@ -172,6 +189,10 @@ async function installOnce(
       "automatic-speech-recognition" as never,
       MODEL_ID,
       {
+        // int8 量化：与 onnxruntime-web 兼容良好，避开 Xenova/whisper-tiny q8
+        // 变体的 MatMulNBits scale 缺失 bug（详见文件顶部 ESTIMATED_TOTAL_BYTES 注释）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        dtype: "int8" as any,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         progress_callback: (p: any) => {
           if (!onProgress) return;
