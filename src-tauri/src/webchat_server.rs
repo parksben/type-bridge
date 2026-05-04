@@ -23,6 +23,7 @@
 //! - userToken 随机 32 字节 base64url，只通过 hello ack 发给对应设备
 //! - 后续所有事件（text/image）必须带 userToken，server 查哈希匹配
 
+use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
@@ -101,6 +102,7 @@ impl WebChatServer {
             injector: ctx.injector.clone(),
             history: ctx.history.clone(),
             expires_at_unix_ms,
+            pending_acks: SyncMutex::new(HashMap::new()),
         });
 
         // 构建 Socket.IO layer
@@ -160,6 +162,8 @@ impl WebChatServer {
 
     /// 优雅关闭。返回后 server task 已经结束。
     pub async fn stop(&self) {
+        // 先把 pending 的 ack 都以"已停止"回掉，避免手机一直转圈
+        self.cancel_all_pending_acks();
         self.cancel.cancel();
         let h = {
             let mut guard = self.handle.lock().unwrap();
@@ -179,6 +183,39 @@ impl WebChatServer {
             .unwrap_or(0)
     }
 
+    /// 外部触发：某条消息注入完成 / 失败 / 被取消，从 pending_acks 取出
+    /// 对应的 Socket.IO AckSender 回调给手机。
+    /// composite_id = `{channel}:{source_id}`，与 injector / history 保持一致。
+    pub fn deliver_ack(&self, composite_id: &str, success: bool, reason: Option<String>) {
+        let ack_opt = self
+            .state
+            .pending_acks
+            .lock()
+            .ok()
+            .and_then(|mut map| map.remove(composite_id));
+        if let Some(ack) = ack_opt {
+            let _ = ack.send(&GenericAck { success, reason });
+        }
+    }
+
+    /// 服务关闭时把所有 pending 的 ack 全部用失败回调，让手机端收到"已取消"
+    /// 而不是一直 spinning。
+    fn cancel_all_pending_acks(&self) {
+        let drained: Vec<(String, AckSender)> = self
+            .state
+            .pending_acks
+            .lock()
+            .ok()
+            .map(|mut map| map.drain().collect())
+            .unwrap_or_default();
+        for (_id, ack) in drained {
+            let _ = ack.send(&GenericAck {
+                success: false,
+                reason: Some("server 已停止".to_string()),
+            });
+        }
+    }
+
     /// 完整 QR 码 URL。
     pub fn qr_url(&self) -> String {
         format!("http://{}:{}/?s={}", self.lan_ip, self.port, self.session_id)
@@ -187,6 +224,16 @@ impl WebChatServer {
     /// 会话是否锁定（OTP 5 次错）。
     pub fn is_locked(&self) -> bool {
         self.state.otp_locked.load(Ordering::SeqCst)
+    }
+}
+
+/// drop 时同步触发 cancellation token，避免端口/资源泄漏。tokio task 会在
+/// event loop 下一次 poll 时退出（abort 式而非 graceful），但进程退出场景
+/// 端口由 OS 自然释放，这样处理足够稳。
+impl Drop for WebChatServer {
+    fn drop(&mut self) {
+        self.cancel.cancel();
+        self.cancel_all_pending_acks();
     }
 }
 
@@ -204,6 +251,11 @@ struct ServerState {
     injector: Arc<crate::queue::Injector>,
     history: Arc<crate::history::HistoryStore>,
     expires_at_unix_ms: i64,
+    /// 等待 injection 真实结果的 ack：key 是 queue 里的 composite_id
+    /// `{channel}:{source_message_id}`，和 typebridge://message-status 事件
+    /// payload.id 完全一致。注入完成时上层 Bridge 会调 `deliver_ack` 取出
+    /// 对应 AckSender 回调给手机。
+    pending_acks: SyncMutex<HashMap<String, AckSender>>,
 }
 
 #[derive(Clone, Debug)]
@@ -302,12 +354,23 @@ async fn on_connect(socket: SocketRef) {
         },
     );
 
-    // text：入 FIFO 队列，立即 ack success；真实注入结果由 typebridge://message-status 事件回流（P2b-2 阶段再补）
+    // text：入 FIFO 队列；AckSender 暂存到 pending_acks，等 injector 注入完成后
+    // 上层 Bridge 调 deliver_ack 回调给手机。如果 enqueue 本身就失败（校验错 / 内存
+    // 错），立即 ack 失败。
     socket.on(
         "text",
         |_socket: SocketRef, Data::<TextMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
-            let result = handle_text(&msg, state).await;
-            let _ = ack.send(&to_generic_ack(result));
+            match handle_text(&msg, state.clone()).await {
+                Ok(composite_id) => {
+                    park_ack(&state, composite_id, ack);
+                }
+                Err(reason) => {
+                    let _ = ack.send(&GenericAck {
+                        success: false,
+                        reason: Some(reason),
+                    });
+                }
+            }
         },
     );
 
@@ -315,14 +378,30 @@ async fn on_connect(socket: SocketRef) {
     socket.on(
         "image",
         |_socket: SocketRef, Data::<ImageMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
-            let result = handle_image(&msg, state).await;
-            let _ = ack.send(&to_generic_ack(result));
+            match handle_image(&msg, state.clone()).await {
+                Ok(composite_id) => {
+                    park_ack(&state, composite_id, ack);
+                }
+                Err(reason) => {
+                    let _ = ack.send(&GenericAck {
+                        success: false,
+                        reason: Some(reason),
+                    });
+                }
+            }
         },
     );
 
     socket.on_disconnect(|socket: SocketRef| async move {
         tracing::info!("[webchat] client disconnected: sid={}", socket.id);
     });
+}
+
+/// 把 AckSender 按 composite_id 暂存，等注入完成时 deliver_ack 回调。
+fn park_ack(state: &ServerState, composite_id: String, ack: AckSender) {
+    if let Ok(mut map) = state.pending_acks.lock() {
+        map.insert(composite_id, ack);
+    }
 }
 
 fn to_generic_ack(r: Result<(), String>) -> GenericAck {
@@ -336,6 +415,11 @@ fn to_generic_ack(r: Result<(), String>) -> GenericAck {
             reason: Some(e),
         },
     }
+}
+// 保留工具供未来使用（当前改用 park_ack 流程，GenericAck 直接构造）
+#[allow(dead_code)]
+fn _unused_ack_convert() {
+    let _ = to_generic_ack;
 }
 
 async fn handle_hello(
@@ -391,12 +475,12 @@ async fn handle_hello(
     Ok(user_token)
 }
 
-async fn handle_text(msg: &TextMsg, state: Arc<ServerState>) -> Result<(), String> {
+async fn handle_text(msg: &TextMsg, state: Arc<ServerState>) -> Result<String, String> {
     verify_user_token(&msg.user_token, &state)?;
     ingest_text(&msg.client_message_id, &msg.text, &state)
 }
 
-async fn handle_image(msg: &ImageMsg, state: Arc<ServerState>) -> Result<(), String> {
+async fn handle_image(msg: &ImageMsg, state: Arc<ServerState>) -> Result<String, String> {
     verify_user_token(&msg.user_token, &state)?;
     ingest_image(&msg.client_message_id, &msg.data, &msg.mime, &state)
 }
@@ -414,8 +498,9 @@ fn verify_user_token(token: &str, state: &ServerState) -> Result<(), String> {
     }
 }
 
-fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Result<(), String> {
-    // client_message_id 当前未用于 ack 回流（P2b-2 阶段再补），仅留作调试日志
+fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Result<String, String> {
+    // client_message_id 当前未用于 ack 回流（Socket.IO ack 由 composite_id 匹配），
+    // 仅留作调试日志
     let _ = client_message_id;
     let source_id = format!("wc_{}", short_uid());
     let composite = crate::channel::composite_id(ChannelId::WebChat, &source_id);
@@ -442,7 +527,7 @@ fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Resu
     state
         .injector
         .enqueue(QueuedMessage {
-            id: composite,
+            id: composite.clone(),
             channel: ChannelId::WebChat,
             source_message_id: source_id,
             text: text.to_string(),
@@ -450,7 +535,7 @@ fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Resu
             image_mime: None,
         })?;
 
-    Ok(())
+    Ok(composite)
 }
 
 fn ingest_image(
@@ -458,7 +543,7 @@ fn ingest_image(
     base64_data: &str,
     mime: &str,
     state: &ServerState,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let _ = client_message_id;
     use base64::{engine::general_purpose, Engine as _};
     let raw = general_purpose::STANDARD
@@ -499,7 +584,7 @@ fn ingest_image(
     state
         .injector
         .enqueue(QueuedMessage {
-            id: composite,
+            id: composite.clone(),
             channel: ChannelId::WebChat,
             source_message_id: source_id,
             text: String::new(),
@@ -507,7 +592,7 @@ fn ingest_image(
             image_mime: Some(mime.to_string()),
         })?;
 
-    Ok(())
+    Ok(composite)
 }
 
 fn mime_to_ext(mime: &str) -> &'static str {
