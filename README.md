@@ -110,10 +110,22 @@ npm run dev        # Next.js 开发模式，http://localhost:3000
 ```bash
 cd webchat-local
 npm install        # 首次需要
+npm run build      # 一次性构建，产物在 dist/（被 Tauri resource 打包）
+# 或独立开发：
 npm run dev        # Vite 开发模式，http://localhost:5173
 ```
 
-`webchat-local/` 是独立的 Vite + React + TypeScript SPA 工程，是 WebChat 渠道的移动端页面源码。`npm run tauri build` 会自动先跑 `webchat-local` 的 `npm run build`，把产物 `dist/` 打包进 `.app` 作为静态资源；运行时由桌面 App 内嵌的 Rust server（`axum + socketioxide`）提供。**不部署到任何公网**，完全本地化运行。
+`webchat-local/` 是独立的 Vite + React + TypeScript SPA 工程，是 WebChat 渠道的移动端页面源码。
+
+**完整工作流**（生产）：
+- `npm run tauri build` 会自动先跑 `webchat-local` 的 `npm install && npm run build`，再打包主 App；构建产物 `webchat-local/dist/` 通过 `tauri.conf.json` 的 `bundle.resources` 映射到 .app 内 `Resources/webchat-local/dist/`
+- 运行时由桌面 App 内嵌的 Rust server（`axum + socketioxide + tower-http ServeDir`）从本机 8723 端口提供
+- **不部署到任何公网**，完全本地化运行
+
+**开发模式**（`npm run tauri dev`）：
+- 先手工跑一次 `cd webchat-local && npm run build` 生成 `dist/`
+- 桌面 App 启动时，`resolve_spa_dir` 会优先查 Tauri resource 路径，找不到会 fallback 到 `<repo>/webchat-local/dist`
+- 真机联调：手机和电脑同一 WiFi，扫桌面 App 显示的 QR 码即可（URL 形如 `http://192.168.x.x:8723/?s=ses_xxx`）
 
 ---
 
