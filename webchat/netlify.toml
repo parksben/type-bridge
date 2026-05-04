@@ -12,3 +12,16 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "microphone=(self), camera=(self)"
+
+# Whisper 模型文件 - 内容按版本号稳定，长期缓存 + immutable
+# 首次下载通过 Netlify CDN；再次打开直接从浏览器缓存读（304 都不用发）
+[[headers]]
+  for = "/models/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ONNX Runtime WASM - 与 onnxruntime-web 版本绑定，换版本即换文件
+[[headers]]
+  for = "/ort/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

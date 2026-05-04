@@ -14,20 +14,18 @@
 //      client component；本模块 top-level 不导入 transformers
 
 export type InstallProgress =
-  | { kind: "initiate"; file: string }
-  | { kind: "download"; file: string }
+  | { kind: "initiate" }
+  | { kind: "download" }
   | {
       kind: "progress";
-      /** 总字节数（已知分母） */
+      /** 预估总字节数（固定分母，约 42 MB） */
       totalBytes: number;
-      /** 累计已下载字节数 */
+      /** 累计已下载字节数（只增） */
       totalLoaded: number;
-      /** 平滑累计百分比（0-100，单调递增） */
+      /** 百分比 0-99（只在 "ready" 事件到 100） */
       percent: number;
-      /** 当前正在下载的文件名（给 UI 展示） */
-      currentFile: string;
     }
-  | { kind: "done"; file: string }
+  | { kind: "done" }
   | { kind: "ready" }
   | {
       kind: "retrying";
@@ -43,6 +41,12 @@ export type InstallProgress =
 
 const MODEL_ID = "Xenova/whisper-tiny";
 const DEFAULT_MAX_RETRIES = 3;
+
+/** whisper-tiny q8 全部资源约 42 MB（encoder 9MB + decoder 30MB + metadata 3MB）。
+ *  用这个做分母算进度百分比，loaded 单调递增 → percent 天然单调递增，
+ *  不会出现"文件加入时分母变大、百分比回退"的抖动。
+ *  如果实际文件总量略小/略大（±5MB），只是最后一段进度略快/略慢，用户无感。 */
+const ESTIMATED_TOTAL_BYTES = 42 * 1024 * 1024;
 
 // 懒初始化的 pipeline 实例
 let transcriberPromise: Promise<unknown> | null = null;
@@ -104,25 +108,21 @@ export async function installEngine(
 
   // 跨 retry 共享进度状态。每个文件当前 loaded/total，累加算总进度。
   const files = new Map<string, { loaded: number; total: number }>();
-  // 单调递增保护：已经报过的 percent 不允许回退（防累加过程中的瞬时抖动）
-  let monotonicPercent = 0;
 
-  function emitProgress(currentFile: string) {
+  function emitProgress() {
     if (!onProgress) return;
     let totalLoaded = 0;
-    let totalBytes = 0;
-    for (const { loaded, total } of files.values()) {
+    for (const { loaded } of files.values()) {
       totalLoaded += loaded;
-      totalBytes += total;
     }
-    const rawPct = totalBytes > 0 ? (totalLoaded / totalBytes) * 100 : 0;
-    monotonicPercent = Math.max(monotonicPercent, Math.min(99, rawPct));
+    // 用固定分母（预估 42MB），loaded 单调递增 → percent 天然单调递增
+    // 实际 loaded 可能略超 ESTIMATED_TOTAL_BYTES，截到 99%，最终 "ready" 事件补到 100
+    const percent = Math.min(99, (totalLoaded / ESTIMATED_TOTAL_BYTES) * 100);
     onProgress({
       kind: "progress",
       totalLoaded,
-      totalBytes,
-      percent: monotonicPercent,
-      currentFile,
+      totalBytes: ESTIMATED_TOTAL_BYTES,
+      percent,
     });
   }
 
@@ -159,7 +159,7 @@ export async function installEngine(
 async function installOnce(
   onProgress: ((p: InstallProgress) => void) | undefined,
   files: Map<string, { loaded: number; total: number }>,
-  emitProgress: (currentFile: string) => void,
+  emitProgress: () => void,
 ): Promise<void> {
   if (transcriberPromise) {
     await transcriberPromise;
@@ -168,7 +168,6 @@ async function installOnce(
 
   transcriberPromise = (async () => {
     const { pipeline } = await loadTransformers();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const transcriber = await pipeline(
       "automatic-speech-recognition" as never,
       MODEL_ID,
@@ -181,10 +180,10 @@ async function installOnce(
             case "initiate":
               // 只在不存在时初始化，避免覆盖 retry 中已有进度
               if (!files.has(file)) files.set(file, { loaded: 0, total: 0 });
-              onProgress({ kind: "initiate", file });
+              // 不 emit "initiate" 事件，避免 UI state 跳变
               break;
             case "download":
-              onProgress({ kind: "download", file });
+              // 同上
               break;
             case "progress": {
               const existing = files.get(file) || { loaded: 0, total: 0 };
@@ -193,7 +192,7 @@ async function installOnce(
                 loaded: Math.max(existing.loaded, Number(p.loaded) || 0),
                 total: Math.max(existing.total, Number(p.total) || 0),
               });
-              emitProgress(file);
+              emitProgress();
               break;
             }
             case "done": {
@@ -204,8 +203,7 @@ async function installOnce(
                   total: existing.total,
                 });
               }
-              emitProgress(file);
-              onProgress({ kind: "done", file });
+              emitProgress();
               break;
             }
             default:
