@@ -6,7 +6,7 @@
 
 四个渠道平等共存，消息进同一个 FIFO 队列依次粘到当前焦点。消息入队 / 成功 / 失败都会给来源侧一个可见反馈（飞书 emoji reaction；钉钉一次性 `✅ 已输入` / `❌ 输入失败`；企微同一条消息原地从 `🟡 处理中...` 更新为 `✅ 已输入` / `❌ 输入失败`；WebChat 在手机聊天页消息底部显示 `已收到` / `已注入` / `失败：原因`）。
 
-> WebChat 渠道无需任何 IM 账号 —— 桌面端启动会话生成二维码 + 6 位 OTP，手机扫码进 [webchat-typebridge.parksben.xyz](https://webchat-typebridge.parksben.xyz) 输入 OTP 即可开聊。
+> WebChat 渠道无需任何 IM 账号 —— 桌面端启动会话时在本机起一个局域网 HTTP + Socket.IO server，手机在同一 WiFi 下扫码 + 输 OTP 即可开聊。完全不依赖任何云端服务。
 
 🌐 产品官网：[typebridge.parksben.xyz](https://typebridge.parksben.xyz) — 包含使用文档和各渠道应用接入教程。
 
@@ -53,7 +53,7 @@ npm run tauri dev
 ```
 
 应用首次启动会自动弹出配置窗口。在「连接 IM 应用」tab 下任选一家填好凭据即可：
-- WebChat：无需凭据，点「启动会话」生成 QR 码扫码即用
+- WebChat：无需凭据，点「启动会话」在本机启动局域网服务，手机同 WiFi 扫码即用
 - 飞书：App ID / App Secret（仅支持自建应用）
 - 钉钉：Client ID / Client Secret（Stream Mode）
 - 企微：Bot ID / Secret（智能机器人长连接模式）
@@ -105,15 +105,15 @@ npm run dev        # Next.js 开发模式，http://localhost:3000
 
 官网是独立的 Next.js 项目，修改 `website/**/*.tsx` 会自动热更新。部署到 Netlify 后访问 `typebridge.parksben.xyz`。
 
-### WebChat 移动端 + 中继 (`webchat/`)
+### WebChat 移动端 SPA (`webchat-local/`)
 
 ```bash
-cd webchat
+cd webchat-local
 npm install        # 首次需要
-npm run dev        # Next.js 开发模式，http://localhost:3000
+npm run dev        # Vite 开发模式，http://localhost:5173
 ```
 
-`webchat/` 是独立的 Next.js 项目，包含移动端聊天页面 + Netlify Functions 中继 API（端点 `/api/*`）。本地联调时把桌面 App 设置里的 `WEBCHAT_RELAY_URL` 改成 `http://<本机 IP>:3000` 即可让真机扫码连本地中继。Netlify 部署后访问 `webchat-typebridge.parksben.xyz`。
+`webchat-local/` 是独立的 Vite + React + TypeScript SPA 工程，是 WebChat 渠道的移动端页面源码。`npm run tauri build` 会自动先跑 `webchat-local` 的 `npm run build`，把产物 `dist/` 打包进 `.app` 作为静态资源；运行时由桌面 App 内嵌的 Rust server（`axum + socketioxide`）提供。**不部署到任何公网**，完全本地化运行。
 
 ---
 
@@ -124,7 +124,7 @@ npm run dev        # Next.js 开发模式，http://localhost:3000
 | 前端逻辑 / React state | 应用窗口里按 `Cmd + Option + I` 打开 DevTools |
 | Rust 日志 | `tracing::info!` / `println!` 输出到运行 `tauri dev` 的终端 |
 | Go sidecar 日志 | 由 Rust 捕获其 stdout 并以 `[sidecar]` 前缀转发到同一终端 |
-| WebChat 中继日志 | `[webchat] xxx` 前缀；本地联调时还可看 `cd webchat && npm run dev` 终端的 Next.js Route Handler 输出 |
+| WebChat 本地 server 日志 | `[webchat]` 前缀；启动时会输出 `Server started at http://<LAN-IP>:<port>` |
 | 应用运行时文件日志 | `~/Library/Logs/TypeBridge/typebridge-YYYY-MM-DD.log`（按天滚动，保留 30 天） |
 | 应用内日志窗口 | 托盘菜单 → "消息日志" |
 | 持久化配置 | `~/.typebridge/config.json`（通过 `tauri-plugin-store` 写入） |
@@ -193,7 +193,7 @@ type-bridge/
 │   │   ├── channel.rs            ChannelId + Capability + 复合 id 工具
 │   │   ├── tray.rs               托盘图标 + 窗口生命周期
 │   │   ├── sidecar.rs            飞书 / 钉钉 / 企微 sidecar 进程管理 + 事件派发
-│   │   ├── webchat.rs            WebChat 渠道 HTTP 轮询模块（不走 sidecar）
+│   │   ├── webchat.rs            WebChat 渠道本机 server 宿主
 │   │   ├── queue.rs              注入队列 + worker + 反馈（reaction / reply）
 │   │   ├── history.rs            消息历史持久化（history.json + 图片归档）
 │   │   ├── injector.rs           AXUIElement + CGEventPost 注入
@@ -221,16 +221,14 @@ type-bridge/
 │   │   └── download/[arch]       GitHub Release .dmg 代理转发
 │   └── package.json
 │
-├── webchat/                      WebChat 移动端 + Netlify Functions 中继 (Next.js)
-│   ├── netlify.toml              Netlify 零手动部署配置
-│   ├── middleware.ts             UA 检测：PC / 微信 / IM 内置浏览器拦截
-│   ├── app/
-│   │   ├── page.tsx              单页 SPA：握手 → 聊天状态机
-│   │   ├── blocked/{pc,wechat}/  拦截引导页
-│   │   ├── components/           移动端聊天 UI（OTP 输入 / 消息流 / 文本/图片/语音）
-│   │   ├── lib/                  fetch wrapper / UA 检测 / 图片压缩 / Blobs 封装
-│   │   └── api/                  9 个 Route Handler（register / handshake / send / pull / ack / heartbeat ...）
-│   └── package.json
+├── webchat-local/                WebChat 移动端 SPA (Vite + React + TS)
+│   ├── vite.config.ts
+│   ├── index.html
+│   ├── src/
+│   │   ├── App.tsx               状态机路由（PC 拦截 / 握手 / 聊天）
+│   │   ├── lib/                  UA 检测 / socket.io-client 封装
+│   │   └── components/           OTP 输入 / 消息流 / 文本/图片/语音引导
+│   └── package.json              （构建产物 dist/ 打包进 .app，不入库）
 │
 └── docs/
     ├── REQUIREMENTS.md           做什么、为什么
@@ -269,13 +267,13 @@ A: 检查 `tauri dev` 终端里 `[sidecar]` 前缀的日志。常见原因：App
 A: 应该不会 —— 项目用 `CGEventPost` 模拟按键而非 `AXSetValue`。若遇到请在 issue 里附上目标应用名。
 
 **Q: WebChat tab 提示"启动会话"失败？**
-A: 大概率是网络问题——桌面端启动 WebChat 时会向 `webchat-typebridge.parksben.xyz` 发 `/api/register` 请求注册 sessionId。检查终端 `[webchat]` 前缀日志看具体错误。也可在 Rust `~/.typebridge/config.json` 里把 `webchat_relay_url` 改成自部署 URL。
+A: 看终端 `[webchat]` 前缀日志查具体错误。常见原因：端口 8723-8732 全被占用（换端口 / 关其他应用）、无法获取 LAN IP（电脑没连 WiFi / 有线）。
 
-**Q: 用手机扫了 WebChat 的 QR 但页面提示"会话已过期"？**
-A: WebChat 会话有 5 分钟 TTL；如果生成 QR 后超过 5 分钟才扫，回桌面端点「重启会话」即可。
+**Q: 手机扫了 WebChat 的 QR 但打不开页面？**
+A: 确认手机和电脑在**同一个 WiFi** 下。WebChat 服务绑在本机局域网 IP，跨 WiFi / 跨网段访问不到。不方便切 WiFi 时请改用飞书/钉钉/企微渠道。
 
-**Q: 微信 / 钉钉 / 飞书内置浏览器扫 WebChat QR 进不去聊天页？**
-A: 设计如此 —— IM 内置 WebView 屏蔽了 Web Speech API（语音听写），无法体验完整功能；页面会拦截到引导页提示用 Safari / Chrome 等外部浏览器打开。
+**Q: WebChat 聊天页的语音按钮点了没反应？**
+A: WebChat 不自研语音识别。点语音会弹提示引导用**手机输入法自带的麦克风按钮**（搜狗/百度/讯飞/iOS 系统键盘都内置）完成语音转文字。
 
 ---
 
