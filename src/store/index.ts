@@ -81,8 +81,6 @@ export interface Settings {
   dingtalk_client_secret: string;
   wecom_bot_id: string;
   wecom_secret: string;
-  /// WebChat 中继 URL；空字符串 = 用官方默认。
-  webchat_relay_url: string;
   auto_submit: boolean;
   submit_key: SubmitKey;
 }

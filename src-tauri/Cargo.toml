@@ -28,8 +28,7 @@ objc2-app-kit = { version = "0.2", features = ["NSPasteboard", "NSWorkspace", "N
 objc2-foundation = { version = "0.2", features = ["NSString", "NSData", "NSURL", "NSArray"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 dirs = "5"
-# WebChat 渠道（轮询中继 + 本地随机生成 OTP / sessionId / token）
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip"] }
+# WebChat 渠道（本地 server + sha256 OTP hashing + base64 token；sha2/base64/rand 也在 sidecar 签名等场景用）
 sha2 = "0.10"
 base64 = "0.22"
 rand = "0.8"

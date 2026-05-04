@@ -37,7 +37,6 @@ pub fn run() {
             webchat::start_webchat,
             webchat::stop_webchat,
             webchat::webchat_snapshot,
-            webchat::set_webchat_relay_url,
             injector::check_accessibility,
             injector::request_accessibility,
             injector::inject_text_direct,
@@ -48,7 +47,7 @@ pub fn run() {
             logger::cleanup_old_logs();
 
             // 构造共享 AppContext（含 history + injector worker + submit 配置 + WebChat bridge）
-            let (submit_config, webchat_relay_url) = {
+            let submit_config = {
                 use tauri_plugin_store::StoreExt;
                 let store = app.store("config.json").ok();
                 match store {
@@ -61,26 +60,13 @@ pub fn run() {
                             .get("submit_key")
                             .and_then(|v| serde_json::from_value::<store::SubmitKey>(v).ok())
                             .unwrap_or_default();
-                        let relay = s
-                            .get("webchat_relay_url")
-                            .and_then(|v| v.as_str().map(String::from))
-                            .unwrap_or_default();
-                        (
-                            sidecar::SubmitConfig { auto_submit, submit_key },
-                            relay,
-                        )
+                        sidecar::SubmitConfig { auto_submit, submit_key }
                     }
-                    None => (sidecar::SubmitConfig::default(), String::new()),
+                    None => sidecar::SubmitConfig::default(),
                 }
             };
             let ctx = AppContext::new(app.handle().clone(), submit_config);
-            if !webchat_relay_url.is_empty() {
-                ctx.webchat.set_relay_url(webchat_relay_url);
-            }
             app.manage(ctx);
-
-            // WebChat 全局 ack 监听：消息状态变成 sent/failed 时回写中继
-            webchat::install_ack_listener(app.handle());
 
             // 启动后广播一次辅助功能权限状态，前端 ConnectionTab 据此决定是否
             // 展示 banner；前端后续会每 3s 主动 check_accessibility 轮询直到授予
