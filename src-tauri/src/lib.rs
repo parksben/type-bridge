@@ -7,6 +7,8 @@ pub mod sidecar;
 pub mod store;
 pub mod tray;
 pub mod webchat;
+pub mod webchat_net;
+pub mod webchat_server;
 
 use sidecar::AppContext;
 use tauri::{Emitter, Manager};
