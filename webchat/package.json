@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/fetch-models.mjs",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "fetch-models": "node scripts/fetch-models.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",

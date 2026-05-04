@@ -26,6 +26,23 @@ let transcriberPromise: Promise<unknown> | null = null;
 
 async function loadTransformers() {
   const mod = await import("@huggingface/transformers");
+  // 让模型 + ONNX WASM 运行时从**同域 Netlify 站点**加载，避开 HuggingFace Hub
+  // 和 jsdelivr CDN 在国内不稳定的问题。这些文件由 scripts/fetch-models.mjs
+  // 在 build 前落到 public/ 下，部署后走 Netlify CDN 分发。
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    // 模型：origin + "models/" + "Xenova/whisper-tiny/" + "onnx/encoder_model_quantized.onnx"
+    //     = https://webchat-typebridge.parksben.xyz/models/Xenova/whisper-tiny/onnx/...
+    mod.env.remoteHost = origin + "/";
+    mod.env.remotePathTemplate = "models/{model}/";
+    // ONNX runtime WASM：origin + "/ort/" + "ort-wasm-simd-threaded.wasm"
+    // 用 optional chain 容错：transformers.js v4 定义中 onnx.wasm 是 optional，
+    // 但运行时一定存在；遇到类型问题就 cast 成 unknown 再赋值
+    const wasm = mod.env.backends?.onnx?.wasm;
+    if (wasm) {
+      (wasm as unknown as { wasmPaths: string }).wasmPaths = origin + "/ort/";
+    }
+  }
   return mod;
 }
 

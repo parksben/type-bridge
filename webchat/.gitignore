@@ -4,3 +4,7 @@ out/
 .env*.local
 .netlify/
 next-env.d.ts
+
+# fetch-models.mjs 预构建下载的模型 + ONNX 运行时，跟 node_modules 一样按需生成
+public/models/
+public/ort/
