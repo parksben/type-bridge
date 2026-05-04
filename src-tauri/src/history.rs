@@ -194,6 +194,24 @@ impl HistoryStore {
         removed
     }
 
+    /// 清空所有历史。返回被清掉的 id 列表，供上层同步取消队列中尚未注入的条目。
+    /// 同时删除所有关联的图片文件。
+    pub fn clear_all(&self) -> Vec<String> {
+        let drained: Vec<HistoryMessage> = {
+            let mut guard = self.messages.write().unwrap();
+            std::mem::take(&mut *guard)
+        };
+        for msg in &drained {
+            if let Some(rel) = &msg.image_path {
+                let _ = fs::remove_file(self.abs_image_path(rel));
+            }
+        }
+        if !drained.is_empty() {
+            self.flush();
+        }
+        drained.into_iter().map(|m| m.id).collect()
+    }
+
     /// 把 Go sidecar 回传的 feedback_error 落到对应消息上。
     /// 若找不到消息（可能已被淘汰）直接忽略。
     pub fn attach_feedback_error(&self, id: &str, err: FeedbackError) -> bool {

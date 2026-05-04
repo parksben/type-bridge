@@ -31,7 +31,6 @@ interface WebChatSnapshot {
   phase: { kind: Phase };
   session_id: string | null;
   otp: string | null;
-  aux_code: string | null;
   expires_at: number | null;
   bound_device_ua: string | null;
   bound_at: number | null;
@@ -296,7 +295,6 @@ function PendingView({
   onStop: () => void;
 }) {
   const otpDigits = (snap.otp || "").split("");
-  const auxFormatted = formatAuxCode(snap.aux_code);
   const lowTime = remainingSecs <= 60;
 
   return (
@@ -360,27 +358,6 @@ function PendingView({
           手机端扫码后会要求输入此 6 位 OTP 完成绑定。
         </p>
       </div>
-
-      {/* 辅助会话码 */}
-      {snap.aux_code && (
-        <div className="flex flex-col gap-1.5">
-          <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-            辅助会话码
-          </label>
-          <div
-            className="rounded-lg px-3.5 py-2.5 flex items-center justify-between"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <span className="font-mono text-[14px] tracking-[0.2em] text-text">
-              {auxFormatted}
-            </span>
-            <span className="text-[10.5px] text-muted">手机相机不可用时手动输入</span>
-          </div>
-        </div>
-      )}
 
       {/* 两按钮：重启 / 断开 — 与飞书 tab 「启动 / 测试」 一致的双按钮布局 */}
       <div className="flex gap-2 mt-1">
@@ -576,12 +553,6 @@ function formatRemaining(secs: number): string {
   const m = Math.floor(secs / 60);
   const s = secs % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-}
-
-function formatAuxCode(code: string | null): string {
-  if (!code) return "";
-  if (code.length === 8) return `${code.slice(0, 4)}-${code.slice(4)}`;
-  return code;
 }
 
 function simplifyUa(ua: string | null): string {

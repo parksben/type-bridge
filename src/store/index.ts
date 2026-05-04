@@ -181,8 +181,9 @@ export const useAppStore = create<AppStore>((set) => ({
     }),
 
   clearHistoryDisplay: () =>
-    set((state) => ({
-      hiddenHistoryIds: new Set(state.history.map((m) => m.id)),
+    set(() => ({
+      history: [],
+      hiddenHistoryIds: new Set<string>(),
     })),
 }));
 

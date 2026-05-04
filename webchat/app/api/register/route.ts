@@ -1,10 +1,10 @@
-// POST /api/register — 桌面端启动会话时调用，注册 sessionId / OTP / auxCode。
+// POST /api/register — 桌面端启动会话时调用，注册 sessionId / OTP。
 //
-// 桌面侧本地随机生成 OTP 和 auxCode，明文 OTP **不上送中继**，只送 sha256；
+// 桌面侧本地随机生成 OTP，明文 OTP **不上送中继**，只送 sha256；
 // 中继签发 ownerToken，桌面侧拿来作为后续所有 endpoint 的 Bearer。
 //
 // Request body:
-//   { otpHash: <sha256 hex>, auxCode: <8-char base32> }
+//   { otpHash: <sha256 hex> }
 //
 // Response data:
 //   { sessionId, ownerToken, expiresAt }
@@ -19,7 +19,6 @@ import {
 } from "@/app/lib/auth";
 import {
   saveSession,
-  setAuxIndex,
   SESSION_TTL_MS,
   type Session,
 } from "@/app/lib/storage";
@@ -28,7 +27,6 @@ export const runtime = "nodejs"; // Blobs 需要 Node runtime
 
 type RegisterBody = {
   otpHash?: unknown;
-  auxCode?: unknown;
 };
 
 export async function POST(req: NextRequest) {
@@ -40,13 +38,9 @@ export async function POST(req: NextRequest) {
   }
 
   const otpHash = typeof body.otpHash === "string" ? body.otpHash : "";
-  const auxCode = typeof body.auxCode === "string" ? body.auxCode : "";
 
   if (!/^[0-9a-f]{64}$/.test(otpHash)) {
     return err("BAD_REQUEST", "otpHash must be 64-char hex sha256", 400);
-  }
-  if (!/^[A-Z2-7]{8}$/.test(auxCode)) {
-    return err("BAD_REQUEST", "auxCode must be 8-char base32", 400);
   }
 
   const now = Date.now();
@@ -61,7 +55,6 @@ export async function POST(req: NextRequest) {
     boundExpiresAt: null,
     ownerTokenHash,
     userTokenHash: null,
-    auxCode,
     otpHash,
     otpAttempts: 0,
     otpLocked: false,
@@ -73,7 +66,6 @@ export async function POST(req: NextRequest) {
   };
 
   await saveSession(session);
-  await setAuxIndex(auxCode, sessionId);
 
   return ok({
     sessionId,

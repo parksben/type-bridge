@@ -8,12 +8,17 @@
 //   2. perform injection (text + optional image) + auto-submit key
 //   3. status → Sent / Failed, emit feishu://message-status + feishu://inject-result
 //   4. send reaction (DONE/CRY) + failure thread reply to Go sidecar
+//
+// 取消机制：用户删除历史条目 / 清空历史时，会把对应 id 加入 cancelled 集合。
+// 消息可能已经在 mpsc 队列里排队（但还没被 worker 消费），worker 拿到消息后
+// 先查 cancelled，命中则跳过注入，只 emit 取消状态让 UI 同步。
 
 use crate::channel::{composite_id, ChannelId};
 use crate::history::{HistoryMessage, HistoryStore, MessageStatus};
 use crate::sidecar::{SidecarBridge, SidecarBridges, SidecarCommand, SubmitConfig};
 use serde::Serialize;
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::mpsc;
 
@@ -45,6 +50,9 @@ pub struct QueuedMessage {
 /// 注入服务：队列 sender
 pub struct Injector {
     tx: mpsc::UnboundedSender<QueuedMessage>,
+    /// 被标记"取消"的消息 id 集合。用户清空历史 / 删除单条历史时把 id 塞进来，
+    /// worker 从 mpsc 拿到消息后先查此集合，命中则跳过注入。
+    cancelled: Arc<Mutex<HashSet<String>>>,
 }
 
 #[derive(Serialize, Clone)]
@@ -63,8 +71,12 @@ impl Injector {
         bridges: Arc<SidecarBridges>,
     ) -> Arc<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
+        let cancelled = Arc::new(Mutex::new(HashSet::new()));
 
-        let injector = Arc::new(Self { tx });
+        let injector = Arc::new(Self {
+            tx,
+            cancelled: cancelled.clone(),
+        });
 
         tauri::async_runtime::spawn(worker_loop(
             rx,
@@ -72,6 +84,7 @@ impl Injector {
             history,
             submit_config,
             bridges,
+            cancelled,
         ));
 
         injector
@@ -79,6 +92,23 @@ impl Injector {
 
     pub fn enqueue(&self, msg: QueuedMessage) -> Result<(), String> {
         self.tx.send(msg).map_err(|e| format!("queue closed: {}", e))
+    }
+
+    /// 取消单条消息的注入。如果该消息已经在 mpsc 队列里（尚未被 worker 消费），
+    /// worker 收到时会跳过。如果已经在注入中或已完成，此调用无副作用。
+    pub fn cancel(&self, id: &str) {
+        if let Ok(mut set) = self.cancelled.lock() {
+            set.insert(id.to_string());
+        }
+    }
+
+    /// 批量取消（清空历史场景）。给定 id 列表全部标记为取消。
+    pub fn cancel_many(&self, ids: &[String]) {
+        if let Ok(mut set) = self.cancelled.lock() {
+            for id in ids {
+                set.insert(id.clone());
+            }
+        }
     }
 }
 
@@ -88,8 +118,22 @@ async fn worker_loop<R: Runtime>(
     history: Arc<HistoryStore>,
     submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
     bridges: Arc<SidecarBridges>,
+    cancelled: Arc<Mutex<HashSet<String>>>,
 ) {
     while let Some(msg) = rx.recv().await {
+        // 用户在入队后、注入前清空 / 删除了该历史条目 → 跳过注入
+        let skip = cancelled
+            .lock()
+            .map(|mut set| set.remove(&msg.id))
+            .unwrap_or(false);
+        if skip {
+            tracing::info!("[queue] skip cancelled message {}", msg.id);
+            // history 可能已经被删了，这里 update_status 是 no-op；emit 给 UI 补一下
+            // 以防用户在队列消费延迟期间切到了其他 tab 又切回来。
+            history.update_status(&msg.id, MessageStatus::Failed, Some("已取消".into()));
+            emit_status(&app, &msg.id, "cancelled", Some("已取消".into()));
+            continue;
+        }
         // 按消息渠道选 bridge 发反馈命令
         let bridge = bridges.get(msg.channel);
         process_one(&app, &history, &submit_config, &bridge, msg).await;

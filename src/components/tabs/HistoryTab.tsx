@@ -120,9 +120,15 @@ export default function HistoryTab() {
         </div>
         {visible.length > 0 && (
           <button
-            onClick={clearHistoryDisplay}
+            onClick={async () => {
+              if (!window.confirm("清空全部历史消息？\n队列中尚未注入的对应条目也会被取消。")) {
+                return;
+              }
+              await invoke("clear_all_history").catch(() => {});
+              clearHistoryDisplay();
+            }}
             className="tb-btn-ghost flex items-center gap-1.5"
-            title="清空当前 UI 显示，历史文件保持不变"
+            title="删除所有历史，并取消队列中尚未注入的对应条目"
           >
             <Eraser size={12} strokeWidth={1.75} />
             清空

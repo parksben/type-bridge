@@ -155,8 +155,3 @@ export function sendImage(
     }),
   });
 }
-
-/** 手机端：辅助会话码反查 */
-export function lookupAuxCode(code: string): Promise<{ sessionId: string }> {
-  return call(`/api/aux-lookup?code=${encodeURIComponent(code)}`);
-}
