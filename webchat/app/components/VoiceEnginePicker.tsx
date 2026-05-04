@@ -1,96 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, Cpu, Download, Loader2, Mic, Shield, X } from "lucide-react";
-import {
-  installEngine,
-  markEngineInstalled,
-  type InstallProgress,
-} from "@/app/lib/wasm-speech";
+import { AlertCircle, ChevronDown, Cpu, Download, Loader2, Mic, Shield, X } from "lucide-react";
+import type { DownloadState } from "./VoiceButton";
 
-// 用户首次点击麦克风按钮时弹出。文件名保留 VoiceEnginePicker 是历史原因，
-// 实际上现在只有一个 "安装本地语音引擎" 功能，不再是多选项 picker。
+// 用户首次点击麦克风按钮时弹出。现在是纯展示组件 —— 下载状态和安装任务
+// 由 VoiceButton 管理，这个组件根据传入的 download state 渲染不同 stage。
 
 type Props = {
-  onInstalled: () => void;
+  download: DownloadState;
+  onConfirmInstall: () => void;
+  /** 收起到后台，保留下载任务 */
+  onMinimize: () => void;
+  /** 关闭对话框（未开始下载 / 出错时用） */
   onClose: () => void;
+  /** 出错态点重试时 */
+  onRetry: () => void;
 };
 
-type Stage = "intro" | "installing" | "error";
-
-// UI 里用 state 记住最近一次 progress 的关键数据（而不是用单次 InstallProgress event）
-// 这样非 "progress" 类型事件（retrying 等）不会把 percent / bytes 清零
-type ProgressState = {
-  percent: number;
-  loaded: number;
-  total: number;
-};
-
-export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
-  const [stage, setStage] = useState<Stage>("intro");
-  const [progressState, setProgressState] = useState<ProgressState>({
-    percent: 0,
-    loaded: 0,
-    total: 42 * 1024 * 1024,
-  });
-  const [retryInfo, setRetryInfo] = useState<{
-    attempt: number;
-    maxAttempts: number;
-    delaySecs: number;
-  } | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const cancelledRef = useRef(false);
-
-  useEffect(() => {
-    return () => {
-      cancelledRef.current = true;
-    };
-  }, []);
-
-  const handleProgress = useCallback((p: InstallProgress) => {
-    if (cancelledRef.current) return;
-    switch (p.kind) {
-      case "progress":
-        setProgressState({
-          percent: p.percent,
-          loaded: p.totalLoaded,
-          total: p.totalBytes,
-        });
-        setRetryInfo(null); // 收到真实进度即清掉 retry 态
-        break;
-      case "retrying":
-        setRetryInfo({
-          attempt: p.attempt,
-          maxAttempts: p.maxAttempts,
-          delaySecs: p.delaySecs,
-        });
-        break;
-      case "ready":
-        setProgressState((s) => ({ ...s, percent: 100 }));
-        setRetryInfo(null);
-        break;
-      // initiate / download / done 不改 UI state，保留 progress 显示
-      default:
-        break;
-    }
-  }, []);
-
-  const startInstall = useCallback(async () => {
-    setStage("installing");
-    setErrorMsg(null);
-    setProgressState({ percent: 0, loaded: 0, total: 42 * 1024 * 1024 });
-    setRetryInfo(null);
-    try {
-      await installEngine(handleProgress);
-      if (cancelledRef.current) return;
-      markEngineInstalled();
-      onInstalled();
-    } catch (e) {
-      if (cancelledRef.current) return;
-      setErrorMsg((e as Error).message || "下载失败，请检查网络后重试");
-      setStage("error");
-    }
-  }, [handleProgress, onInstalled]);
+export default function VoiceEnginePicker({
+  download,
+  onConfirmInstall,
+  onMinimize,
+  onClose,
+  onRetry,
+}: Props) {
+  const { stage } = download;
 
   return (
     <div
@@ -100,7 +34,10 @@ export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
         backdropFilter: "blur(4px)",
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && stage !== "installing") onClose();
+        if (e.target !== e.currentTarget) return;
+        // 点空白处：下载中则收起到后台；其他情况关闭
+        if (stage === "installing") onMinimize();
+        else onClose();
       }}
     >
       <div
@@ -114,26 +51,24 @@ export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
         }}
       >
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
-          <span className="w-10 h-1 rounded-full mx-auto" style={{ background: "var(--tb-border)" }} />
+          <span
+            className="w-10 h-1 rounded-full mx-auto"
+            style={{ background: "var(--tb-border)" }}
+          />
         </div>
 
-        {stage === "intro" && <IntroView onCancel={onClose} onConfirm={startInstall} />}
+        {stage === "intro" && (
+          <IntroView onCancel={onClose} onConfirm={onConfirmInstall} />
+        )}
 
         {stage === "installing" && (
-          <InstallingView
-            progressState={progressState}
-            retryInfo={retryInfo}
-            onCancel={() => {
-              cancelledRef.current = true;
-              onClose();
-            }}
-          />
+          <InstallingView download={download} onMinimize={onMinimize} />
         )}
 
         {stage === "error" && (
           <ErrorView
-            message={errorMsg || "下载失败"}
-            onRetry={startInstall}
+            message={download.errorMsg || "下载失败"}
+            onRetry={onRetry}
             onCancel={onClose}
           />
         )}
@@ -163,7 +98,7 @@ function IntroView({
             启用语音输入
           </p>
           <p className="text-[13px] text-[var(--tb-muted)] leading-relaxed">
-            语音功能需要先在手机浏览器里下载一个 <strong className="text-[var(--tb-text)]">~40MB</strong> 的本地语音引擎。
+            语音功能需要先在手机浏览器里下载一个 <strong className="text-[var(--tb-text)]">~35MB</strong> 的本地语音引擎。
             <br />
             下载后保存在浏览器，<span className="text-[var(--tb-text)]">下次打开直接用，不再下载</span>。
           </p>
@@ -195,9 +130,7 @@ function IntroView({
           </li>
           <li className="flex items-start gap-2">
             <Shield size={12} strokeWidth={2} className="mt-0.5 shrink-0" style={{ color: "var(--tb-accent)" }} />
-            <span>
-              音频不会离开你的手机，不上传到任何服务器。
-            </span>
+            <span>音频不会离开你的手机，不上传到任何服务器。</span>
           </li>
         </ul>
       </div>
@@ -230,15 +163,13 @@ function IntroView({
 }
 
 function InstallingView({
-  progressState,
-  retryInfo,
-  onCancel,
+  download,
+  onMinimize,
 }: {
-  progressState: ProgressState;
-  retryInfo: { attempt: number; maxAttempts: number; delaySecs: number } | null;
-  onCancel: () => void;
+  download: DownloadState;
+  onMinimize: () => void;
 }) {
-  const { percent, loaded, total } = progressState;
+  const { percent, loaded, total, retryInfo } = download;
   const isRetrying = retryInfo !== null;
   const pctRound = Math.floor(percent);
 
@@ -271,10 +202,9 @@ function InstallingView({
       <p className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-5">
         {isRetrying
           ? `${retryInfo.delaySecs}s 后重试（第 ${retryInfo.attempt}/${retryInfo.maxAttempts} 次）· 已下完的会跳过`
-          : "首次下载会慢一点，下次打开直接从浏览器缓存读取"}
+          : "可以收起到后台，下载完成会自动启用"}
       </p>
 
-      {/* 进度条 + 右侧百分比 */}
       <div className="flex items-center gap-3 mb-2">
         <div
           className="flex-1 h-2.5 rounded-full overflow-hidden"
@@ -294,30 +224,37 @@ function InstallingView({
         </div>
         <span
           className="text-[13px] font-mono font-medium tabular-nums shrink-0"
-          style={{ color: isRetrying ? "var(--tb-muted)" : "var(--tb-text)", minWidth: 36, textAlign: "right" }}
+          style={{
+            color: isRetrying ? "var(--tb-muted)" : "var(--tb-text)",
+            minWidth: 36,
+            textAlign: "right",
+          }}
         >
           {pctRound}%
         </span>
       </div>
 
-      <p
-        className="text-[12px] text-[var(--tb-muted)] font-mono mb-5 text-center"
-      >
+      <p className="text-[12px] text-[var(--tb-muted)] font-mono mb-5 text-center">
         {formatBytes(loaded)} / {formatBytes(total)}
       </p>
 
+      {/* 主按钮：后台下载（显眼，鼓励用户继续聊天） */}
       <button
         type="button"
-        onClick={onCancel}
-        className="w-full h-10 rounded-lg text-[13px]"
+        onClick={onMinimize}
+        className="w-full h-11 rounded-lg font-medium text-[14px] flex items-center justify-center gap-1.5 mb-2"
         style={{
-          background: "var(--tb-surface)",
-          border: "1px solid var(--tb-border)",
-          color: "var(--tb-muted)",
+          background: "color-mix(in srgb, var(--tb-accent) 10%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--tb-accent) 25%, transparent)",
+          color: "var(--tb-accent)",
         }}
       >
-        取消下载
+        <ChevronDown size={14} strokeWidth={2.2} />
+        后台下载（你可以先发文字 / 图片）
       </button>
+      <p className="text-[11px] text-[var(--tb-muted)] text-center">
+        下载中麦克风按钮会显示环形进度，完成后自动启用
+      </p>
     </div>
   );
 }
@@ -345,8 +282,11 @@ function ErrorView({
       <p className="text-[16px] font-semibold text-center mb-1 text-[var(--tb-text)]">
         下载失败
       </p>
-      <p className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-5">
-        {message}
+      <p
+        className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-5 break-all"
+        title={message}
+      >
+        {message.length > 120 ? message.slice(0, 120) + "…" : message}
       </p>
 
       <div className="flex gap-2">
