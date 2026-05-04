@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────
+   TypeBridge WebChat 主题（与旧 webchat/ 视觉语言一致）
+   品牌橙 #c2410c（Tailwind orange-700）；背景是米白色，偏温暖的纸感
+   ─────────────────────────────────────────────────────────────── */
+
+@theme {
+  --color-tb-bg: #fff8ed;
+  --color-tb-surface: #ffffff;
+  --color-tb-text: #1c1917;
+  --color-tb-muted: #78716c;
+  --color-tb-subtle: #a8a29e;
+  --color-tb-accent: #c2410c;
+  --color-tb-accent-soft: rgba(194, 65, 12, 0.1);
+  --color-tb-border: #e7e5e4;
+  --color-tb-danger: #b91c1c;
+  --color-tb-success: #16a34a;
+}
+
+/* CSS 变量镜像（组件里 style={{ background: "var(--tb-accent)" }} 用） */
+:root {
+  --tb-bg: #fff8ed;
+  --tb-surface: #ffffff;
+  --tb-text: #1c1917;
+  --tb-muted: #78716c;
+  --tb-subtle: #a8a29e;
+  --tb-accent: #c2410c;
+  --tb-accent-soft: rgba(194, 65, 12, 0.1);
+  --tb-border: #e7e5e4;
+  --tb-danger: #b91c1c;
+  --tb-success: #16a34a;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  background: var(--tb-bg);
+  color: var(--tb-text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+}
+
+/* iOS 输入框默认会被浏览器放大字体，统一 14px 防跳 */
+input,
+textarea,
+button {
+  font-family: inherit;
+}
+
+/* 禁止长按出现选择菜单（聊天气泡、按钮等，输入框内部仍允许选择） */
+body,
+[data-no-select] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-allow-select] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 隐藏 scrollbar（手机浏览器多数默认如此，桌面上显式隐藏） */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* safe-area insets */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-area-left {
+  padding-left: env(safe-area-inset-left);
+}
+.safe-area-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* OTP 输入框抖动反馈 */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* 通用淡入上移（底部弹出面板用） */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.22s ease-out;
+}
+
+/* 连接状态脉冲点 */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
