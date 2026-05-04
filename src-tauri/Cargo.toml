@@ -37,7 +37,7 @@ tokio-util = "0.7"
 axum = "0.7"
 socketioxide = { version = "0.15", features = ["state"] }
 tower = "0.5"
-tower-http = { version = "0.5", features = ["cors"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
 # LAN IP 枚举 / 网卡选择
 local-ip-address = "0.6"
 # macOS CoreWLAN FFI（获取当前 WiFi SSID）
