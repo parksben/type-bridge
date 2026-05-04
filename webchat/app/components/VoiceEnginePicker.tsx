@@ -49,22 +49,36 @@ export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
     }
   }, [onInstalled]);
 
-  // 进度文案
+  // 进度文案 + 条宽度计算（基于新的累计进度协议，无抖动）
   let progressText = "准备中…";
+  let progressSubText: string | null = null;
   let percent = 0;
+  let retrying = false;
   if (progress) {
-    if (progress.kind === "progress") {
-      percent = Math.max(0, Math.min(100, progress.percent));
-      progressText = `${progress.file || "模型文件"} · ${percent.toFixed(0)}%`;
-    } else if (progress.kind === "download") {
-      progressText = `开始下载 ${progress.file || "模型文件"}…`;
-    } else if (progress.kind === "done") {
-      progressText = `${progress.file || "文件"} 完成，继续…`;
-    } else if (progress.kind === "initiate") {
-      progressText = `初始化 ${progress.file || "运行时"}…`;
-    } else if (progress.kind === "ready") {
-      progressText = "加载完成，准备开始…";
-      percent = 100;
+    switch (progress.kind) {
+      case "progress":
+        percent = Math.max(0, Math.min(99, progress.percent));
+        progressText = `${formatBytes(progress.totalLoaded)} / ${formatBytes(progress.totalBytes)}`;
+        progressSubText = `${percent.toFixed(0)}% · ${progress.currentFile || ""}`;
+        break;
+      case "download":
+        progressText = `正在下载 ${progress.file || "模型文件"}…`;
+        break;
+      case "done":
+        progressText = `${progress.file || "文件"} 完成，继续…`;
+        break;
+      case "initiate":
+        progressText = `准备下载 ${progress.file || "模型"}…`;
+        break;
+      case "ready":
+        progressText = "加载完成";
+        percent = 100;
+        break;
+      case "retrying":
+        retrying = true;
+        progressText = `网络不稳，第 ${progress.attempt}/${progress.maxAttempts} 次重试…`;
+        progressSubText = `${progress.delaySecs}s 后自动重试 · 已下完的文件会跳过，不会重下`;
+        break;
     }
   }
 
@@ -98,7 +112,9 @@ export default function VoiceEnginePicker({ onInstalled, onClose }: Props) {
         {stage === "installing" && (
           <InstallingView
             progressText={progressText}
+            progressSubText={progressSubText}
             percent={percent}
+            retrying={retrying}
             onCancel={() => {
               cancelledRef.current = true;
               onClose();
@@ -207,11 +223,15 @@ function IntroView({
 
 function InstallingView({
   progressText,
+  progressSubText,
   percent,
+  retrying,
   onCancel,
 }: {
   progressText: string;
+  progressSubText: string | null;
   percent: number;
+  retrying: boolean;
   onCancel: () => void;
 }) {
   return (
@@ -219,18 +239,22 @@ function InstallingView({
       <div className="flex items-center justify-center mb-4 mt-2">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center"
-          style={{ background: "color-mix(in srgb, var(--tb-accent) 14%, transparent)" }}
+          style={{
+            background: retrying
+              ? "color-mix(in srgb, var(--tb-muted) 14%, transparent)"
+              : "color-mix(in srgb, var(--tb-accent) 14%, transparent)",
+          }}
         >
           <Loader2
             size={22}
             strokeWidth={2}
-            className="animate-spin text-[var(--tb-accent)]"
+            className={retrying ? "animate-spin text-[var(--tb-muted)]" : "animate-spin text-[var(--tb-accent)]"}
           />
         </div>
       </div>
 
       <p className="text-[16px] font-semibold text-center mb-1 text-[var(--tb-text)]">
-        正在下载语音引擎
+        {retrying ? "网络不稳，正在自动重试" : "正在下载语音引擎"}
       </p>
       <p className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-5">
         首次下载会慢一点，下次打开直接从浏览器缓存读取。
@@ -238,19 +262,35 @@ function InstallingView({
 
       <div
         className="h-2 rounded-full overflow-hidden mb-2"
-        style={{ background: "var(--tb-bg)", border: "1px solid var(--tb-border)" }}
+        style={{
+          background: "var(--tb-bg)",
+          border: "1px solid var(--tb-border)",
+        }}
       >
         <div
-          className="h-full transition-all duration-200"
+          className="h-full transition-all duration-300"
           style={{
             width: `${percent}%`,
-            background: "var(--tb-accent)",
+            background: retrying ? "var(--tb-muted)" : "var(--tb-accent)",
+            opacity: retrying ? 0.5 : 1,
           }}
         />
       </div>
-      <p className="text-[11px] text-[var(--tb-muted)] font-mono truncate mb-5" title={progressText}>
+      <p
+        className="text-[12px] text-[var(--tb-text)] font-mono truncate mb-0.5"
+        title={progressText}
+      >
         {progressText}
       </p>
+      {progressSubText && (
+        <p
+          className="text-[10.5px] text-[var(--tb-muted)] font-mono truncate mb-3"
+          title={progressSubText}
+        >
+          {progressSubText}
+        </p>
+      )}
+      <div className="mt-5" />
 
       <button
         type="button"
@@ -319,4 +359,12 @@ function ErrorView({
       </div>
     </div>
   );
+}
+
+function formatBytes(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0 B";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
