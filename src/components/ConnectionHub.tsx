@@ -1,5 +1,6 @@
 import { Info } from "lucide-react";
-import { useAppStore, CHANNEL_LABEL, type ChannelId } from "../store";
+import { useAppStore, type ChannelId } from "../store";
+import { useI18n } from "../i18n";
 import ConnectionTab from "./tabs/ConnectionTab";
 import DingTalkConnectionTab from "./tabs/DingTalkConnectionTab";
 import WeComConnectionTab from "./tabs/WeComConnectionTab";
@@ -24,6 +25,7 @@ const CHANNEL_BRAND_COLOR: Record<ChannelId, string> = {
 export default function ConnectionHub() {
   const { activeConnectionChannel, setActiveConnectionChannel, channelConnected } =
     useAppStore();
+  const { t } = useI18n();
 
   return (
     <div className="h-full flex flex-col">
@@ -37,7 +39,7 @@ export default function ConnectionHub() {
         }}
       >
         <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
-        <span>通过内置 WebChat 或 IM 应用机器人连接 TypeBridge 进行输入</span>
+        <span>{t("connectionHub.intro")}</span>
       </div>
 
       {/* 横向渠道子 tab */}
@@ -70,7 +72,7 @@ export default function ConnectionHub() {
                 <ChannelIcon channel={ch} size={13} />
               </span>
               <span className={active ? "font-medium" : ""}>
-                {CHANNEL_LABEL[ch]}
+                {t(`channel.${ch}` as any)}
               </span>
               {active && (
                 <span

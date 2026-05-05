@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ShieldAlert, ExternalLink } from "lucide-react";
+import { useI18n } from "../i18n";
 
 /// 辅助功能权限启动模态（blocking gate）
 ///
@@ -13,6 +14,7 @@ import { ShieldAlert, ExternalLink } from "lucide-react";
 /// 自动登记到列表里，用户到了设置页直接勾开关即可。
 export default function AccessibilityGate() {
   const [granted, setGranted] = useState<boolean | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     invoke<boolean>("check_accessibility")
@@ -69,10 +71,10 @@ export default function AccessibilityGate() {
           />
           <div className="flex-1">
             <div className="text-[15px] font-medium text-text leading-tight mb-1">
-              需要授予辅助功能权限
+              {t("accessibility.title")}
             </div>
             <div className="text-[12px] text-muted leading-relaxed">
-              TypeBridge 需要此权限才能把飞书消息粘贴到你的当前输入框。
+              {t("accessibility.body")}
             </div>
           </div>
         </div>
@@ -84,20 +86,20 @@ export default function AccessibilityGate() {
             color: "var(--muted)",
           }}
         >
-          点击下方按钮会直接打开系统设置页，TypeBridge 已在列表中——
-          <span className="text-text font-medium">只需勾上开关</span>即可。
+          {t("accessibility.hintBefore")}
+          <span className="text-text font-medium">{t("accessibility.hintToggle")}</span>{t("accessibility.hintAfter")}
         </div>
 
         <button
           onClick={openPrefs}
           className="tb-btn-primary inline-flex items-center justify-center gap-1.5"
         >
-          前往授权
+          {t("accessibility.cta")}
           <ExternalLink size={14} strokeWidth={2} />
         </button>
 
         <div className="text-[11px] text-muted text-center mt-3">
-          授权后本窗口会自动感知，无需手动刷新或重启应用
+          {t("accessibility.autoDetect")}
         </div>
       </div>
     </div>

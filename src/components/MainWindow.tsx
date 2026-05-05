@@ -3,10 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   useAppStore,
-  CHANNEL_LABEL,
   type ChannelId,
   type Settings,
 } from "../store";
+import { useI18n } from "../i18n";
 import SideBar from "./SideBar";
 import ErrorBoundary from "./ErrorBoundary";
 import ConnectionHub from "./ConnectionHub";
@@ -17,6 +17,7 @@ import AboutTab from "./tabs/AboutTab";
 
 export default function MainWindow() {
   const { activeTab, setChannelConnected, addLog } = useAppStore();
+  const { t } = useI18n();
 
   // 启动时拉一次 settings，把已配置凭据的渠道注册到 channelConnected
   // （初始都是 false）。这样 sidebar 底部能立刻显示对应渠道行，而不是"尚未配置"。
@@ -49,11 +50,13 @@ export default function MainWindow() {
       "typebridge://status",
       (e) => {
         setChannelConnected(e.payload.channel, e.payload.connected);
-        const label = CHANNEL_LABEL[e.payload.channel];
+        const label = t(`channel.${e.payload.channel}` as any);
         addLog({
           kind: "connect",
           channel: e.payload.channel,
-          text: e.payload.connected ? `${label}长连接已建立` : `${label}连接断开`,
+          text: e.payload.connected
+            ? t("log.connectEstablished", { label })
+            : t("log.connectDropped", { label }),
         });
       }
     );
@@ -64,8 +67,10 @@ export default function MainWindow() {
           kind: "inject",
           channel: e.payload.channel,
           text: e.payload.success
-            ? "输入成功"
-            : `输入失败: ${e.payload.reason ?? "未知原因"}`,
+            ? t("log.injectSuccess")
+            : t("log.injectFailed", {
+                reason: e.payload.reason ?? t("log.injectFailedUnknown"),
+              }),
         });
       }
     );
@@ -75,7 +80,10 @@ export default function MainWindow() {
         addLog({
           kind: "message",
           channel: e.payload.channel,
-          text: `@${e.payload.sender}: "${e.payload.text}"`,
+          text: t("log.messageReceived", {
+            sender: e.payload.sender,
+            text: e.payload.text,
+          }),
         });
       }
     );
@@ -99,27 +107,27 @@ export default function MainWindow() {
       <SideBar />
       <div className="flex-1 overflow-hidden">
         {activeTab === "connection" && (
-          <ErrorBoundary label="连接 TypeBridge tab">
+          <ErrorBoundary label={t("sidebar.connection")}>
             <ConnectionHub />
           </ErrorBoundary>
         )}
         {activeTab === "history" && (
-          <ErrorBoundary label="历史消息 tab">
+          <ErrorBoundary label={t("sidebar.history")}>
             <HistoryTab />
           </ErrorBoundary>
         )}
         {activeTab === "logs" && (
-          <ErrorBoundary label="系统日志 tab">
+          <ErrorBoundary label={t("sidebar.logs")}>
             <SystemLogTab />
           </ErrorBoundary>
         )}
         {activeTab === "input" && (
-          <ErrorBoundary label="输入设置 tab">
+          <ErrorBoundary label={t("sidebar.input")}>
             <InputSettingsTab />
           </ErrorBoundary>
         )}
         {activeTab === "about" && (
-          <ErrorBoundary label="关于 TypeBridge tab">
+          <ErrorBoundary label={t("sidebar.about")}>
             <AboutTab />
           </ErrorBoundary>
         )}

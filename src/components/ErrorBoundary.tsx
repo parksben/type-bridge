@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { t } from "../i18n";
 
 interface Props {
   children: ReactNode;
@@ -35,18 +36,20 @@ export default class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="h-full overflow-auto p-6 font-mono text-[12px] leading-relaxed">
         <div className="text-error font-medium mb-2">
-          {this.props.label ? `${this.props.label} 渲染错误` : "渲染错误"}
+          {this.props.label
+            ? t("errorBoundary.titleWith", { label: this.props.label })
+            : t("errorBoundary.title")}
         </div>
         <div className="text-text mb-3 break-all">{String(error.message || error)}</div>
         {error.stack && (
           <details open>
-            <summary className="cursor-pointer text-muted mb-2">Stack trace</summary>
+            <summary className="cursor-pointer text-muted mb-2">{t("errorBoundary.stack")}</summary>
             <pre className="whitespace-pre-wrap text-[11px] text-muted">{error.stack}</pre>
           </details>
         )}
         {info?.componentStack && (
           <details open className="mt-3">
-            <summary className="cursor-pointer text-muted mb-2">Component stack</summary>
+            <summary className="cursor-pointer text-muted mb-2">{t("errorBoundary.componentStack")}</summary>
             <pre className="whitespace-pre-wrap text-[11px] text-muted">{info.componentStack}</pre>
           </details>
         )}
@@ -55,7 +58,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           className="mt-4 tb-btn-ghost"
           style={{ border: "1px solid var(--border)" }}
         >
-          重置
+          {t("errorBoundary.reset")}
         </button>
       </div>
     );
