@@ -213,6 +213,21 @@ html.light-force .noise::before {
   }
 }
 
+@keyframes concept-typewriter {
+  0% {
+    width: 0;
+  }
+  45% {
+    width: 75px;
+  }
+  85% {
+    width: 75px;
+  }
+  100% {
+    width: 0;
+  }
+}
+
 /* ─────────────────────────────────────────────
    Utility classes referenced from components
    ───────────────────────────────────────────── */

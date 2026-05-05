@@ -134,13 +134,18 @@ export function Scenes() {
 
   const playing = inView && !hovered;
 
+  // 5s 自动轮播 — 仅在 playing（视口内 + 未 hover）时计时
+  useEffect(() => {
+    if (!playing) return;
+    const t = window.setTimeout(() => {
+      setIndex((i) => (i + 1) % SCENES.length);
+    }, AUTO_PLAY_MS);
+    return () => window.clearTimeout(t);
+  }, [index, playing]);
+
   function goTo(i: number) {
     if (i === index) return;
     setIndex(i);
-  }
-
-  function next() {
-    setIndex((i) => (i + 1) % SCENES.length);
   }
 
   const active = SCENES[index];
@@ -185,30 +190,14 @@ export function Scenes() {
           ))}
         </div>
 
-        {/* Card — top border acts as the rotation progress rail */}
+        {/* Card — no top progress rail (轮播完全靠右上角页码暗示) */}
         <div
           ref={cardRef}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/60 backdrop-blur-sm"
         >
-          {/* Progress rail at card top — acts as the top border */}
-          <div className="absolute inset-x-0 top-0 z-20 h-[3px] bg-[var(--border)]/60">
-            <span
-              key={`prog-${index}`}
-              className="block h-full bg-accent-gradient"
-              style={{
-                width: 0,
-                animation: `scene-progress ${AUTO_PLAY_MS}ms linear forwards`,
-                animationPlayState: playing ? "running" : "paused",
-              }}
-              onAnimationEnd={() => {
-                if (playing) next();
-              }}
-            />
-          </div>
-
-          <div className="relative p-6 pt-8 md:p-10 md:pt-12">
+          <div className="relative p-6 md:p-10">
             {/* Watermark icon */}
             <div
               aria-hidden
@@ -249,7 +238,7 @@ export function Scenes() {
                   </div>
                 </div>
 
-                {/* Page indicator — only element needed for progress signal now */}
+                {/* Page indicator — 唯一的进度信号 */}
                 <div className="shrink-0 font-mono text-xs tabular-nums tracking-widest">
                   <span className="text-[var(--text)] font-bold">
                     {String(index + 1).padStart(2, "0")}
@@ -289,33 +278,10 @@ export function Scenes() {
                   {active.tip}
                 </p>
               </div>
-
-              {/* Theme repeat — 主题短语复诵 */}
-              <div className="mt-8 flex items-center gap-3 border-t border-[var(--border)] pt-6">
-                <span
-                  aria-hidden
-                  className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent"
-                />
-                <p className="text-sm font-semibold tracking-tight text-[var(--text)]/90">
-                  <span className="text-accent-gradient">{active.theme}</span>
-                </p>
-                <span
-                  aria-hidden
-                  className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent"
-                />
-              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Inline keyframe — only required by this component */}
-      <style>{`
-        @keyframes scene-progress {
-          from { width: 0%; }
-          to { width: 100%; }
-        }
-      `}</style>
     </section>
   );
 }
