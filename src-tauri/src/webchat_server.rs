@@ -120,12 +120,17 @@ impl WebChatServer {
 
         // 如果 SPA 目录不存在（dev 未构建前端等），给一个占位 fallback，避免
         // server 完全没响应
+        //
+        // ⚠️ axum 0.7 的 `.layer()` 只作用于**调用它之前**已注册的 routes/fallback。
+        // 必须先 `.fallback_service(serve_dir)` 再 `.layer(io_layer)`，否则
+        // `/socket.io/*` 请求会落到 fallback 被 ServeDir 404 吃掉，socketioxide
+        // 永远收不到手机端握手 → 前端报「握手超时」。详见 TECH_DESIGN §35.9.1
         let router = axum::Router::new()
             .route("/healthz", get(healthz))
             .route("/__placeholder", get(serve_placeholder))
+            .fallback_service(serve_dir)
             .layer(io_layer)
-            .layer(tower_http::cors::CorsLayer::very_permissive())
-            .fallback_service(serve_dir);
+            .layer(tower_http::cors::CorsLayer::very_permissive());
 
         // 端口递增 fallback
         let (listener, port) = bind_with_fallback(lan_ip).await?;
