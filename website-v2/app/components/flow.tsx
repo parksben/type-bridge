@@ -207,36 +207,14 @@ function Connector({
       style={{ transitionDelay: active ? `${delayMs}ms` : "0ms" }}
       aria-hidden
     >
+      {/* 纯静态：细线 + 箭头，只表达方向，不再有 traveling-glow */}
       <div
-        className={`relative overflow-hidden rounded-full bg-[var(--border)] ${
+        className={`rounded-full bg-[var(--border-strong)] ${
           isH ? "h-[2px] w-10" : "h-8 w-[2px]"
         }`}
-      >
-        <span
-          className="absolute bg-accent-gradient"
-          style={
-            isH
-              ? {
-                  top: 0,
-                  bottom: 0,
-                  width: "40%",
-                  left: 0,
-                  animation: "flow-travel-h 2.2s linear infinite",
-                  borderRadius: "9999px",
-                }
-              : {
-                  left: 0,
-                  right: 0,
-                  height: "40%",
-                  top: 0,
-                  animation: "flow-travel-v 2.2s linear infinite",
-                  borderRadius: "9999px",
-                }
-          }
-        />
-      </div>
+      />
       <ArrowRight
-        size={isH ? 14 : 14}
+        size={14}
         strokeWidth={2}
         className={`ml-1 text-[var(--accent)] ${isH ? "" : "rotate-90"}`}
       />
@@ -271,11 +249,11 @@ export function Flow() {
         {/* Header — no eyebrow, no trailing period */}
         <div className="mb-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-            马上把<span className="text-accent-gradient">手机</span>
+            如何把<span className="text-accent-gradient">手机</span>
             变成你桌面的<span className="text-accent-gradient">键盘</span>
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-[var(--muted)]">
-            四步上手，两条连接路径可任选其一；消息发出后桌面当前聚焦的输入框自动落字
+            四步操作，打通手机到电脑的输入连接
           </p>
         </div>
 
@@ -324,18 +302,6 @@ export function Flow() {
           <StepCard step={FINAL_STEP} active delayMs={0} highlight />
         </div>
       </div>
-
-      {/* Keyframes scoped inline to this section */}
-      <style>{`
-        @keyframes flow-travel-h {
-          0%   { transform: translateX(-120%); }
-          100% { transform: translateX(340%); }
-        }
-        @keyframes flow-travel-v {
-          0%   { transform: translateY(-120%); }
-          100% { transform: translateY(340%); }
-        }
-      `}</style>
     </section>
   );
 }
