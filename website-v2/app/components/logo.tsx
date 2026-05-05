@@ -48,26 +48,31 @@ export function BrandWordmark({
   showMark = true,
   markSize = 22,
   gradient = false,
+  textClassName = "text-[17px] font-bold tracking-tight",
+  gapClassName = "gap-2",
+  gradientId,
 }: {
   className?: string;
   showMark?: boolean;
   markSize?: number;
   gradient?: boolean;
+  textClassName?: string;
+  gapClassName?: string;
+  gradientId?: string;
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 select-none ${className}`}
+      className={`inline-flex items-center ${gapClassName} select-none ${className}`}
     >
       {showMark && (
         <BrandMark
           size={markSize}
           gradient={gradient}
+          gradientId={gradientId}
           className={gradient ? "" : "text-[var(--accent)]"}
         />
       )}
-      <span className="text-[17px] font-bold tracking-tight text-[var(--text)]">
-        TypeBridge
-      </span>
+      <span className={`${textClassName} text-[var(--text)]`}>TypeBridge</span>
     </span>
   );
 }
