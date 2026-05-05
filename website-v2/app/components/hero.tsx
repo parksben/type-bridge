@@ -354,7 +354,7 @@ export function Hero() {
             href="#flow"
             className="group inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 px-6 py-3 text-sm font-medium text-[var(--text)] backdrop-blur-sm transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)]"
           >
-            怎么用
+            如何使用
             <ArrowDown
               size={15}
               strokeWidth={2}
