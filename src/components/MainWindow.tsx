@@ -31,6 +31,18 @@ export default function MainWindow() {
     }).catch(() => {});
   }, []);
 
+  // WebChat 是零配置渠道，"连接"语义是 phase === "bound"（至少一台手机绑定）。
+  // 初始拉一次 snapshot 同步当前状态；后续由 typebridge://webchat-session-update
+  // 事件实时维护（下面 un4 订阅）。把 webchat 的 key 初始化进 channelConnected
+  // 后，ConnectionHub 横向子 tab 的小绿点才会正确亮起。
+  useEffect(() => {
+    invoke<{ phase: { kind: string } }>("webchat_snapshot")
+      .then((snap) => {
+        setChannelConnected("webchat", snap?.phase?.kind === "bound");
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const un1 = listen<{ channel: ChannelId; connected: boolean }>(
       "typebridge://status",
@@ -66,10 +78,18 @@ export default function MainWindow() {
         });
       }
     );
+    // WebChat phase 变化实时映射到 channelConnected.webchat（bound → true，其余 → false）
+    const un4 = listen<{ phase: { kind: string } }>(
+      "typebridge://webchat-session-update",
+      (e) => {
+        setChannelConnected("webchat", e.payload?.phase?.kind === "bound");
+      }
+    );
     return () => {
       un1.then((f) => f());
       un2.then((f) => f());
       un3.then((f) => f());
+      un4.then((f) => f());
     };
   }, []);
 
