@@ -13,6 +13,7 @@ import ConnectionHub from "./ConnectionHub";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
 import InputSettingsTab from "./tabs/InputSettingsTab";
+import AboutTab from "./tabs/AboutTab";
 
 export default function MainWindow() {
   const { activeTab, setChannelConnected, addLog } = useAppStore();
@@ -115,6 +116,11 @@ export default function MainWindow() {
         {activeTab === "input" && (
           <ErrorBoundary label="输入设置 tab">
             <InputSettingsTab />
+          </ErrorBoundary>
+        )}
+        {activeTab === "about" && (
+          <ErrorBoundary label="关于 TypeBridge tab">
+            <AboutTab />
           </ErrorBoundary>
         )}
       </div>

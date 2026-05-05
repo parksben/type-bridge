@@ -53,7 +53,8 @@ export type TabId =
   | "connection"  // 连接 TypeBridge（内容页再用横向子 tab 切渠道）
   | "input"       // 输入设置
   | "history"     // 历史消息
-  | "logs";       // 系统日志
+  | "logs"        // 系统日志
+  | "about";      // 关于 TypeBridge（v0.7.x 起）
 
 export interface SubmitKey {
   key: string;      // KeyboardEvent.code (e.g. "Enter", "KeyA", "Space")

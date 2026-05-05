@@ -1,4 +1,4 @@
-import { History, Plug, Terminal, Settings2, LucideIcon } from "lucide-react";
+import { History, Info, Plug, Terminal, Settings2, LucideIcon } from "lucide-react";
 import { useAppStore, TabId } from "../store";
 
 interface TabDef {
@@ -7,14 +7,14 @@ interface TabDef {
   icon: LucideIcon;
 }
 
-// 顶部 3 个主 tab。系统日志不在这里 — 它作为底部固定入口独立渲染（v0.7+）。
+// 主 tab 列表（v0.7.x 起系统日志回归常规 tab，不再单独占底部 slot）
 const TABS: TabDef[] = [
   { id: "connection", label: "连接 TypeBridge", icon: Plug },
   { id: "input", label: "输入设置", icon: Settings2 },
   { id: "history", label: "历史消息", icon: History },
+  { id: "logs", label: "系统日志", icon: Terminal },
+  { id: "about", label: "关于 TypeBridge", icon: Info },
 ];
-
-const LOG_TAB: TabDef = { id: "logs", label: "系统日志", icon: Terminal };
 
 export default function SideBar() {
   const { activeTab, setActiveTab } = useAppStore();
@@ -32,19 +32,6 @@ export default function SideBar() {
           <TabButton key={t.id} tab={t} active={t.id === activeTab} onClick={() => setActiveTab(t.id)} />
         ))}
       </nav>
-
-      {/* 底部固定：系统日志入口。连接状态不在底部冗余展示 —
-          已经由「连接 TypeBridge」tab 里的横向子 tab 承担。 */}
-      <div
-        className="mt-auto px-2 py-3"
-        style={{ borderTop: "1px solid var(--border)" }}
-      >
-        <TabButton
-          tab={LOG_TAB}
-          active={activeTab === LOG_TAB.id}
-          onClick={() => setActiveTab(LOG_TAB.id)}
-        />
-      </div>
     </div>
   );
 }

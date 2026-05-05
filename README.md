@@ -105,6 +105,16 @@ npm run dev        # Next.js 开发模式，http://localhost:3000
 
 官网是独立的 Next.js 项目，修改 `website/**/*.tsx` 会自动热更新。部署到 Netlify 后访问 `typebridge.parksben.xyz`。
 
+### 新版单页落地页 (`website-v2/`)
+
+```bash
+cd website-v2
+npm install        # 首次需要
+npm run dev        # Next.js 开发模式，http://localhost:3000
+```
+
+`website-v2/` 是**单页滚动营销站**，与旧版多页文档站 `website/` 并存。定位差异见 [docs/REQUIREMENTS.md §9.8](docs/REQUIREMENTS.md)。当前仍以旧站为线上官网，新站跑通后再切换。
+
 ### WebChat 移动端 SPA (`webchat-local/`)
 
 ```bash
@@ -123,9 +133,11 @@ npm run dev        # Vite 开发模式，http://localhost:5173
 - **不部署到任何公网**，完全本地化运行
 
 **开发模式**（`npm run tauri dev`）：
-- 先手工跑一次 `cd webchat-local && npm run build` 生成 `dist/`
-- 桌面 App 启动时，`resolve_spa_dir` 会优先查 Tauri resource 路径，找不到会 fallback 到 `<repo>/webchat-local/dist`
-- 真机联调：手机和电脑同一 WiFi，扫桌面 App 显示的 QR 码即可（URL 形如 `http://192.168.x.x:8723/?s=ses_xxx`）
+- 根 `package.json` 的 `dev` 脚本通过 `concurrently` 同时拉起两个 Vite：桌面 (1420) + WebChat SPA (5173，`host: 0.0.0.0` LAN 可达)
+- WebChat 桌面 server 在 `cfg!(debug_assertions)` 下会把所有非 `/socket.io/*` 的 HTTP 请求 **302 重定向到 5173**（同时把 `apiPort=<server_port>` 追加到 query），手机端从 Vite dev server 加载页面 → **HMR 原生工作，改源码无需手动刷新 / 重新 `npm run build`**
+- Socket.IO 仍然连桌面 server（跨源；CORS 已 permissive），消息链路正常
+- 真机联调：手机和电脑同一 WiFi，扫桌面 App 显示的 QR 码即可（URL 形如 `http://192.168.x.x:8723/?s=ses_xxx`，浏览器会被 302 到 5173）
+- 生产 build (`npm run tauri build`)：上述 dev redirect 不生效，桌面 server 直接 `ServeDir` 加载 `webchat-local/dist/`
 
 ---
 
@@ -220,7 +232,7 @@ type-bridge/
 ├── dingtalk-bridge/              钉钉 Go sidecar 源码
 ├── wecom-bridge/                 企微 Go sidecar 源码（手写 WSS + AES 图片解密）
 │
-├── website/                      产品官网 (Next.js)
+├── website/                      产品官网 (Next.js，多页文档站，当前线上)
 │   ├── netlify.toml              Netlify 零手动部署配置
 │   ├── app/                      Next.js 15 App Router
 │   │   ├── page.tsx              首页 (Hero / 工作原理 / 特性 / 接入教程 / 下载)
@@ -231,6 +243,14 @@ type-bridge/
 │   │   │   ├── dingtalk/page.tsx 钉钉企业内部应用接入教程（自维护）
 │   │   │   └── wecom/page.tsx    企业微信自建应用接入教程（自维护）
 │   │   └── download/[arch]       GitHub Release .dmg 代理转发
+│   └── package.json
+│
+├── website-v2/                   新版单页营销站 (Next.js，与 website/ 并存)
+│   ├── app/
+│   │   ├── page.tsx              单页拼装 (Hero / 使用场景 / 流程 / 下载)
+│   │   ├── components/           TopNav / Hero / Scenes / Flow / Download / Footer
+│   │   └── download/[arch]       GitHub Release .dmg 代理转发（同 website/）
+│   ├── netlify.toml
 │   └── package.json
 │
 ├── webchat-local/                WebChat 移动端 SPA (Vite + React + TS)
