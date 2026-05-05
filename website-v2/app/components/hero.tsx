@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDown, Download, Globe, Mic } from "lucide-react";
+import { useT, renderMarked } from "../lib/i18n";
 import { BrandMark, BrandWordmark } from "./logo";
 
 // ────────────────────────────────────────────
@@ -67,34 +68,36 @@ type ChannelNode = {
   Mark: (props: { size?: number }) => React.ReactNode;
 };
 
-const CHANNELS: ChannelNode[] = [
-  {
-    label: "语音输入法",
-    color: "#c084fc",
-    delayMs: 0,
-    Mark: ({ size = 20 }) => (
-      <Mic size={size} strokeWidth={1.8} style={{ color: "#c084fc" }} />
-    ),
-  },
-  {
-    label: "飞书",
-    color: "#3370FF",
-    delayMs: 180,
-    Mark: ({ size = 22 }) => <FeishuMark size={size} />,
-  },
-  {
-    label: "钉钉",
-    color: "#0089FF",
-    delayMs: 360,
-    Mark: ({ size = 22 }) => <DingTalkMark size={size} />,
-  },
-  {
-    label: "企微",
-    color: "#06BA6A",
-    delayMs: 540,
-    Mark: ({ size = 22 }) => <WecomMark size={size} />,
-  },
-];
+function makeChannels(t: (key: string) => string): ChannelNode[] {
+  return [
+    {
+      label: t("channel.voice"),
+      color: "#c084fc",
+      delayMs: 0,
+      Mark: ({ size = 20 }) => (
+        <Mic size={size} strokeWidth={1.8} style={{ color: "#c084fc" }} />
+      ),
+    },
+    {
+      label: t("channel.feishu"),
+      color: "#3370FF",
+      delayMs: 180,
+      Mark: ({ size = 22 }) => <FeishuMark size={size} />,
+    },
+    {
+      label: t("channel.dingtalk"),
+      color: "#0089FF",
+      delayMs: 360,
+      Mark: ({ size = 22 }) => <DingTalkMark size={size} />,
+    },
+    {
+      label: t("channel.wecom"),
+      color: "#06BA6A",
+      delayMs: 540,
+      Mark: ({ size = 22 }) => <WecomMark size={size} />,
+    },
+  ];
+}
 
 // Geometry — used by both badges and SVG arcs so they stay aligned.
 // All values are percentages of the banner (matches SVG viewBox 0 0 100 100 + preserveAspectRatio="none").
@@ -176,7 +179,7 @@ function BridgeNode() {
 }
 
 function DesktopFrame() {
-  // 简化：窗口内直接展示文本输入效果，无 input 框样式。
+  const { t } = useT();
   return (
     <div
       className="absolute right-3 top-1/2 w-[200px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.4)] backdrop-blur-sm sm:right-4 sm:w-[230px]"
@@ -190,7 +193,7 @@ function DesktopFrame() {
 
       <div className="flex h-[92px] items-center px-4">
         <span className="font-mono text-[12px] leading-none text-[var(--text)]">
-          手机即键盘
+          {t("hero.desktopText")}
         </span>
         <span className="ml-0.5 inline-block h-3.5 w-[2px] rounded-full bg-[var(--accent)]" />
       </div>
@@ -199,6 +202,8 @@ function DesktopFrame() {
 }
 
 function ConceptBanner() {
+  const { t } = useT();
+  const CHANNELS = makeChannels(t);
   const total = CHANNELS.length;
 
   return (
@@ -290,6 +295,8 @@ function ConceptBanner() {
 // ────────────────────────────────────────────
 
 export function Hero() {
+  const { t } = useT();
+
   return (
     <section
       id="hero"
@@ -306,7 +313,7 @@ export function Hero() {
       />
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
-        {/* Giant brand mark + wordmark — bigger so it balances the headline below */}
+        {/* Giant brand mark + wordmark */}
         <div className="animate-fade-up animate-breathe-glow mx-auto mb-10 inline-flex items-center">
           <BrandWordmark
             gradient
@@ -317,25 +324,20 @@ export function Hero() {
           />
         </div>
 
-        {/* Main headline — slightly toned down so it doesn't dwarf the brand wordmark */}
+        {/* Main headline */}
         <h1
           className="animate-fade-up text-[40px] font-extrabold leading-[1.05] tracking-tight md:text-[72px] lg:text-[84px]"
           style={{ animationDelay: "180ms" }}
         >
-          手机
-          <span className="text-accent-gradient">即键盘</span>
+          {t("hero.headline")}
         </h1>
 
-        {/* Subtitle — punchier, action-oriented */}
+        {/* Subtitle */}
         <p
           className="animate-fade-up mx-auto mt-6 max-w-2xl text-balance text-base text-[var(--muted)] md:text-lg"
           style={{ animationDelay: "260ms" }}
         >
-          把你的
-          <strong className="font-semibold text-[var(--text)]">手机</strong>
-          变成电脑的
-          <strong className="font-semibold text-[var(--text)]">无线键盘</strong>
-          。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。
+          {renderMarked(t("hero.subtitle"), "hero-sub")}
         </p>
 
         {/* CTA */}
@@ -348,13 +350,13 @@ export function Hero() {
             className="group inline-flex items-center gap-2 rounded-xl bg-accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_32px_-8px_var(--accent-glow)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
           >
             <Download size={16} strokeWidth={2.2} />
-            免费下载
+            {t("hero.ctaDownload")}
           </a>
           <a
             href="#flow"
             className="group inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 px-6 py-3 text-sm font-medium text-[var(--text)] backdrop-blur-sm transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)]"
           >
-            如何使用
+            {t("hero.ctaHowto")}
             <ArrowDown
               size={15}
               strokeWidth={2}

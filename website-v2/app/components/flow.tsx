@@ -10,14 +10,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useT, renderMarked } from "../lib/i18n";
 
 // ────────────────────────────────────────────
 // Flow — 4-step horizontal process diagram
 //
-//   01 下载 ──→ 02 打开 ──→ 03 连接（任选其一：扫码 WebChat / 连接 IM 机器人）──→ 04 桌面自动落字
-//
-// Desktop: horizontal flex with animated "traveling-glow" connectors between cards.
-// Mobile: vertical stack with down-chevron dividers.
+//   01 Download ──→ 02 Launch ──→ 03 Connect (pick one) ──→ 04 Type on Desktop
 // ────────────────────────────────────────────
 
 type Step = {
@@ -27,51 +25,12 @@ type Step = {
   subtitle: string;
 };
 
-const LINEAR_STEPS: Step[] = [
-  {
-    label: "01",
-    icon: Download,
-    title: "下载 App",
-    subtitle: "下载 macOS 版，免费安装",
-  },
-  {
-    label: "02",
-    icon: Play,
-    title: "打开 App",
-    subtitle: "按提示开启系统授权",
-  },
-];
-
-type Choice = {
+type ChoiceDef = {
   icon: LucideIcon;
   label: string;
   desc: string;
   bg: string;
   accent: string;
-};
-
-const CHOICES: Choice[] = [
-  {
-    icon: QrCode,
-    label: "扫码 WebChat",
-    desc: "同 WiFi 手机扫码即连",
-    bg: "rgba(192, 132, 252, 0.12)",
-    accent: "#c084fc",
-  },
-  {
-    icon: MessageSquareText,
-    label: "连接 IM 机器人",
-    desc: "飞书 / 钉钉 / 企微自建应用",
-    bg: "rgba(51, 112, 255, 0.12)",
-    accent: "#3370ff",
-  },
-];
-
-const FINAL_STEP: Step = {
-  label: "04",
-  icon: Keyboard,
-  title: "桌面落字",
-  subtitle: "文字、图片、语音转写，直达输入框",
 };
 
 // ────────────────────────────────────────────
@@ -130,10 +89,14 @@ function StepCard({
 }
 
 function ChoiceCard({
+  choices,
+  pickOneLabel,
   delayMs,
   active,
   className = "",
 }: {
+  choices: ChoiceDef[];
+  pickOneLabel: string;
   delayMs: number;
   active: boolean;
   className?: string;
@@ -150,12 +113,12 @@ function ChoiceCard({
           STEP 03
         </span>
         <span className="inline-flex items-center rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)]">
-          任选其一
+          {pickOneLabel}
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {CHOICES.map((c) => {
+        {choices.map((c) => {
           const CIcon = c.icon;
           return (
             <div
@@ -227,6 +190,7 @@ function Connector({
 // ────────────────────────────────────────────
 
 export function Flow() {
+  const { t } = useT();
   const [active, setActive] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -243,40 +207,67 @@ export function Flow() {
     return () => io.disconnect();
   }, []);
 
+  const LINEAR_STEPS: Step[] = [
+    {
+      label: "01",
+      icon: Download,
+      title: t("flow.step01.title"),
+      subtitle: t("flow.step01.subtitle"),
+    },
+    {
+      label: "02",
+      icon: Play,
+      title: t("flow.step02.title"),
+      subtitle: t("flow.step02.subtitle"),
+    },
+  ];
+
+  const CHOICES: ChoiceDef[] = [
+    {
+      icon: QrCode,
+      label: t("flow.choice.webchat.label"),
+      desc: t("flow.choice.webchat.desc"),
+      bg: "rgba(192, 132, 252, 0.12)",
+      accent: "#c084fc",
+    },
+    {
+      icon: MessageSquareText,
+      label: t("flow.choice.im.label"),
+      desc: t("flow.choice.im.desc"),
+      bg: "rgba(51, 112, 255, 0.12)",
+      accent: "#3370ff",
+    },
+  ];
+
+  const FINAL_STEP: Step = {
+    label: "04",
+    icon: Keyboard,
+    title: t("flow.step04.title"),
+    subtitle: t("flow.step04.subtitle"),
+  };
+
   return (
     <section id="flow" className="relative px-6 py-24 md:py-32">
       <div className="mx-auto max-w-6xl">
-        {/* Header — no eyebrow, no trailing period */}
+        {/* Header */}
         <div className="mb-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-            把<span className="text-accent-gradient">手机</span>
-            变成<span className="text-accent-gradient">键盘</span>，只需四步
+            {renderMarked(t("flow.heading"), "flow-h")}
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-[var(--muted)]">
-            下载、打开、连接、落字——两分钟搞定
+            {t("flow.subheading")}
           </p>
         </div>
 
         {/* Desktop flow */}
-        <div
-          ref={ref}
-          className="hidden items-stretch gap-0 md:flex"
-        >
-          <StepCard
-            step={LINEAR_STEPS[0]}
-            active={active}
-            delayMs={0}
-            className="w-0 flex-1"
-          />
+        <div ref={ref} className="hidden items-stretch gap-0 md:flex">
+          <StepCard step={LINEAR_STEPS[0]} active={active} delayMs={0} className="w-0 flex-1" />
           <Connector active={active} delayMs={120} />
-          <StepCard
-            step={LINEAR_STEPS[1]}
-            active={active}
-            delayMs={200}
-            className="w-0 flex-1"
-          />
+          <StepCard step={LINEAR_STEPS[1]} active={active} delayMs={200} className="w-0 flex-1" />
           <Connector active={active} delayMs={320} />
           <ChoiceCard
+            choices={CHOICES}
+            pickOneLabel={t("flow.step03.pickOne")}
             active={active}
             delayMs={400}
             className="w-0 flex-[1.8]"
@@ -297,7 +288,7 @@ export function Flow() {
           <Connector active delayMs={0} orientation="vertical" />
           <StepCard step={LINEAR_STEPS[1]} active delayMs={0} />
           <Connector active delayMs={0} orientation="vertical" />
-          <ChoiceCard active delayMs={0} />
+          <ChoiceCard choices={CHOICES} pickOneLabel={t("flow.step03.pickOne")} active delayMs={0} />
           <Connector active delayMs={0} orientation="vertical" />
           <StepCard step={FINAL_STEP} active delayMs={0} highlight />
         </div>

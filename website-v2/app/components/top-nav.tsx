@@ -2,8 +2,10 @@
 
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useT } from "../lib/i18n";
 import { BrandWordmark } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
+import { LangToggle } from "./lang-toggle";
 
 /** GitHub mark — lucide-react v1 doesn't ship brand logos, so inline SVG. */
 function GithubMark({ size = 16 }: { size?: number }) {
@@ -20,19 +22,18 @@ function GithubMark({ size = 16 }: { size?: number }) {
   );
 }
 
-type NavItem = { id: string; label: string };
-
-const NAV_ITEMS: NavItem[] = [
-  { id: "hero", label: "首页" },
-  { id: "scenes", label: "适用场景" },
-  { id: "flow", label: "使用流程" },
-  { id: "download", label: "下载安装" },
-];
-
 export function TopNav() {
+  const { t } = useT();
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string>("hero");
   const [open, setOpen] = useState(false);
+
+  const NAV_ITEMS = [
+    { id: "hero", label: t("nav.home") },
+    { id: "scenes", label: t("nav.scenes") },
+    { id: "flow", label: t("nav.flow") },
+    { id: "download", label: t("nav.download") },
+  ];
 
   // Scroll state for frosted-blur bg switch
   useEffect(() => {
@@ -52,7 +53,6 @@ export function TopNav() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Consider only entries currently intersecting; pick the one closest to the top
         const visible = entries.filter((e) => e.isIntersecting);
         if (!visible.length) return;
         const top = visible.reduce((best, e) =>
@@ -61,7 +61,6 @@ export function TopNav() {
         setActive(top.target.id);
       },
       {
-        // Trigger when the section crosses the nav line (~72px from top)
         rootMargin: "-72px 0px -60% 0px",
         threshold: [0, 0.25, 0.5],
       }
@@ -69,7 +68,7 @@ export function TopNav() {
 
     sections.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [NAV_ITEMS]);
 
   // Close mobile menu when clicking a link
   function handleNavClick() {
@@ -89,11 +88,11 @@ export function TopNav() {
         <a
           href="#hero"
           className="group inline-flex items-center"
-          aria-label="TypeBridge — 手机即键盘"
+          aria-label={t("nav.brandAria")}
         >
           <BrandWordmark markSize={20} gradient />
           <span className="ml-3 hidden text-xs font-medium text-[var(--subtle)] transition-colors group-hover:text-[var(--muted)] md:inline">
-            手机即键盘
+            {t("nav.tagline")}
           </span>
         </a>
 
@@ -130,15 +129,16 @@ export function TopNav() {
             href="https://github.com/parksben/type-bridge"
             target="_blank"
             rel="noreferrer noopener"
-            aria-label="查看 TypeBridge GitHub 仓库"
+            aria-label={t("nav.githubAria")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)] hover:text-[var(--text)]"
           >
             <GithubMark size={15} />
           </a>
+          <LangToggle />
           <ThemeToggle />
           <button
             type="button"
-            aria-label={open ? "关闭菜单" : "打开菜单"}
+            aria-label={open ? "Close menu" : "Open menu"}
             onClick={() => setOpen((v) => !v)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 text-[var(--muted)] transition-colors hover:text-[var(--text)] md:hidden"
           >

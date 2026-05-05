@@ -295,9 +295,11 @@ export const ZH = {
     injectFailedUnknown: "未知原因",
     messageReceived: "@{sender}: \"{text}\"",
   },
-} as const;
+};
 
-export const EN: typeof ZH = {
+export type Dict = typeof ZH;
+
+export const EN: Dict = {
   channel: {
     webchat: "WebChat",
     feishu: "Feishu",
