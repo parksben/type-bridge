@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 
-function isEnglishRequest(): boolean {
+async function isEnglishRequest(): Promise<boolean> {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const acceptLang = headersList.get("accept-language") || "";
     return acceptLang.trim().toLowerCase().startsWith("en");
   } catch {
