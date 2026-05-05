@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowDown, Download, Globe, Mic } from "lucide-react";
+import { ArrowDown, Download, Globe } from "lucide-react";
 import { useT, renderMarked } from "../lib/i18n";
 import { BrandMark, BrandWordmark } from "./logo";
 
 // ────────────────────────────────────────────
-// Channel icons — match the ones used in the desktop app
-// (see src/components/ChannelIcon.tsx + src/assets/icons/)
+// Icon marks — reused in both the app-icon row (left of phone)
+// and inside the phone chatbot screen.
 // ────────────────────────────────────────────
 
 /** 飞书 — 官方 favicon PNG，原色多色保留 */
@@ -23,7 +23,7 @@ function FeishuMark({ size = 22 }: { size?: number }) {
   );
 }
 
-/** 钉钉 — ant-design icons 单色 SVG（app/assets/icons/dingtalk.svg） */
+/** 钉钉 — ant-design icons 单色 SVG */
 function DingTalkMark({ size = 22 }: { size?: number }) {
   return (
     <svg
@@ -39,7 +39,7 @@ function DingTalkMark({ size = 22 }: { size?: number }) {
   );
 }
 
-/** 企微 — tdesign icons 单色 SVG（app/assets/icons/wecom.svg） */
+/** 企微 — tdesign icons 单色 SVG */
 function WecomMark({ size = 22 }: { size?: number }) {
   return (
     <svg
@@ -56,156 +56,201 @@ function WecomMark({ size = 22 }: { size?: number }) {
 }
 
 // ────────────────────────────────────────────
-// Concept banner — 4 inputs → bridge node → desktop
-// All x/y positions expressed in percentages of the banner box so
-// the SVG arc endpoints align exactly with the HTML badges.
+// Concept banner layout geometry
+// Phone (left, 4 app icons outside-left) → bridge (center) → monitor (right)
+// Two horizontal lines connecting the three nodes.
 // ────────────────────────────────────────────
 
-type ChannelNode = {
+type AppIcon = {
   label: string;
   color: string;
-  delayMs: number;
   Mark: (props: { size?: number }) => React.ReactNode;
 };
 
-function makeChannels(t: (key: string) => string): ChannelNode[] {
+function makeAppIcons(t: (key: string) => string): AppIcon[] {
   return [
     {
-      label: t("channel.voice"),
-      color: "#c084fc",
-      delayMs: 0,
+      label: t("channel.webchat"),
+      color: "#ea580c",
       Mark: ({ size = 20 }) => (
-        <Mic size={size} strokeWidth={1.8} style={{ color: "#c084fc" }} />
+        <img
+          src="/typebridge.png"
+          width={size}
+          height={size}
+          alt=""
+          aria-hidden
+          style={{ display: "inline-block", objectFit: "contain" }}
+        />
       ),
     },
     {
       label: t("channel.feishu"),
       color: "#3370FF",
-      delayMs: 180,
       Mark: ({ size = 22 }) => <FeishuMark size={size} />,
     },
     {
       label: t("channel.dingtalk"),
       color: "#0089FF",
-      delayMs: 360,
       Mark: ({ size = 22 }) => <DingTalkMark size={size} />,
     },
     {
       label: t("channel.wecom"),
       color: "#06BA6A",
-      delayMs: 540,
       Mark: ({ size = 22 }) => <WecomMark size={size} />,
     },
   ];
 }
 
-// Geometry — used by both badges and SVG arcs so they stay aligned.
-// All values are percentages of the banner (matches SVG viewBox 0 0 100 100 + preserveAspectRatio="none").
-const BADGE_LEFT_PCT = 9;
-const BRIDGE_X_PCT = 52;
+// Phone center X (where the right edge of the phone body meets the line)
+const PHONE_X_PCT = 16;
+// Bridge center
+const BRIDGE_X_PCT = 50;
 const BRIDGE_Y_PCT = 50;
-const DESKTOP_ANCHOR_X_PCT = 84;
+// Monitor left edge X (where the line meets the monitor)
+const MONITOR_X_PCT = 84;
 
-function badgeTopPct(i: number, total: number) {
-  // Spread across [20%, 80%]
-  return 20 + (60 / (total - 1)) * i;
-}
+/** Phone with chatbot screen + 4 app icons stacked outside-left */
+function PhoneNode() {
+  const { t } = useT();
+  const apps = makeAppIcons(t);
 
-function ChannelBadge({
-  channel,
-  index,
-  total,
-}: {
-  channel: ChannelNode;
-  index: number;
-  total: number;
-}) {
   return (
     <div
-      // 用 calc(BADGE_LEFT_PCT% - 22px) 让 icon 左边缘 - 22px，即 icon 中心精确对到 BADGE_LEFT_PCT%。
-      // 这样不同 label 长度的 badge，icon 的 x 坐标完全一致（左侧居左对齐）。
-      className="absolute flex -translate-y-1/2 items-center gap-2"
-      style={{
-        top: `${badgeTopPct(index, total)}%`,
-        left: `calc(${BADGE_LEFT_PCT}% - 22px)`,
-      }}
+      className="absolute flex -translate-y-1/2 items-center gap-3"
+      style={{ top: "50%", left: `${PHONE_X_PCT}%` }}
     >
-      <div className="relative">
-        <div
-          className="relative flex h-11 w-11 items-center justify-center rounded-2xl border backdrop-blur-sm"
-          style={{
-            borderColor: `${channel.color}44`,
-            backgroundColor: `${channel.color}1a`,
-            boxShadow: `0 0 24px ${channel.color}30`,
-          }}
-        >
-          <channel.Mark size={20} />
+      {/* App icons outside-left of phone — stacked vertically */}
+      <div className="flex flex-col gap-2.5">
+        {apps.map((app, i) => (
+          <div
+            key={app.label}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border backdrop-blur-sm"
+            style={{
+              borderColor: `${app.color}44`,
+              backgroundColor: `${app.color}1a`,
+              boxShadow: `0 0 12px ${app.color}20`,
+            }}
+          >
+            <app.Mark size={18} />
+          </div>
+        ))}
+      </div>
+
+      {/* Phone body */}
+      <div
+        className="relative flex flex-col overflow-hidden rounded-[20px] border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+        style={{ width: "120px", height: "200px" }}
+        aria-hidden
+      >
+        {/* Status bar */}
+        <div className="flex items-center justify-between px-3 pt-2">
+          <span className="text-[8px] font-medium text-[var(--muted)]">9:41</span>
+          <div className="flex items-center gap-1">
+            <Globe size={8} strokeWidth={1.5} style={{ color: "var(--muted)" }} />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#28c840]" />
+          </div>
+        </div>
+
+        {/* Chatbot screen */}
+        <div className="flex flex-col gap-2 px-3 pt-3">
+          {/* Bot avatar row */}
+          <div className="flex items-center gap-1.5">
+            <img src="/typebridge.png" width={14} height={14} alt="" aria-hidden style={{ display: "inline-block", objectFit: "contain" }} />
+            <span className="text-[9px] font-semibold text-[var(--text)]">TypeBridge</span>
+          </div>
+          {/* Bot message bubble */}
+          <div
+            className="rounded-lg px-2.5 py-1.5 text-[10px] leading-tight text-[var(--accent-fg)]"
+            style={{ backgroundColor: "var(--accent)", maxWidth: "85%" }}
+          >
+            {t("hero.phoneBotMsg")}
+          </div>
+          {/* User message bubble */}
+          <div
+            className="ml-auto rounded-lg px-2.5 py-1.5 text-[10px] leading-tight text-[var(--text)]"
+            style={{ backgroundColor: "var(--surface-elevated)", maxWidth: "85%" }}
+          >
+            {t("hero.phoneUserMsg")}
+          </div>
+        </div>
+
+        {/* Bottom bar — home indicator */}
+        <div className="mt-auto flex justify-center pb-2">
+          <span className="h-1 w-8 rounded-full bg-[var(--border)]" />
         </div>
       </div>
-      <span
-        className="hidden text-[10px] font-semibold uppercase tracking-widest sm:inline"
-        style={{ color: channel.color }}
-      >
-        {channel.label}
-      </span>
     </div>
   );
 }
 
+/** Central TypeBridge node */
 function BridgeNode() {
-  // 直接复用 app 的 typebridge.png（橙渐变方块 + 白 N，与桌面端一致）。
-  // icon 是 64×64；top 上偏 32px，让 icon 中心落在 BRIDGE_Y_PCT。
   return (
     <div
-      className="absolute flex -translate-x-1/2 flex-col items-center gap-3"
+      className="absolute flex -translate-x-1/2 flex-col items-center gap-2"
       style={{
         left: `${BRIDGE_X_PCT}%`,
-        top: `calc(${BRIDGE_Y_PCT}% - 32px)`,
+        top: `calc(${BRIDGE_Y_PCT}% - 28px)`,
       }}
     >
-      <div className="relative h-16 w-16">
+      <div className="relative h-14 w-14">
         <img
           src="/typebridge.png"
           alt=""
-          className="h-16 w-16 rounded-2xl shadow-[0_8px_32px_-8px_var(--accent-glow)]"
+          className="animate-breathe-glow h-14 w-14 rounded-2xl shadow-[0_8px_32px_-8px_var(--accent-glow)]"
           aria-hidden
         />
       </div>
-      <span className="whitespace-nowrap text-[18px] font-extrabold tracking-tight text-[var(--text)] md:text-[22px]">
+      <span className="whitespace-nowrap text-[16px] font-extrabold tracking-tight text-[var(--text)] md:text-[18px]">
         TypeBridge
       </span>
     </div>
   );
 }
 
-function DesktopFrame() {
+/** Monitor with typing-window inside */
+function MonitorNode() {
   const { t } = useT();
+
   return (
     <div
-      className="absolute right-3 top-1/2 w-[200px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.4)] backdrop-blur-sm sm:right-4 sm:w-[230px]"
-      aria-hidden
+      className="absolute flex -translate-y-1/2 flex-col items-center"
+      style={{ top: "50%", left: `${MONITOR_X_PCT}%` }}
     >
-      <div className="flex items-center gap-1.5 border-b border-[var(--border)]/60 px-3 py-2">
-        <span className="h-2 w-2 rounded-full bg-[#ff5f57]" />
-        <span className="h-2 w-2 rounded-full bg-[#febc2e]" />
-        <span className="h-2 w-2 rounded-full bg-[#28c840]" />
+      {/* Monitor body */}
+      <div
+        className="relative overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4)] backdrop-blur-sm"
+        style={{ width: "140px", height: "110px" }}
+        aria-hidden
+      >
+        {/* Window inside monitor */}
+        <div className="flex flex-col h-full">
+          {/* Window title bar */}
+          <div className="flex items-center gap-1.5 border-b border-[var(--border)]/60 px-2.5 py-1.5">
+            <span className="h-[5px] w-[5px] rounded-full bg-[#ff5f57]" />
+            <span className="h-[5px] w-[5px] rounded-full bg-[#febc2e]" />
+            <span className="h-[5px] w-[5px] rounded-full bg-[#28c840]" />
+          </div>
+          {/* Typing content */}
+          <div className="flex items-center px-3 py-2">
+            <span className="font-mono text-[11px] leading-none text-[var(--text)]">
+              {t("hero.desktopText")}
+            </span>
+            <span className="animate-blink-cursor ml-0.5 inline-block h-3 w-[2px] rounded-full bg-[var(--accent)]" />
+          </div>
+        </div>
       </div>
-
-      <div className="flex h-[92px] items-center px-4">
-        <span className="font-mono text-[12px] leading-none text-[var(--text)]">
-          {t("hero.desktopText")}
-        </span>
-        <span className="ml-0.5 inline-block h-3.5 w-[2px] rounded-full bg-[var(--accent)]" />
+      {/* Monitor stand */}
+      <div className="flex flex-col items-center">
+        <div className="h-3 w-6 rounded-b-none border-x border-b border-[var(--border)]/60 bg-[var(--surface)]/70" />
+        <div className="h-1.5 w-10 rounded-b-sm border border-[var(--border)]/60 bg-[var(--surface)]/70" />
       </div>
     </div>
   );
 }
 
+/** ConceptBanner — the full diagram: phone → bridge → monitor */
 function ConceptBanner() {
-  const { t } = useT();
-  const CHANNELS = makeChannels(t);
-  const total = CHANNELS.length;
-
   return (
     <div className="noise relative mt-10 h-[280px] w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm sm:h-[320px] md:h-[360px]">
       {/* Grid pattern */}
@@ -218,64 +263,45 @@ function ConceptBanner() {
         }}
       />
 
-      {/* SVG overlay — arcs from each badge into the bridge, plus bridge→desktop line.
-          viewBox 0 0 100 100 + preserveAspectRatio="none" means each unit = 1% of banner box.
-          Two-layer pattern per path:
-            (a) thin static "track" — solid accent at low opacity
-            (b) bright "sweep" overlay with strokeDasharray + animated strokeDashoffset
-                creating a single short bright pulse traveling along the path. */}
+      {/* SVG overlay — two straight lines connecting phone→bridge→monitor */}
       <svg
         className="pointer-events-none absolute inset-0 h-full w-full"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         aria-hidden
       >
-        <defs>
-          {CHANNELS.map((ch, i) => {
-            const y = badgeTopPct(i, total);
-            const d = `M ${BADGE_LEFT_PCT} ${y} C ${BRIDGE_X_PCT - 18} ${y}, ${BRIDGE_X_PCT - 8} ${BRIDGE_Y_PCT}, ${BRIDGE_X_PCT - 2} ${BRIDGE_Y_PCT}`;
-            return <path key={ch.label} id={`hero-arc-path-${i}`} d={d} />;
-          })}
-          <path
-            id="hero-output-path"
-            d={`M ${BRIDGE_X_PCT + 2} ${BRIDGE_Y_PCT} L ${DESKTOP_ANCHOR_X_PCT} ${BRIDGE_Y_PCT}`}
-          />
-        </defs>
-
-        {/* (a) Static thin track lines — solid accent, very low opacity */}
-        {CHANNELS.map((_, i) => (
-          <use
-            key={`track-${i}`}
-            href={`#hero-arc-path-${i}`}
-            stroke="var(--accent)"
-            strokeOpacity="0.18"
-            strokeWidth="1"
-            fill="none"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
-        <use
-          href="#hero-output-path"
+        {/* Line 1: phone → bridge */}
+        <line
+          x1={PHONE_X_PCT + 4}
+          y1={BRIDGE_Y_PCT}
+          x2={BRIDGE_X_PCT - 6}
+          y2={BRIDGE_Y_PCT}
           stroke="var(--accent)"
-          strokeOpacity="0.22"
-          strokeWidth="1"
-          fill="none"
+          strokeOpacity="0.35"
+          strokeWidth="1.2"
           vectorEffect="non-scaling-stroke"
         />
-
-        {/* (b) Sweep overlay removed — concept image is fully static. */}
+        {/* Line 2: bridge → monitor */}
+        <line
+          x1={BRIDGE_X_PCT + 6}
+          y1={BRIDGE_Y_PCT}
+          x2={MONITOR_X_PCT - 2}
+          y2={BRIDGE_Y_PCT}
+          stroke="var(--accent)"
+          strokeOpacity="0.35"
+          strokeWidth="1.2"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
 
-      {/* Channel badges */}
-      {CHANNELS.map((ch, i) => (
-        <ChannelBadge key={ch.label} channel={ch} index={i} total={total} />
-      ))}
+      {/* Phone node */}
+      <PhoneNode />
 
       {/* Central bridge node */}
       <BridgeNode />
 
-      {/* Desktop window */}
-      <DesktopFrame />
+      {/* Monitor node */}
+      <MonitorNode />
 
       {/* Vignette to blend edges */}
       <div
