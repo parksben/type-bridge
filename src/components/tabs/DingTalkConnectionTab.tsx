@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAppStore, type Settings } from "../../store";
+import { useI18n } from "../../i18n";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
 
 type ConnState = "idle" | "connecting" | "connected";
@@ -32,6 +33,7 @@ export default function DingTalkConnectionTab() {
   const [selftestResult, setSelftestResult] = useState<SelftestResult | null>(null);
 
   const { channelConnected, addLog } = useAppStore();
+  const { t } = useI18n();
   const connected = channelConnected.dingtalk === true;
   const connState: ConnState = connected ? "connected" : starting ? "connecting" : "idle";
 
@@ -66,8 +68,8 @@ export default function DingTalkConnectionTab() {
 
   function validate(): FieldErrors {
     const errs: FieldErrors = {};
-    if (!clientId.trim()) errs.clientId = "Client ID 不能为空";
-    if (!clientSecret.trim()) errs.clientSecret = "Client Secret 不能为空";
+    if (!clientId.trim()) errs.clientId = t("dingtalk.clientIdEmpty");
+    if (!clientSecret.trim()) errs.clientSecret = t("dingtalk.clientSecretEmpty");
     return errs;
   }
 
@@ -83,10 +85,10 @@ export default function DingTalkConnectionTab() {
         clientId: clientId.trim(),
         clientSecret: clientSecret.trim(),
       });
-      addLog({ kind: "connect", channel: "dingtalk", text: "正在启动长连接..." });
+      addLog({ kind: "connect", channel: "dingtalk", text: t("dingtalk.starting") });
     } catch (e) {
       setStarting(false);
-      addLog({ kind: "error", channel: "dingtalk", text: `启动失败: ${e}` });
+      addLog({ kind: "error", channel: "dingtalk", text: t("dingtalk.startFailed", { error: String(e) }) });
     }
   }
 
@@ -100,8 +102,8 @@ export default function DingTalkConnectionTab() {
         kind: res.credentials_ok ? "connect" : "error",
         channel: "dingtalk",
         text: res.credentials_ok
-          ? "连接测试通过：凭据已通过 WSS 鉴权"
-          : `连接测试失败：${res.credentials_reason}`,
+          ? t("dingtalk.selftestPassed")
+          : t("dingtalk.selftestFailed", { reason: res.credentials_reason ?? "" }),
       });
     } catch (e) {
       setSelftestResult({
@@ -109,7 +111,7 @@ export default function DingTalkConnectionTab() {
         credentials_reason: String(e),
         probes: [],
       });
-      addLog({ kind: "error", channel: "dingtalk", text: `连接测试异常：${e}` });
+      addLog({ kind: "error", channel: "dingtalk", text: t("dingtalk.selftestException", { error: String(e) }) });
     } finally {
       setSelftesting(false);
     }
@@ -157,8 +159,8 @@ export default function DingTalkConnectionTab() {
                 className="shrink-0 mt-0.5 text-accent"
               />
               <div className="flex-1 text-text">
-                <span className="font-medium">钉钉机器人已就绪。</span>
-                打开钉钉 App 找到你配置的机器人，发消息即自动注入到桌面当前焦点输入框。
+                <span className="font-medium">{t("dingtalk.bannerConnectedTitle")}</span>
+                {t("dingtalk.bannerConnectedBody")}
               </div>
             </div>
             <div
@@ -171,9 +173,9 @@ export default function DingTalkConnectionTab() {
                 className="shrink-0 mt-0.5 text-accent"
               />
               <div className="flex-1 text-muted">
-                TypeBridge 不接收语音消息。想用语音输入，请使用
-                <span className="text-text">钉钉</span>
-                的「语音转文字」功能或手机输入法的「语音输入」功能。
+                {t("dingtalk.voiceHintPrefix")}
+                <span className="text-text">{t("dingtalk.voiceHintApp")}</span>
+                {t("dingtalk.voiceHintSuffix")}
               </div>
             </div>
           </div>
@@ -191,15 +193,15 @@ export default function DingTalkConnectionTab() {
               className="shrink-0 mt-0.5 text-accent"
             />
             <div className="flex-1 text-text">
-              还没有钉钉应用？先到{" "}
+              {t("dingtalk.bannerIdleBefore")}
               <button
                 onClick={openDingTalkDevPortal}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                钉钉开发者平台
+                {t("dingtalk.bannerIdlePortal")}
                 <ExternalLink size={10} strokeWidth={2} />
-              </button>{" "}
-              创建「企业内部应用」，加机器人能力 + 选 Stream 模式后复制 Client ID / Secret 到下方。
+              </button>
+              {t("dingtalk.bannerIdleAfter")}
             </div>
           </div>
         )}
@@ -235,7 +237,7 @@ export default function DingTalkConnectionTab() {
           <input
             type="password"
             className="tb-input"
-            placeholder="请输入 Client Secret"
+            placeholder={t("dingtalk.clientSecretPlaceholder")}
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}
             spellCheck={false}
@@ -260,12 +262,12 @@ export default function DingTalkConnectionTab() {
             {starting ? (
               <>
                 <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
-                启动中
+                {t("conn.starting")}
               </>
             ) : (
               <>
                 <Play size={14} strokeWidth={1.75} />
-                {connected ? "重启长连接" : "启动长连接"}
+                {connected ? t("conn.restart") : t("conn.start")}
               </>
             )}
           </button>
@@ -279,17 +281,17 @@ export default function DingTalkConnectionTab() {
               color: canSelftest ? "var(--text)" : "var(--subtle)",
               cursor: canSelftest ? "pointer" : "not-allowed",
             }}
-            title={connected ? "验证 WSS 鉴权通过情况" : "请先启动长连接"}
+            title={connected ? t("dingtalk.selftestTooltip") : t("conn.testTooltipDisabled")}
           >
             {selftesting ? (
               <>
                 <RotateCw size={13} strokeWidth={1.75} className="animate-spin" />
-                测试中
+                {t("conn.testing")}
               </>
             ) : (
               <>
                 <Radar size={13} strokeWidth={1.75} />
-                测试连接
+                {t("conn.test")}
               </>
             )}
           </button>
@@ -307,7 +309,7 @@ export default function DingTalkConnectionTab() {
             }`}
           />
           <span className="text-[12.5px] text-muted">
-            {connState === "connected" ? "已连接" : connState === "connecting" ? "启动中" : "未连接"}
+            {connState === "connected" ? t("conn.statusConnected") : connState === "connecting" ? t("conn.statusConnecting") : t("conn.statusIdle")}
           </span>
         </div>
 
@@ -323,15 +325,15 @@ export default function DingTalkConnectionTab() {
           >
             <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
             <div className="flex-1">
-              长连接已启动。若没收到消息，去{" "}
+              {t("dingtalk.afterStartBefore")}
               <button
                 onClick={openDingTalkDevPortal}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                钉钉开发者平台
+                {t("dingtalk.afterStartPortal")}
                 <ExternalLink size={10} strokeWidth={2} />
-              </button>{" "}
-              确认「消息接收模式」已选 Stream 模式；或点「测试连接」验证凭据可用。
+              </button>
+              {t("dingtalk.afterStartAfter")}
             </div>
           </div>
         )}

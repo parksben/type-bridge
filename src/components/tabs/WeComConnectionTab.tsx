@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAppStore, type Settings } from "../../store";
+import { useI18n } from "../../i18n";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
 
 type ConnState = "idle" | "connecting" | "connected";
@@ -32,6 +33,7 @@ export default function WeComConnectionTab() {
   const [selftestResult, setSelftestResult] = useState<SelftestResult | null>(null);
 
   const { channelConnected, addLog } = useAppStore();
+  const { t } = useI18n();
   const connected = channelConnected.wecom === true;
   const connState: ConnState = connected ? "connected" : starting ? "connecting" : "idle";
 
@@ -65,8 +67,8 @@ export default function WeComConnectionTab() {
 
   function validate(): FieldErrors {
     const errs: FieldErrors = {};
-    if (!botId.trim()) errs.botId = "Bot ID 不能为空";
-    if (!secret.trim()) errs.secret = "Secret 不能为空";
+    if (!botId.trim()) errs.botId = t("wecom.botIdEmpty");
+    if (!secret.trim()) errs.secret = t("wecom.secretEmpty");
     return errs;
   }
 
@@ -82,10 +84,10 @@ export default function WeComConnectionTab() {
         botId: botId.trim(),
         secret: secret.trim(),
       });
-      addLog({ kind: "connect", channel: "wecom", text: "正在启动长连接..." });
+      addLog({ kind: "connect", channel: "wecom", text: t("wecom.starting") });
     } catch (e) {
       setStarting(false);
-      addLog({ kind: "error", channel: "wecom", text: `启动失败: ${e}` });
+      addLog({ kind: "error", channel: "wecom", text: t("wecom.startFailed", { error: String(e) }) });
     }
   }
 
@@ -99,8 +101,8 @@ export default function WeComConnectionTab() {
         kind: res.credentials_ok ? "connect" : "error",
         channel: "wecom",
         text: res.credentials_ok
-          ? "连接测试通过：WSS 订阅已完成"
-          : `连接测试失败：${res.credentials_reason}`,
+          ? t("wecom.selftestPassed")
+          : t("wecom.selftestFailed", { reason: res.credentials_reason ?? "" }),
       });
     } catch (e) {
       setSelftestResult({
@@ -108,7 +110,7 @@ export default function WeComConnectionTab() {
         credentials_reason: String(e),
         probes: [],
       });
-      addLog({ kind: "error", channel: "wecom", text: `连接测试异常：${e}` });
+      addLog({ kind: "error", channel: "wecom", text: t("wecom.selftestException", { error: String(e) }) });
     } finally {
       setSelftesting(false);
     }
@@ -156,8 +158,8 @@ export default function WeComConnectionTab() {
                 className="shrink-0 mt-0.5 text-accent"
               />
               <div className="flex-1 text-text">
-                <span className="font-medium">企微机器人已就绪。</span>
-                打开企业微信 App 找到你配置的机器人，发消息即自动注入到桌面当前焦点输入框。
+                <span className="font-medium">{t("wecom.bannerConnectedTitle")}</span>
+                {t("wecom.bannerConnectedBody")}
               </div>
             </div>
             <div
@@ -170,9 +172,9 @@ export default function WeComConnectionTab() {
                 className="shrink-0 mt-0.5 text-accent"
               />
               <div className="flex-1 text-muted">
-                TypeBridge 不接收语音消息。想用语音输入，请使用
-                <span className="text-text">企业微信</span>
-                的「语音转文字」功能或手机输入法的「语音输入」功能。
+                {t("wecom.voiceHintPrefix")}
+                <span className="text-text">{t("wecom.voiceHintApp")}</span>
+                {t("wecom.voiceHintSuffix")}
               </div>
             </div>
           </div>
@@ -186,15 +188,15 @@ export default function WeComConnectionTab() {
           >
             <Info size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
             <div className="flex-1 text-text">
-              还没有企微机器人？先到{" "}
+              {t("wecom.bannerIdleBefore")}
               <button
                 onClick={openWeComAdmin}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                企微机器人管理后台
+                {t("wecom.bannerIdlePortal")}
                 <ExternalLink size={10} strokeWidth={2} />
-              </button>{" "}
-              创建智能机器人，开启「API 模式」→「长连接」，复制 Bot ID / Secret 到下方。
+              </button>
+              {t("wecom.bannerIdleAfter")}
             </div>
           </div>
         )}
@@ -209,7 +211,7 @@ export default function WeComConnectionTab() {
           }}
         >
           <AlertCircle size={12} strokeWidth={1.75} className="shrink-0 mt-0.5" />
-          <span>同一个企微机器人同时只能一台设备使用，多设备登录会互相挤掉。</span>
+          <span>{t("wecom.singleConnHint")}</span>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -243,7 +245,7 @@ export default function WeComConnectionTab() {
           <input
             type="password"
             className="tb-input"
-            placeholder="请输入长连接专用 Secret"
+            placeholder={t("wecom.secretPlaceholder")}
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             spellCheck={false}
@@ -268,12 +270,12 @@ export default function WeComConnectionTab() {
             {starting ? (
               <>
                 <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
-                启动中
+                {t("conn.starting")}
               </>
             ) : (
               <>
                 <Play size={14} strokeWidth={1.75} />
-                {connected ? "重启长连接" : "启动长连接"}
+                {connected ? t("conn.restart") : t("conn.start")}
               </>
             )}
           </button>
@@ -287,17 +289,17 @@ export default function WeComConnectionTab() {
               color: canSelftest ? "var(--text)" : "var(--subtle)",
               cursor: canSelftest ? "pointer" : "not-allowed",
             }}
-            title={connected ? "验证 WSS 订阅是否已就绪" : "请先启动长连接"}
+            title={connected ? t("wecom.selftestTooltip") : t("conn.testTooltipDisabled")}
           >
             {selftesting ? (
               <>
                 <RotateCw size={13} strokeWidth={1.75} className="animate-spin" />
-                测试中
+                {t("conn.testing")}
               </>
             ) : (
               <>
                 <Radar size={13} strokeWidth={1.75} />
-                测试连接
+                {t("conn.test")}
               </>
             )}
           </button>
@@ -315,7 +317,7 @@ export default function WeComConnectionTab() {
             }`}
           />
           <span className="text-[12.5px] text-muted">
-            {connState === "connected" ? "已连接" : connState === "connecting" ? "启动中" : "未连接"}
+            {connState === "connected" ? t("conn.statusConnected") : connState === "connecting" ? t("conn.statusConnecting") : t("conn.statusIdle")}
           </span>
         </div>
 
@@ -331,15 +333,15 @@ export default function WeComConnectionTab() {
           >
             <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
             <div className="flex-1">
-              长连接已启动。若没收到消息，去{" "}
+              {t("wecom.afterStartBefore")}
               <button
                 onClick={openWeComAdmin}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                企微机器人管理后台
+                {t("wecom.afterStartPortal")}
                 <ExternalLink size={10} strokeWidth={2} />
-              </button>{" "}
-              确认智能机器人的「API 模式」已选「长连接」；或点「测试连接」验证凭据可用。
+              </button>
+              {t("wecom.afterStartAfter")}
             </div>
           </div>
         )}
