@@ -5,6 +5,14 @@ import { create } from "zustand";
 /// v0.7 起增加 webchat（TypeBridge 官方网页扫码渠道，不走 sidecar）。
 export type ChannelId = "webchat" | "feishu" | "dingtalk" | "wecom";
 
+/// UI 语言。空字符串表示「未选择」（首次启动会弹语言选择卡片）。
+/// 持久化字段在 Rust Settings.language（src-tauri/src/store.rs）；
+/// 首屏防闪 hint 写在 localStorage。详见 docs/TECH_DESIGN.md §三十六。
+export type Lang = "zh" | "en";
+
+/// 历史遗留导出：渠道展示名（中文版）。组件层应改用 useI18n() 的
+/// t("channel.xxx") 取得当前语言的渠道名；保留此常量是为了兼容老
+/// 代码路径，不再被新代码使用。
 export const CHANNEL_LABEL: Record<ChannelId, string> = {
   webchat: "WebChat",
   feishu: "飞书",
@@ -84,6 +92,8 @@ export interface Settings {
   wecom_secret: string;
   auto_submit: boolean;
   submit_key: SubmitKey;
+  /// UI 语言。空字符串 = 未选择。新增字段，老配置升级后该值缺省为空。
+  language: string;
 }
 
 interface AppStore {
@@ -98,12 +108,16 @@ interface AppStore {
   /// 「连接 TypeBridge」tab 内部横向子 tab 的选中渠道。切走 sidebar tab 再回来
   /// 保留选中——用户半途去改输入设置或看历史不会丢上下文。
   activeConnectionChannel: ChannelId;
+  /// UI 语言。空字符串「未选择」时由 LanguagePicker 弹首启卡片。
+  language: Lang | "";
 
   setChannelConnected: (channel: ChannelId, connected: boolean) => void;
   setAutoSubmit: (v: boolean) => void;
   setSubmitKey: (k: SubmitKey) => void;
   setActiveTab: (tab: TabId) => void;
   setActiveConnectionChannel: (ch: ChannelId) => void;
+  /// 仅更新内存状态。持久化由调用方负责（hooks/usePersistLanguage.ts）。
+  setLanguage: (lang: Lang) => void;
   addLog: (entry: Omit<LogEntry, "time">) => void;
   clearLogs: () => void;
   setHistory: (items: HistoryMessage[]) => void;
@@ -111,6 +125,18 @@ interface AppStore {
   updateHistoryStatus: (id: string, status: MessageStatus, reason?: string) => void;
   removeHistoryMessage: (id: string) => void;
   clearHistoryDisplay: () => void;
+}
+
+/// 首屏防闪：从 localStorage 取语言 hint。null/非法值返回空字符串
+/// （触发首启选择卡片）。Rust 侧 Settings.language 是权威值，启动后会
+/// 由 MainWindow 的 useEffect 同步覆盖此值。
+function readLangHint(): Lang | "" {
+  try {
+    const v = window.localStorage.getItem("tb_lang_hint");
+    return v === "zh" || v === "en" ? v : "";
+  } catch {
+    return "";
+  }
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -122,6 +148,7 @@ export const useAppStore = create<AppStore>((set) => ({
   hiddenHistoryIds: new Set(),
   activeTab: "connection",
   activeConnectionChannel: "webchat",
+  language: readLangHint(),
 
   setChannelConnected: (channel, connected) =>
     set((state) => ({
@@ -132,6 +159,14 @@ export const useAppStore = create<AppStore>((set) => ({
   setActiveTab: (activeTab) => set({ activeTab }),
   setActiveConnectionChannel: (activeConnectionChannel) =>
     set({ activeConnectionChannel }),
+  setLanguage: (language) => {
+    try {
+      window.localStorage.setItem("tb_lang_hint", language);
+    } catch {
+      // 忽略 storage 异常（隐私模式 / 配额满）——内存状态仍然生效
+    }
+    set({ language });
+  },
 
   addLog: (entry) =>
     set((state) => ({
@@ -139,7 +174,8 @@ export const useAppStore = create<AppStore>((set) => ({
         ...state.logs,
         {
           ...entry,
-          time: new Date().toLocaleTimeString("zh-CN", { hour12: false }),
+          // 24 小时制；不依赖语言（zh-CN / en-GB 都是 24h），避免英文环境下出现 AM/PM
+          time: new Date().toLocaleTimeString("en-GB", { hour12: false }),
         },
       ].slice(-500),
     })),
