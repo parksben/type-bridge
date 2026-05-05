@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useT, renderMarked } from "../lib/i18n";
+import { Footer } from "./footer";
 
 function DownloadCard({
   arch,
@@ -62,7 +63,7 @@ export function Download() {
   return (
     <section
       id="download"
-      className="relative overflow-hidden px-6 py-24 md:py-32"
+      className="relative flex min-h-screen flex-col overflow-hidden px-6 py-24 md:py-32"
     >
       {/* Decorative orb */}
       <div
@@ -74,7 +75,7 @@ export function Download() {
         }}
       />
 
-      <div className="relative mx-auto max-w-3xl text-center">
+      <div className="relative mx-auto w-full max-w-3xl flex-1 text-center">
         {/* Header */}
         <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
           {t("download.heading")}
@@ -113,6 +114,8 @@ export function Download() {
           <AccessibilityNotice />
         </div>
       </div>
+
+      <Footer />
     </section>
   );
 }

@@ -136,7 +136,7 @@ export function Scenes() {
   const tip = t(activeDef.tipKey);
 
   return (
-    <section id="scenes" className="relative px-6 py-24 md:py-32">
+    <section id="scenes" className="relative flex min-h-screen flex-col items-center justify-center px-6 py-24 md:py-32">
       <div className="mx-auto max-w-5xl">
         {/* Header */}
         <div className="mb-12 text-center">
