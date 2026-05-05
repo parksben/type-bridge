@@ -8,7 +8,7 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { id: "connection", label: "连接IM应用", icon: Plug },
+  { id: "connection", label: "连接 TypeBridge", icon: Plug },
   { id: "input", label: "输入设置", icon: Settings2 },
   { id: "history", label: "历史消息", icon: History },
   { id: "logs", label: "系统日志", icon: Terminal },

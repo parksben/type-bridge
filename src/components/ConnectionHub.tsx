@@ -16,7 +16,7 @@ const CHANNEL_BRAND_COLOR: Record<ChannelId, string> = {
   wecom: "#07c160",
 };
 
-/// 「连接IM应用」tab 的壳：
+/// 「连接 TypeBridge」tab 的壳：
 ///   顶部 intro 说明 → 横向渠道子 tab → 当前渠道的配置面板（独立滚动）
 ///
 /// 子 tab 选中状态存 Zustand（activeConnectionChannel）——切走 sidebar tab
@@ -37,7 +37,7 @@ export default function ConnectionHub() {
         }}
       >
         <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
-        <span>通过连接 IM 应用的机器人或扫码官方 WebChat 网页来实现输入桥接</span>
+        <span>通过内置 WebChat 或 IM 应用机器人连接 TypeBridge 进行输入</span>
       </div>
 
       {/* 横向渠道子 tab */}

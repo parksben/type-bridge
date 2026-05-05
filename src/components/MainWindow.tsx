@@ -78,7 +78,7 @@ export default function MainWindow() {
       <SideBar />
       <div className="flex-1 overflow-hidden">
         {activeTab === "connection" && (
-          <ErrorBoundary label="连接IM应用 tab">
+          <ErrorBoundary label="连接 TypeBridge tab">
             <ConnectionHub />
           </ErrorBoundary>
         )}

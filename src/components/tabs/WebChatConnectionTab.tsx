@@ -9,7 +9,6 @@ import {
   PowerOff,
   RotateCw,
   ScanLine,
-  ShieldCheck,
   Smartphone,
   Timer,
   Wifi,
@@ -145,13 +144,12 @@ export default function WebChatConnectionTab() {
     >
       <Wifi size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
       <div className="flex-1 text-text">
-        手机需与本机同一 WiFi
+        扫码之前确保手机与本机连接到同一 WiFi
         {snap?.wifi_name && (
           <>
             ：<span className="font-medium">{snap.wifi_name}</span>
           </>
         )}
-        。若不方便切换 WiFi，可改用飞书 / 钉钉 / 企微渠道。
       </div>
     </div>
   );
@@ -228,8 +226,6 @@ function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
           </>
         )}
       </button>
-
-      <DisclaimerCard />
     </>
   );
 }
@@ -360,8 +356,6 @@ function PendingView({
           停止
         </button>
       </div>
-
-      <DisclaimerCard />
     </>
   );
 }
@@ -437,8 +431,6 @@ function BoundView({
           重启会话
         </button>
       </div>
-
-      <DisclaimerCard />
     </>
   );
 }
@@ -495,37 +487,6 @@ function ErrorView({
         )}
       </button>
     </>
-  );
-}
-
-function DisclaimerCard() {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-        <ShieldCheck size={12} strokeWidth={1.75} />
-        免责声明
-      </label>
-      <div
-        className="rounded-lg px-3.5 py-3 text-[12px] leading-relaxed flex flex-col gap-1.5"
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          color: "var(--muted)",
-        }}
-      >
-        <div className="flex items-start gap-2">
-          <span className="text-accent font-medium">·</span>
-          <span>
-            WebChat 服务运行在你的电脑本地，
-            <span className="text-text">数据不经过任何线上服务</span>
-          </span>
-        </div>
-        <div className="flex items-start gap-2">
-          <span className="text-accent font-medium">·</span>
-          <span>语音识别由手机自带输入法完成，音频不离开你的手机</span>
-        </div>
-      </div>
-    </div>
   );
 }
 

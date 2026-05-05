@@ -52,7 +52,7 @@ done
 npm run tauri dev
 ```
 
-应用首次启动会自动弹出配置窗口。在「连接 IM 应用」tab 下任选一家填好凭据即可：
+应用首次启动会自动弹出配置窗口。在「连接 TypeBridge」tab 下任选一家填好凭据即可：
 - WebChat：无需凭据，点「启动会话」在本机启动局域网服务，手机同 WiFi 扫码即用
 - 飞书：App ID / App Secret（仅支持自建应用）
 - 钉钉：Client ID / Client Secret（Stream Mode）

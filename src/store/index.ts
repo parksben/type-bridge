@@ -50,7 +50,7 @@ export interface HistoryMessage {
 }
 
 export type TabId =
-  | "connection"  // 连接IM应用（内容页再用横向子 tab 切渠道）
+  | "connection"  // 连接 TypeBridge（内容页再用横向子 tab 切渠道）
   | "input"       // 输入设置
   | "history"     // 历史消息
   | "logs";       // 系统日志
@@ -94,7 +94,7 @@ interface AppStore {
   history: HistoryMessage[];
   hiddenHistoryIds: Set<string>;
   activeTab: TabId;
-  /// 「连接IM应用」tab 内部横向子 tab 的选中渠道。切走 sidebar tab 再回来
+  /// 「连接 TypeBridge」tab 内部横向子 tab 的选中渠道。切走 sidebar tab 再回来
   /// 保留选中——用户半途去改输入设置或看历史不会丢上下文。
   activeConnectionChannel: ChannelId;
 
