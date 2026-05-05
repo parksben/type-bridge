@@ -162,8 +162,6 @@ export default function ChatPage({ client }: Props) {
             <br />
             <br />
             {t("chat.emptyHintTry")}
-            <br />
-            {t("chat.emptyHintVoice")}
           </div>
         )}
 

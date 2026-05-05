@@ -47,14 +47,12 @@ const ZH = {
     statusReconnecting: "重连中",
     emptyHint: "发出去的每一条消息会自动写入你\n桌面当前聚焦的输入框。",
     emptyHintTry: "可以试试发一条文本，或点图片按钮拍照 / 上传。",
-    emptyHintVoice: "语音输入可以用手机键盘的麦克风按钮。",
   },
 
   composer: {
     placeholder: "输入消息…",
     placeholderImageReady: "图片已就绪，点发送",
     sendAria: "发送",
-    voiceAria: "用语音输入",
     imagePickAria: "发送图片",
     imageRemoveAria: "移除图片",
     imageProcessFail: "图片处理失败",
@@ -74,13 +72,6 @@ const ZH = {
     sending: "发送中",
     delivered: "已送达",
     sendFailed: "发送失败",
-  },
-
-  voiceModal: {
-    title: "请使用输入法语音输入功能",
-    desc: "WebChat 页面暂不支持语音输入，请使用输入法自带的语音功能进行语音输入。",
-    closeAria: "关闭",
-    ok: "我知道了",
   },
 
   pcBlock: {
@@ -136,14 +127,12 @@ const EN: Dict = {
     statusReconnecting: "Reconnecting",
     emptyHint: "Every message you send is auto-written into\nyour focused desktop input.",
     emptyHintTry: "Try sending a text, or tap the image button to capture / upload a photo.",
-    emptyHintVoice: "For voice input, use the microphone on your phone keyboard.",
   },
 
   composer: {
     placeholder: "Type a message…",
     placeholderImageReady: "Image ready — tap send",
     sendAria: "Send",
-    voiceAria: "Voice input",
     imagePickAria: "Send image",
     imageRemoveAria: "Remove image",
     imageProcessFail: "Image processing failed",
@@ -163,13 +152,6 @@ const EN: Dict = {
     sending: "Sending",
     delivered: "Delivered",
     sendFailed: "Send failed",
-  },
-
-  voiceModal: {
-    title: "Use your keyboard's voice input",
-    desc: "WebChat doesn't have built-in voice input — use the microphone on your phone keyboard instead.",
-    closeAria: "Close",
-    ok: "Got it",
   },
 
   pcBlock: {
