@@ -1,3 +1,4 @@
+import { Hero } from "./components/hero";
 import { TopNav } from "./components/top-nav";
 
 function SectionPlaceholder({
@@ -34,12 +35,7 @@ export default function HomePage() {
     <>
       <TopNav />
       <main className="page-bg relative">
-        <SectionPlaceholder
-          id="hero"
-          eyebrow="让手机成为桌面输入设备"
-          title="手机即键盘。"
-          subtitle="Hero 章节正在搭建 — logo、slogan、概念动画即将就位。"
-        />
+        <Hero />
         <SectionPlaceholder
           id="scenes"
           eyebrow="场景"
