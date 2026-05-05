@@ -363,7 +363,7 @@ export function Hero() {
               aria-hidden
               className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
             />
-            让手机成为桌面输入设备
+            支持语音输入的输入法
           </p>
         </div>
 
