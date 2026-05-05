@@ -86,6 +86,14 @@ export default function ChatPage({ client }: Props) {
     );
   }
 
+  async function sendKeyPress(code: string) {
+    const cmId = newClientMessageId();
+    const ack = await client.sendKey(cmId, code);
+    if (!ack.success) {
+      setImageError(ack.reason ?? t("composer.shortcutSendFailed"));
+    }
+  }
+
   const empty = useMemo(() => messages.length === 0, [messages]);
 
   return (
@@ -181,6 +189,7 @@ export default function ChatPage({ client }: Props) {
       <ComposerBar
         onSendText={sendTextMsg}
         onSendImage={sendImageMsg}
+        onSendKey={sendKeyPress}
         onImageError={setImageError}
         disabled={wifi === "disconnected"}
       />

@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { ChevronDown, ChevronUp, Send } from "lucide-react";
 import VoiceButton from "./VoiceButton";
 import ImagePicker from "./ImagePicker";
 import VoiceHintModal from "./VoiceHintModal";
+import ShortcutKeysPanel from "./ShortcutKeysPanel";
 import type { CompressResult } from "@/lib/image";
 import { t } from "@/i18n";
 
 type StagedImage = { previewUrl: string; compressed: CompressResult };
 
+const LS_SHORTCUTS_EXPANDED = "tb_webchat_shortcuts_expanded";
+
 type Props = {
   onSendText: (text: string) => void;
   onSendImage: (img: CompressResult, previewUrl: string) => void;
+  onSendKey: (code: string) => void;
   onImageError: (msg: string) => void;
   disabled: boolean;
 };
@@ -18,12 +22,20 @@ type Props = {
 export default function ComposerBar({
   onSendText,
   onSendImage,
+  onSendKey,
   onImageError,
   disabled,
 }: Props) {
   const [text, setText] = useState("");
   const [staged, setStaged] = useState<StagedImage | null>(null);
   const [showVoiceHint, setShowVoiceHint] = useState(false);
+  const [shortcutsExpanded, setShortcutsExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(LS_SHORTCUTS_EXPANDED) === "1";
+    } catch {
+      return false;
+    }
+  });
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // 自适应高度
@@ -32,6 +44,18 @@ export default function ComposerBar({
     taRef.current.style.height = "auto";
     taRef.current.style.height = `${Math.min(120, taRef.current.scrollHeight)}px`;
   }, [text]);
+
+  function toggleShortcuts() {
+    setShortcutsExpanded((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(LS_SHORTCUTS_EXPANDED, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   function send() {
     if (disabled) return;
@@ -57,6 +81,36 @@ export default function ComposerBar({
           borderColor: "var(--tb-border)",
         }}
       >
+        {/* 顶部居中切换按钮：展开/收起控制键面板 */}
+        <div className="flex justify-center -mb-1">
+          <button
+            type="button"
+            onClick={toggleShortcuts}
+            aria-label={t(
+              shortcutsExpanded
+                ? "composer.shortcutsCollapse"
+                : "composer.shortcutsExpand",
+            )}
+            className="h-6 px-3 rounded-b-md flex items-center justify-center transition-colors"
+            style={{
+              background: "var(--tb-bg)",
+              color: "var(--tb-muted)",
+              border: "1px solid var(--tb-border)",
+              borderTop: "none",
+            }}
+          >
+            {shortcutsExpanded ? (
+              <ChevronDown size={14} strokeWidth={2.2} />
+            ) : (
+              <ChevronUp size={14} strokeWidth={2.2} />
+            )}
+          </button>
+        </div>
+
+        {shortcutsExpanded && (
+          <ShortcutKeysPanel onPress={onSendKey} disabled={disabled} />
+        )}
+
         <div className="flex items-end gap-2 px-3 py-2.5">
           <ImagePicker
             staged={staged}

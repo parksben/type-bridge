@@ -150,4 +150,35 @@ export class WebChatClient {
   setUserToken(token: string) {
     this.userToken = token;
   }
+
+  /**
+   * 发送控制键事件（Enter / Backspace / Space / Arrow*）。
+   * code 是 W3C KeyboardEvent.code 字面量，server 侧白名单约束（详见
+   * TECH_DESIGN §35.11.3）。
+   * 与 text/image 共用同一 FIFO 队列，严格按用户点击顺序串行注入。
+   */
+  async sendKey(clientMessageId: string, code: string): Promise<MessageAck> {
+    if (!this.userToken) {
+      return { success: false, reason: "尚未完成握手" };
+    }
+    return new Promise((resolve) => {
+      this.socket
+        .timeout(10000)
+        .emit(
+          "key",
+          {
+            userToken: this.userToken,
+            clientMessageId,
+            code,
+          },
+          (err: unknown, ack: MessageAck) => {
+            if (err) {
+              resolve({ success: false, reason: "网络超时" });
+              return;
+            }
+            resolve(ack ?? { success: false, reason: "server 无响应" });
+          },
+        );
+    });
+  }
 }

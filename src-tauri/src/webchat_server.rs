@@ -397,6 +397,28 @@ struct ImageMsg {
     mime: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct KeyMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
+    #[serde(rename = "clientMessageId")]
+    client_message_id: String,
+    /// W3C KeyboardEvent.code，受 ALLOWED_KEY_CODES 白名单约束
+    code: String,
+}
+
+/// 控制键白名单：只允许无副作用的导航/编辑控制键。详见 TECH_DESIGN §35.11.3。
+/// 任何不在此列表的 code 立即拒绝，绝不入队，避免 WebChat 变成"远程任意按键执行"通道。
+const ALLOWED_KEY_CODES: &[&str] = &[
+    "Enter",
+    "Backspace",
+    "Space",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+];
+
 fn default_image_mime() -> String {
     "image/jpeg".into()
 }
@@ -460,6 +482,25 @@ async fn on_connect(socket: SocketRef) {
         "image",
         |_socket: SocketRef, Data::<ImageMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
             match handle_image(&msg, state.clone()).await {
+                Ok(composite_id) => {
+                    park_ack(&state, composite_id, ack);
+                }
+                Err(reason) => {
+                    let _ = ack.send(&GenericAck {
+                        success: false,
+                        reason: Some(reason),
+                    });
+                }
+            }
+        },
+    );
+
+    // key：控制键事件（Enter / Backspace / Arrow*）。与 text/image 走同一 FIFO 队列，
+    // 严格按用户点击顺序串行注入，避免 Enter 插在粘贴中间提前提交。详见 TECH_DESIGN §35.11
+    socket.on(
+        "key",
+        |_socket: SocketRef, Data::<KeyMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+            match handle_key(&msg, state.clone()).await {
                 Ok(composite_id) => {
                     park_ack(&state, composite_id, ack);
                 }
@@ -569,6 +610,14 @@ async fn handle_image(msg: &ImageMsg, state: Arc<ServerState>) -> Result<String,
     ingest_image(&msg.client_message_id, &msg.data, &msg.mime, &state)
 }
 
+async fn handle_key(msg: &KeyMsg, state: Arc<ServerState>) -> Result<String, String> {
+    verify_user_token(&msg.user_token, &state)?;
+    if !ALLOWED_KEY_CODES.contains(&msg.code.as_str()) {
+        return Err(format!("不支持的按键：{}", msg.code));
+    }
+    ingest_key(&msg.client_message_id, &msg.code, &state)
+}
+
 fn verify_user_token(token: &str, state: &ServerState) -> Result<(), String> {
     let h = sha256_hash(token.as_bytes());
     let bindings = state
@@ -617,6 +666,7 @@ fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Resu
             text: text.to_string(),
             image_path: None,
             image_mime: None,
+            key: None,
         })?;
 
     Ok(composite)
@@ -674,6 +724,7 @@ fn ingest_image(
             text: String::new(),
             image_path: Some(rel_path),
             image_mime: Some(mime.to_string()),
+            key: None,
         })?;
 
     Ok(composite)
@@ -687,6 +738,29 @@ fn mime_to_ext(mime: &str) -> &'static str {
         "image/webp" => "webp",
         _ => "bin",
     }
+}
+
+/// 控制键事件入队：不写历史，不分配图片资源，只生成一个 composite_id 让
+/// pending_acks 能在注入完成时回 ack 给手机。worker 命中 key 分支后跳过
+/// 粘贴流程，直接 simulate_submit。详见 TECH_DESIGN §35.11
+fn ingest_key(client_message_id: &str, code: &str, state: &ServerState) -> Result<String, String> {
+    let _ = client_message_id;
+    let source_id = format!("wc_{}", short_uid());
+    let composite = crate::channel::composite_id(ChannelId::WebChat, &source_id);
+
+    state
+        .injector
+        .enqueue(QueuedMessage {
+            id: composite.clone(),
+            channel: ChannelId::WebChat,
+            source_message_id: source_id,
+            text: String::new(),
+            image_path: None,
+            image_mime: None,
+            key: Some(code.to_string()),
+        })?;
+
+    Ok(composite)
 }
 
 // ──────────────────────────────────────────────────────────────

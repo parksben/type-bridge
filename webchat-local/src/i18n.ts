@@ -58,6 +58,16 @@ const ZH = {
     imagePickAria: "发送图片",
     imageRemoveAria: "移除图片",
     imageProcessFail: "图片处理失败",
+    shortcutsExpand: "展开快捷键",
+    shortcutsCollapse: "收起快捷键",
+    shortcutEnter: "回车",
+    shortcutBackspace: "删除",
+    shortcutSpace: "空格",
+    shortcutArrowUp: "上",
+    shortcutArrowDown: "下",
+    shortcutArrowLeft: "左",
+    shortcutArrowRight: "右",
+    shortcutSendFailed: "按键发送失败",
   },
 
   bubble: {
@@ -137,6 +147,16 @@ const EN: Dict = {
     imagePickAria: "Send image",
     imageRemoveAria: "Remove image",
     imageProcessFail: "Image processing failed",
+    shortcutsExpand: "Show shortcuts",
+    shortcutsCollapse: "Hide shortcuts",
+    shortcutEnter: "Enter",
+    shortcutBackspace: "Backspace",
+    shortcutSpace: "Space",
+    shortcutArrowUp: "Up",
+    shortcutArrowDown: "Down",
+    shortcutArrowLeft: "Left",
+    shortcutArrowRight: "Right",
+    shortcutSendFailed: "Key send failed",
   },
 
   bubble: {
