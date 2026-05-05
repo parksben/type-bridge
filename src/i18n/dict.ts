@@ -246,6 +246,11 @@ export const ZH = {
     termsTokenFallback: "access_token",
     termsHostFallback: "开放平台",
     termsWecomToken: "WSS 订阅",
+    probeLabel: {
+      download_image: "下载图片资源",
+      reaction: "发表情反应",
+      reply: "回复消息",
+    },
   },
 
   inputSettings: {
@@ -555,6 +560,11 @@ export const EN: Dict = {
     termsTokenFallback: "access_token",
     termsHostFallback: "the open platform",
     termsWecomToken: "WSS subscription",
+    probeLabel: {
+      download_image: "Download image resource",
+      reaction: "Post reaction",
+      reply: "Reply to message",
+    },
   },
 
   inputSettings: {

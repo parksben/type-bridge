@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, Bell, Cable, Eraser, ExternalLink, Terminal } from "lucide-react";
 import { useAppStore, LogEntry, type ChannelId } from "../../store";
 import { useI18n } from "../../i18n";
+import { localizeRuntime } from "../../i18n/runtime";
 
 // 系统日志 tab 只展示运维/系统事件，不含 message / inject（这些归历史消息 tab）
 const systemKinds: Set<LogEntry["kind"]> = new Set(["connect", "error", "notify"]);
@@ -103,7 +104,7 @@ export default function SystemLogTab() {
                       [{t(`channel.${log.channel}` as any)}]
                     </span>
                   )}
-                  <span className="text-text break-all">{log.text}</span>
+                  <span className="text-text break-all">{localizeRuntime(log.text)}</span>
                 </div>
               );
             })}

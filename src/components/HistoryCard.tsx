@@ -10,6 +10,7 @@ import {
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type { HistoryMessage } from "../store";
 import { t } from "../i18n";
+import { localizeRuntime } from "../i18n/runtime";
 import ChannelTag from "./ChannelTag";
 import StatusTag from "./StatusTag";
 
@@ -107,7 +108,7 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
           <AlertCircle size={12} strokeWidth={1.75} className="shrink-0 mt-0.5" />
           <span>
             <span className="font-sans">{t("card.failPrefix")}</span>
-            {message.failure_reason}
+            {localizeRuntime(message.failure_reason)}
           </span>
         </div>
       )}
@@ -170,7 +171,7 @@ function FeedbackBanner({ err }: { err: NonNullable<HistoryMessage["feedback_err
           {title}
           <span className="ml-1.5 text-subtle font-mono text-[10.5px]">code={err.code}</span>
         </div>
-        <div className="text-muted font-mono break-all">{err.msg}</div>
+        <div className="text-muted font-mono break-all">{localizeRuntime(err.msg)}</div>
         {err.help_url && (
           <button
             onClick={openHelp}
