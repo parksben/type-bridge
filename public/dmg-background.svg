@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a20"/>
+      <stop offset="100%" stop-color="#121216"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.06"/>
+      <stop offset="50%" stop-color="#f2682b" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#f2682b" stop-opacity="0.06"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#f2682b" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#f2682b" stop-opacity="0.4"/>
+    </linearGradient>
+    <radialGradient id="glowLeft" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#f2682b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRight" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#f2682b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="660" height="400" fill="url(#bgGrad)"/>
+
+  <!-- Subtle grid pattern -->
+  <g opacity="0.03">
+    <line x1="0" y1="100" x2="660" y2="100" stroke="#ffffff" stroke-width="0.5"/>
+    <line x1="0" y1="200" x2="660" y2="200" stroke="#ffffff" stroke-width="0.5"/>
+    <line x1="0" y1="300" x2="660" y2="300" stroke="#ffffff" stroke-width="0.5"/>
+    <line x1="165" y1="0" x2="165" y2="400" stroke="#ffffff" stroke-width="0.5"/>
+    <line x1="330" y1="0" x2="330" y2="400" stroke="#ffffff" stroke-width="0.5"/>
+    <line x1="495" y1="0" x2="495" y2="400" stroke="#ffffff" stroke-width="0.5"/>
+  </g>
+
+  <!-- Top decorative accent line -->
+  <rect x="0" y="0" width="660" height="1" fill="url(#accentLine)"/>
+
+  <!-- Left placement glow (app icon ~180,170 → visual center ~244,234) -->
+  <circle cx="244" cy="234" r="100" fill="url(#glowLeft)"/>
+
+  <!-- Right placement glow (Applications folder ~480,170 → visual center ~544,234) -->
+  <circle cx="544" cy="234" r="100" fill="url(#glowRight)"/>
+
+  <!-- Subtle curved path behind the arrow -->
+  <path d="M 360 234 Q 420 190 480 234 Q 530 270 580 234"
+        stroke="#f2682b" stroke-opacity="0.08" stroke-width="1.5"
+        stroke-dasharray="6 4" fill="none"/>
+
+  <!-- Arrow from left to right -->
+  <g opacity="0.55">
+    <line x1="370" y1="234" x2="500" y2="234" stroke="url(#arrowGrad)" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="510,234 500,229 500,239" fill="#f2682b" fill-opacity="0.6"/>
+  </g>
+
+  <!-- Accent dots -->
+  <circle cx="400" cy="228" r="1.2" fill="#f2682b" fill-opacity="0.18"/>
+  <circle cx="440" cy="242" r="0.8" fill="#f2682b" fill-opacity="0.12"/>
+  <circle cx="470" cy="228" r="1.2" fill="#f2682b" fill-opacity="0.18"/>
+
+  <!-- Drop shadows for icon placements -->
+  <ellipse cx="244" cy="320" rx="70" ry="8" fill="#000000" fill-opacity="0.16"/>
+  <ellipse cx="544" cy="320" rx="70" ry="8" fill="#000000" fill-opacity="0.16"/>
+
+  <!-- Subtle brand watermark -->
+  <text x="330" y="388" text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        font-size="9" font-weight="400"
+        fill="#ffffff" fill-opacity="0.06"
+        letter-spacing="3">
+    TYPEBRIDGE
+  </text>
+</svg>
+
