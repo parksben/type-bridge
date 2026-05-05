@@ -46,13 +46,13 @@ export default function SideBar() {
 
       {/* 底部弱化入口区：关于 TypeBridge + 语言切换。两者视觉重量一致。 */}
       <div className="mt-auto px-2 py-2 flex flex-col gap-0.5">
+        <LanguageSwitcher />
         <FooterTabButton
           tab={ABOUT_TAB}
           label={t(ABOUT_TAB.labelKey)}
           active={activeTab === ABOUT_TAB.id}
           onClick={() => setActiveTab(ABOUT_TAB.id)}
         />
-        <LanguageSwitcher />
       </div>
     </div>
   );
