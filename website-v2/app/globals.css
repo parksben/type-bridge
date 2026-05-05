@@ -1,42 +1,48 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────
-   Color tokens — dark-first, light via .light-force
+   Color tokens — aligned with the desktop app's palette
+   (warm zinc neutrals + single warm-orange accent),
+   dark-first, light via .light-force
    ───────────────────────────────────────────── */
 
 :root {
-  /* Dark defaults (base) */
-  --bg: #07070e;
-  --bg-2: #0d0d18;
-  --surface: #12121f;
-  --surface-elevated: #1a1a2a;
-  --text: #f3f3f8;
-  --muted: #9ca3b4;
-  --subtle: #6b7388;
+  /* Dark defaults — matches src/styles/globals.css dark vars */
+  --bg: #0e0e10;
+  --bg-2: #18181b;
+  --surface: #18181b;
+  --surface-2: #1f1f23;
+  --surface-elevated: #1f1f23;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --subtle: #71717a;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --accent: #ff7a4d;
-  --accent-2: #c084fc;
-  --accent-3: #22d3ee;
-  --accent-glow: rgba(255, 122, 77, 0.35);
+  --accent: #fb923c;
+  --accent-hover: #fdba74;
+  --accent-fg: #1c1917;
+  --accent-soft: rgba(251, 146, 60, 0.12);
+  --accent-glow: rgba(251, 146, 60, 0.28);
 
   color-scheme: dark;
 }
 
 html.light-force {
-  --bg: #fefefe;
-  --bg-2: #f7f7fb;
+  --bg: #faf9f6;
+  --bg-2: #f4f2ec;
   --surface: #ffffff;
+  --surface-2: #f4f2ec;
   --surface-elevated: #ffffff;
-  --text: #0b0b14;
-  --muted: #4e4e5a;
-  --subtle: #8a8a95;
+  --text: #18181b;
+  --muted: #71717a;
+  --subtle: #a1a1aa;
   --border: rgba(10, 10, 20, 0.08);
   --border-strong: rgba(10, 10, 20, 0.14);
-  --accent: #ff6b35;
-  --accent-2: #a855f7;
-  --accent-3: #0891b2;
-  --accent-glow: rgba(255, 107, 53, 0.22);
+  --accent: #c2410c;
+  --accent-hover: #9a3412;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(194, 65, 12, 0.1);
+  --accent-glow: rgba(194, 65, 12, 0.18);
 
   color-scheme: light;
 }
@@ -52,8 +58,8 @@ html.light-force {
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
-  --color-accent-2: var(--accent-2);
-  --color-accent-3: var(--accent-3);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -65,7 +71,7 @@ html.light-force {
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 84px; /* leaves room for fixed TopNav */
+  scroll-padding-top: 84px;
 }
 
 body {
@@ -77,20 +83,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Global ambient background — subtle gradient + grain */
+/* Global ambient background — minimal, just two faint warm orbs.
+   No more rainbow / multi-hue. */
 .page-bg {
   background:
-    radial-gradient(800px circle at 20% 10%, rgba(255, 122, 77, 0.08), transparent 50%),
-    radial-gradient(900px circle at 80% 30%, rgba(192, 132, 252, 0.06), transparent 55%),
-    radial-gradient(700px circle at 50% 95%, rgba(34, 211, 238, 0.05), transparent 55%),
-    var(--bg);
-}
-
-html.light-force .page-bg {
-  background:
-    radial-gradient(800px circle at 20% 10%, rgba(255, 107, 53, 0.05), transparent 50%),
-    radial-gradient(900px circle at 80% 30%, rgba(168, 85, 247, 0.04), transparent 55%),
-    radial-gradient(700px circle at 50% 95%, rgba(8, 145, 178, 0.03), transparent 55%),
+    radial-gradient(720px circle at 22% 12%, var(--accent-soft), transparent 55%),
+    radial-gradient(620px circle at 80% 88%, var(--accent-soft), transparent 55%),
     var(--bg);
 }
 
@@ -111,7 +109,7 @@ html.light-force .noise::before {
 }
 
 /* ─────────────────────────────────────────────
-   Keyframes — animations used across sections
+   Keyframes
    ───────────────────────────────────────────── */
 
 @keyframes fade-up {
@@ -135,7 +133,8 @@ html.light-force .noise::before {
 }
 
 @keyframes float-soft {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -155,19 +154,22 @@ html.light-force .noise::before {
 }
 
 @keyframes breathe-glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 18px var(--accent-glow));
+  0%,
+  100% {
+    filter: drop-shadow(0 0 16px var(--accent-glow));
   }
   50% {
-    filter: drop-shadow(0 0 32px var(--accent-glow));
+    filter: drop-shadow(0 0 28px var(--accent-glow));
   }
 }
 
 @keyframes blink-cursor {
-  0%, 45% {
+  0%,
+  45% {
     opacity: 1;
   }
-  50%, 100% {
+  50%,
+  100% {
     opacity: 0;
   }
 }
@@ -181,111 +183,44 @@ html.light-force .noise::before {
   }
 }
 
-@keyframes particle-travel {
-  0% {
-    transform: translateX(-20%) translateY(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(120%) translateY(0);
-    opacity: 0;
-  }
-}
-
-@keyframes type-cursor {
-  0% {
-    width: 0;
-  }
-  40% {
-    width: 88%;
-  }
-  70% {
-    width: 88%;
-  }
-  100% {
-    width: 0;
-  }
-}
-
-@keyframes concept-typewriter {
-  0% {
-    width: 0;
-  }
-  45% {
-    width: 75px;
-  }
-  85% {
-    width: 75px;
-  }
-  100% {
-    width: 0;
-  }
-}
-
-/* Hero 概念图 - 桌面 chatbot 输入框：粘贴 + 提交效果（非打字机） */
+/* Hero 概念图 - 桌面输入框：粘贴 → 短停 → 清空，循环 */
 @keyframes hero-input-paste {
   0%,
-  30% {
+  35% {
     width: 0;
   }
-  31%,
-  50% {
+  36%,
+  68% {
     width: 65px;
   }
-  51%,
+  69%,
   100% {
     width: 0;
   }
 }
 
-@keyframes hero-bubble-submit {
-  0%,
-  49% {
-    opacity: 0;
-    transform: translateY(18px) scale(0.94);
-  }
-  56% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  78% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  86%,
-  100% {
-    opacity: 0;
-    transform: translateY(-10px) scale(1);
-  }
-}
-
-/* Hero 概念图 - 线条扫光动效：strokeDashoffset 推动短亮 dash 走完一条路径 */
+/* Hero 概念图 - 线条扫光：strokeDashoffset 推一段短亮 dash 走完路径
+   值按 SVG viewBox（0-100）单位：arc 路径长 ~55，output ~30 */
 @keyframes hero-sweep {
   0% {
-    stroke-dashoffset: 600;
+    stroke-dashoffset: 20;
   }
   100% {
-    stroke-dashoffset: -100;
+    stroke-dashoffset: -58;
   }
 }
 
 @keyframes hero-sweep-output {
   0% {
-    stroke-dashoffset: 400;
+    stroke-dashoffset: 12;
   }
   100% {
-    stroke-dashoffset: -50;
+    stroke-dashoffset: -34;
   }
 }
 
 /* ─────────────────────────────────────────────
-   Utility classes referenced from components
+   Utility classes
    ───────────────────────────────────────────── */
 
 .animate-fade-up {
@@ -308,25 +243,22 @@ html.light-force .noise::before {
   animation: blink-cursor 1s step-end infinite;
 }
 
-/* Accent gradient text utility */
-.text-accent-gradient {
-  background: linear-gradient(
-    90deg,
-    var(--accent) 0%,
-    var(--accent-2) 55%,
-    var(--accent-3) 100%
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+/* Brand accent gradient — only TWO stops (accent → accent-hover),
+   not a rainbow. Used for the bridge mark + a few brand wordmark touches. */
+.bg-brand-grad {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
 }
 
+/* Accent text — solid color now, no rainbow gradient.
+   Kept the class name so existing markup keeps compiling; semantic = "accent text". */
+.text-accent-gradient {
+  color: var(--accent);
+}
+
+/* Legacy alias — solid accent fill button bg. */
 .bg-accent-gradient {
-  background: linear-gradient(
-    135deg,
-    var(--accent) 0%,
-    var(--accent-2) 100%
-  );
+  background-color: var(--accent);
+  color: var(--accent-fg);
 }
 
 /* ─────────────────────────────────────────────
@@ -345,7 +277,6 @@ html.light-force .noise::before {
   }
 }
 
-/* Scrollbar — subtle */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -362,9 +293,4 @@ html.light-force .noise::before {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--subtle);
-}
-
-/* Prevent FOUC while the theme-flicker script runs */
-html:not(.light-force):not(.dark) {
-  /* Base already uses dark tokens via :root */
 }
