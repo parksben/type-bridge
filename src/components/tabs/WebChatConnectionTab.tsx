@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "../../store";
 import { useI18n, t as ti18n } from "../../i18n";
+import { localizeRuntime } from "../../i18n/runtime";
 
 // ───────── Snapshot 协议（与 src-tauri/src/webchat.rs 对齐）─────────
 // v2 本地局域网版：
@@ -445,7 +446,7 @@ function ErrorView({
   const title = locked ? ti18n("webchat.lockedTitle") : ti18n("webchat.sessionErrorTitle");
   const body = locked
     ? ti18n("webchat.lockedBody")
-    : snap?.error || ti18n("webchat.sessionErrorFallback");
+    : localizeRuntime(snap?.error) || ti18n("webchat.sessionErrorFallback");
 
   return (
     <>

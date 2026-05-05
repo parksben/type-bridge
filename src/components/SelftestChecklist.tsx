@@ -1,6 +1,7 @@
 import { CheckCircle2, XCircle, AlertCircle, ExternalLink, Info } from "lucide-react";
 import type { ChannelId } from "../store";
 import { t } from "../i18n";
+import { localizeRuntime } from "../i18n/runtime";
 
 export interface ProbeResult {
   id: string;
@@ -47,7 +48,7 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
         <div className="flex-1">
           <div className="text-error font-medium mb-1">{t("selftest.credentialError")}</div>
           <div className="text-muted text-[11.5px] font-mono break-all">
-            {result.credentials_reason || t("selftest.unknownError")}
+            {localizeRuntime(result.credentials_reason) || t("selftest.unknownError")}
           </div>
           <div className="text-text text-[11.5px] mt-1.5">
             {t("selftest.pleaseCheck", { idLabel: terms.idLabel, host: terms.host })}
@@ -78,7 +79,7 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
         <ChecklistRow
           key={p.id}
           ok={p.ok}
-          label={p.label}
+          label={localizedProbeLabel(p)}
           hint={p.scope_hint}
           failureDetail={
             !p.ok ? (
@@ -275,6 +276,17 @@ interface RowProps {
   label: string;
   hint: string;
   failureDetail?: React.ReactNode;
+}
+
+/// Probe 的 label 是 Go sidecar 直接返回的中文字符串。这里按 probe id 做一次本地化映射，
+/// 命中就用 dict 里的翻译，未命中（未来新增的 probe id）回落到 sidecar 给的 label，
+/// 保证向后兼容。
+const KNOWN_PROBE_IDS = new Set(["download_image", "reaction", "reply"]);
+function localizedProbeLabel(p: ProbeResult): string {
+  if (KNOWN_PROBE_IDS.has(p.id)) {
+    return t(`selftest.probeLabel.${p.id}` as any);
+  }
+  return p.label;
 }
 
 /// 凭据文案按渠道走：飞书用 App ID / tenant_access_token，钉钉用 Client ID / access_token，

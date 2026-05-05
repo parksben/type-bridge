@@ -3,6 +3,7 @@ import { CheckCircle2, RefreshCw } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import logoUrl from "../../assets/icons/typebridge.png";
 import { useI18n, t as ti18n } from "../../i18n";
+import { localizeRuntime } from "../../i18n/runtime";
 
 // 与 src-tauri/src/about.rs 的 UpdateCheckResult 对齐
 interface UpdateCheckResult {
@@ -167,7 +168,7 @@ function CheckResultLine({
   }
 
   return (
-    <div className="text-[12px] text-error max-w-xs break-words">{status.message}</div>
+    <div className="text-[12px] text-error max-w-xs break-words">{localizeRuntime(status.message)}</div>
   );
 }
 
