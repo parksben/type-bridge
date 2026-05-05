@@ -125,17 +125,9 @@ function ChannelBadge({
       style={{
         top: `${badgeTopPct(index, total)}%`,
         left: `calc(${BADGE_LEFT_PCT}% - 22px)`,
-        animation: `fade-up 700ms ${channel.delayMs}ms both ease-out`,
       }}
     >
       <div className="relative">
-        <span
-          className="absolute inset-0 rounded-2xl"
-          style={{
-            animation: `pulse-ring 2.8s ${channel.delayMs}ms ease-out infinite`,
-            boxShadow: `0 0 0 2px ${channel.color}66`,
-          }}
-        />
         <div
           className="relative flex h-11 w-11 items-center justify-center rounded-2xl border backdrop-blur-sm"
           style={{
@@ -168,7 +160,7 @@ function BridgeNode() {
         top: `calc(${BRIDGE_Y_PCT}% - 32px)`,
       }}
     >
-      <div className="animate-breathe-glow relative h-16 w-16">
+      <div className="relative h-16 w-16">
         <img
           src="/typebridge.png"
           alt=""
@@ -184,35 +176,23 @@ function BridgeNode() {
 }
 
 function DesktopFrame() {
-  // 简化：单一居中输入框，文字「整段瞬间出现 / 整段瞬间消失」循环（粘贴 + 提交）。
-  // 光标紧贴文字尾。无 chat 气泡 / chat 历史 / 多余 mock 内容。
+  // 简化：窗口内直接展示文本输入效果，无 input 框样式。
   return (
     <div
-      className="animate-float-soft absolute right-3 top-1/2 w-[200px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.4)] backdrop-blur-sm sm:right-4 sm:w-[230px]"
+      className="absolute right-3 top-1/2 w-[200px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.4)] backdrop-blur-sm sm:right-4 sm:w-[230px]"
       aria-hidden
     >
       <div className="flex items-center gap-1.5 border-b border-[var(--border)]/60 px-3 py-2">
         <span className="h-2 w-2 rounded-full bg-[#ff5f57]" />
         <span className="h-2 w-2 rounded-full bg-[#febc2e]" />
         <span className="h-2 w-2 rounded-full bg-[#28c840]" />
-        <span className="ml-2 text-[9px] font-medium tracking-wide text-[var(--subtle)]">
-          桌面端输入框
-        </span>
       </div>
 
       <div className="flex h-[92px] items-center px-4">
-        <div className="flex h-9 w-full items-center overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-2)]/80 px-3">
-          <span
-            className="overflow-hidden whitespace-nowrap font-mono text-[12px] leading-none text-[var(--text)]"
-            style={{
-              animation: "hero-input-paste 5s steps(1, end) infinite",
-              width: 0,
-            }}
-          >
-            手机即键盘
-          </span>
-          <span className="animate-blink-cursor inline-block h-3.5 w-[2px] rounded-full bg-[var(--accent)]" />
-        </div>
+        <span className="font-mono text-[12px] leading-none text-[var(--text)]">
+          手机即键盘
+        </span>
+        <span className="ml-0.5 inline-block h-3.5 w-[2px] rounded-full bg-[var(--accent)]" />
       </div>
     </div>
   );
@@ -278,63 +258,7 @@ function ConceptBanner() {
           vectorEffect="non-scaling-stroke"
         />
 
-        {/* (b) Sweep overlay — short soft pulse traveling along the path.
-            Halo: thicker stroke at low opacity, Core: thinner at moderate opacity.
-            Both share the same animated dashOffset for a glowy "single light pulse" feel. */}
-        {CHANNELS.map((_, i) => (
-          <g key={`sweep-${i}`}>
-            <use
-              href={`#hero-arc-path-${i}`}
-              stroke="var(--accent)"
-              strokeOpacity="0.18"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              strokeDasharray="3 75"
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-              style={{
-                animation: `hero-sweep 6s ${i * 0.8}s linear infinite`,
-              }}
-            />
-            <use
-              href={`#hero-arc-path-${i}`}
-              stroke="var(--accent)"
-              strokeOpacity="0.55"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeDasharray="3 75"
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-              style={{
-                animation: `hero-sweep 6s ${i * 0.8}s linear infinite`,
-              }}
-            />
-          </g>
-        ))}
-        <g>
-          <use
-            href="#hero-output-path"
-            stroke="var(--accent)"
-            strokeOpacity="0.18"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeDasharray="3 50"
-            fill="none"
-            vectorEffect="non-scaling-stroke"
-            style={{ animation: "hero-sweep-output 5s 2.5s linear infinite" }}
-          />
-          <use
-            href="#hero-output-path"
-            stroke="var(--accent)"
-            strokeOpacity="0.55"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            strokeDasharray="3 50"
-            fill="none"
-            vectorEffect="non-scaling-stroke"
-            style={{ animation: "hero-sweep-output 5s 2.5s linear infinite" }}
-          />
-        </g>
+        {/* (b) Sweep overlay removed — concept image is fully static. */}
       </svg>
 
       {/* Channel badges */}

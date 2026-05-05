@@ -18,11 +18,11 @@
   --subtle: #71717a;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --accent: #fb923c;
-  --accent-hover: #fdba74;
+  --accent: #ea580c;
+  --accent-hover: #fb923c;
   --accent-fg: #1c1917;
-  --accent-soft: rgba(251, 146, 60, 0.12);
-  --accent-glow: rgba(251, 146, 60, 0.28);
+  --accent-soft: rgba(234, 88, 12, 0.14);
+  --accent-glow: rgba(234, 88, 12, 0.32);
 
   color-scheme: dark;
 }

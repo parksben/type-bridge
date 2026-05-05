@@ -17,10 +17,10 @@ export const metadata: Metadata = {
 
 /**
  * Theme flicker prevention — runs before React hydration.
- * Reads localStorage.theme; defaults to dark.
- * Writes html.light-force for light mode (html keeps :root dark vars by default).
+ * Reads localStorage.tb-theme: "system" (default) | "light" | "dark".
+ * For "system", consults prefers-color-scheme. Writes html.light-force for light.
  */
-const themeInit = `(function(){try{var t=localStorage.getItem('tb-theme');if(t==='light')document.documentElement.classList.add('light-force');}catch(e){}})()`;
+const themeInit = `(function(){try{var t=localStorage.getItem('tb-theme')||'system';var light=t==='light'||(t==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(light)document.documentElement.classList.add('light-force');}catch(e){}})()`;
 
 export default function RootLayout({
   children,
