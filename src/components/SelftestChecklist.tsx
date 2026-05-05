@@ -1,5 +1,6 @@
 import { CheckCircle2, XCircle, AlertCircle, ExternalLink, Info } from "lucide-react";
 import type { ChannelId } from "../store";
+import { t } from "../i18n";
 
 export interface ProbeResult {
   id: string;
@@ -44,12 +45,12 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
       >
         <XCircle size={14} strokeWidth={1.75} className="shrink-0 mt-0.5 text-error" />
         <div className="flex-1">
-          <div className="text-error font-medium mb-1">凭据/网络错误</div>
+          <div className="text-error font-medium mb-1">{t("selftest.credentialError")}</div>
           <div className="text-muted text-[11.5px] font-mono break-all">
-            {result.credentials_reason || "未知错误"}
+            {result.credentials_reason || t("selftest.unknownError")}
           </div>
           <div className="text-text text-[11.5px] mt-1.5">
-            请检查 {terms.idLabel} 是否正确，或本机网络 / 代理是否能访问 {terms.host}。
+            {t("selftest.pleaseCheck", { idLabel: terms.idLabel, host: terms.host })}
           </div>
         </div>
       </div>
@@ -69,8 +70,8 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
     >
       <ChecklistRow
         ok={true}
-        label="凭据可用"
-        hint={`${terms.idLabel} 能换到 ${terms.tokenName}`}
+        label={t("selftest.credentialAvailable")}
+        hint={t("selftest.credentialAvailableHint", { idLabel: terms.idLabel, tokenName: terms.tokenName })}
       />
 
       {result.probes.map((p) => (
@@ -85,7 +86,7 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
                 <div className="text-[11.5px] text-muted mb-1.5">
                   {p.scopes && p.scopes.length > 0 ? (
                     <>
-                      缺少 scope：
+                      {t("selftest.missingScope")}
                       <span className="font-mono text-text">{p.scopes.join(" / ")}</span>
                     </>
                   ) : (
@@ -98,7 +99,7 @@ export default function SelftestChecklist({ result, channel, appIdOrEquivalent, 
                   onClick={() => onOpenUrl(p.help_url || defaultHelpURL)}
                   className="inline-flex items-center gap-1 text-[11.5px] text-accent hover:underline"
                 >
-                  去飞书开发者后台授权
+                  {t("selftest.openFeishuAuth")}
                   <ExternalLink size={10} strokeWidth={2} />
                 </button>
               </div>
@@ -138,23 +139,23 @@ function FooterGuide({
         <Info size={12} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
         <div className="flex-1">
           <div className="text-text font-medium">
-            接收消息事件 需在飞书后台「事件配置」单独完成
+            {t("selftest.feishuFooterTitle")}
           </div>
           <div className="text-muted text-[11px] mt-0.5">
-            API probe 无法自动校验事件订阅状态，请按以下两步对照配置
+            {t("selftest.feishuFooterDesc")}
           </div>
           <ol className="mt-1.5 flex flex-col gap-1 text-text">
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">①</span>
               <span>
-                <span className="font-medium">订阅方式</span>：选择"使用长连接接收事件"并完成验证
+                <span className="font-medium">{t("selftest.feishuStep1Title")}</span>：{t("selftest.feishuStep1Body")}
               </span>
             </li>
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">②</span>
               <span>
-                <span className="font-medium">添加事件</span>：搜索{" "}
-                <span className="font-mono">im.message.receive_v1</span> 并勾选提交
+                <span className="font-medium">{t("selftest.feishuStep2Title")}</span>：{t("selftest.feishuStep2BodyPrefix")}
+                <span className="font-mono">im.message.receive_v1</span>{t("selftest.feishuStep2BodySuffix")}
               </span>
             </li>
           </ol>
@@ -167,7 +168,7 @@ function FooterGuide({
               }
               className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
             >
-              去事件配置页
+              {t("selftest.feishuFooterCta")}
               <ExternalLink size={10} strokeWidth={2} />
             </button>
           </div>
@@ -188,23 +189,22 @@ function FooterGuide({
         <Info size={12} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
         <div className="flex-1">
           <div className="text-text font-medium">
-            Stream Mode 需在钉钉开放平台完成两步配置
+            {t("selftest.dingFooterTitle")}
           </div>
           <div className="text-muted text-[11px] mt-0.5">
-            API probe 无法自动校验 Stream Mode 开关，请按以下对照配置
+            {t("selftest.dingFooterDesc")}
           </div>
           <ol className="mt-1.5 flex flex-col gap-1 text-text">
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">①</span>
               <span>
-                <span className="font-medium">机器人能力</span>：在「企业内部应用」中添加
+                <span className="font-medium">{t("selftest.dingStep1Title")}</span>：{t("selftest.dingStep1Body")}
               </span>
             </li>
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">②</span>
               <span>
-                <span className="font-medium">消息接收模式</span>：选择
-                "Stream 模式"
+                <span className="font-medium">{t("selftest.dingStep2Title")}</span>：{t("selftest.dingStep2Body")}
               </span>
             </li>
           </ol>
@@ -213,7 +213,7 @@ function FooterGuide({
               onClick={() => onOpenUrl("https://open-dev.dingtalk.com/fe/app?hash=%23%2Fcorp%2Fapp#/corp/app")}
               className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
             >
-              去钉钉开发者平台
+              {t("selftest.dingFooterCta")}
               <ExternalLink size={10} strokeWidth={2} />
             </button>
           </div>
@@ -234,22 +234,22 @@ function FooterGuide({
         <Info size={12} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
         <div className="flex-1">
           <div className="text-text font-medium">
-            长连接模式需在企业微信管理后台开启
+            {t("selftest.wecomFooterTitle")}
           </div>
           <div className="text-muted text-[11px] mt-0.5">
-            API probe 只能验证 WSS 握手是否通过，请按以下对照配置
+            {t("selftest.wecomFooterDesc")}
           </div>
           <ol className="mt-1.5 flex flex-col gap-1 text-text">
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">①</span>
               <span>
-                <span className="font-medium">API 模式</span>：机器人详情 → 编辑 → API配置
+                <span className="font-medium">{t("selftest.wecomStep1Title")}</span>：{t("selftest.wecomStep1Body")}
               </span>
             </li>
             <li className="flex items-baseline gap-1.5">
               <span className="text-accent font-mono text-[10.5px]">②</span>
               <span>
-                <span className="font-medium">连接方式</span>：选择 “使用长连接”
+                <span className="font-medium">{t("selftest.wecomStep2Title")}</span>：{t("selftest.wecomStep2Body")}
               </span>
             </li>
           </ol>
@@ -258,7 +258,7 @@ function FooterGuide({
               onClick={() => onOpenUrl("https://work.weixin.qq.com/wework_admin/frame#/aiHelper/list?tab=manage")}
               className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
             >
-              去企微机器人管理后台
+              {t("selftest.wecomFooterCta")}
               <ExternalLink size={10} strokeWidth={2} />
             </button>
           </div>
@@ -283,27 +283,27 @@ function credentialTerms(channel: ChannelId): { idLabel: string; tokenName: stri
   switch (channel) {
     case "feishu":
       return {
-        idLabel: "App ID / App Secret",
+        idLabel: t("selftest.termsFeishuId"),
         tokenName: "tenant_access_token",
         host: "open.feishu.cn",
       };
     case "dingtalk":
       return {
-        idLabel: "Client ID / Client Secret",
+        idLabel: t("selftest.termsDingId"),
         tokenName: "access_token",
         host: "api.dingtalk.com",
       };
     case "wecom":
       return {
-        idLabel: "Bot ID / Secret",
-        tokenName: "WSS 订阅",
+        idLabel: t("selftest.termsWecomId"),
+        tokenName: t("selftest.termsWecomToken"),
         host: "openws.work.weixin.qq.com",
       };
     default:
       return {
-        idLabel: "凭据",
-        tokenName: "access_token",
-        host: "开放平台",
+        idLabel: t("selftest.termsCredFallback"),
+        tokenName: t("selftest.termsTokenFallback"),
+        host: t("selftest.termsHostFallback"),
       };
   }
 }

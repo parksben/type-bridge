@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type { HistoryMessage } from "../store";
+import { t } from "../i18n";
 import ChannelTag from "./ChannelTag";
 import StatusTag from "./StatusTag";
 
@@ -20,10 +21,10 @@ interface Props {
 
 function formatRelative(ts: number): string {
   const delta = Math.max(0, Math.floor(Date.now() / 1000) - ts);
-  if (delta < 10) return "刚刚";
-  if (delta < 60) return `${delta} 秒前`;
-  if (delta < 3600) return `${Math.floor(delta / 60)} 分钟前`;
-  if (delta < 86400) return `${Math.floor(delta / 3600)} 小时前`;
+  if (delta < 10) return t("card.just");
+  if (delta < 60) return t("card.secondsAgo", { n: delta });
+  if (delta < 3600) return t("card.minutesAgo", { n: Math.floor(delta / 60) });
+  if (delta < 86400) return t("card.hoursAgo", { n: Math.floor(delta / 3600) });
   const d = new Date(ts * 1000);
   const today = new Date();
   const isSameYear = d.getFullYear() === today.getFullYear();
@@ -105,7 +106,7 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
         <div className="flex items-start gap-1.5 text-[11.5px] font-mono mb-2" style={{ color: "var(--accent)" }}>
           <AlertCircle size={12} strokeWidth={1.75} className="shrink-0 mt-0.5" />
           <span>
-            <span className="font-sans">本地输入失败：</span>
+            <span className="font-sans">{t("card.failPrefix")}</span>
             {message.failure_reason}
           </span>
         </div>
@@ -117,18 +118,18 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
         <button
           onClick={handleCopy}
           className="tb-btn-ghost flex items-center gap-1"
-          title="复制到剪贴板"
+          title={t("card.copyTooltip")}
           disabled={copied}
         >
           {copied ? (
             <>
               <Check size={11} strokeWidth={2} className="text-success" />
-              <span className="text-success">已复制</span>
+              <span className="text-success">{t("card.copied")}</span>
             </>
           ) : (
             <>
               <Copy size={11} strokeWidth={1.75} />
-              复制
+              {t("card.copy")}
             </>
           )}
         </button>
@@ -137,7 +138,7 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
           className="tb-btn-ghost flex items-center gap-1"
         >
           <Trash2 size={11} strokeWidth={1.75} />
-          删除
+          {t("card.delete")}
         </button>
       </div>
     </div>
@@ -147,7 +148,7 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
 /// 机器人向飞书发表情 / thread 回复被拒时的提示，独立于注入状态。
 function FeedbackBanner({ err }: { err: NonNullable<HistoryMessage["feedback_error"]> }) {
   const title =
-    err.kind === "reply" ? "机器人回复被拒" : err.kind === "reaction" ? "机器人表情被拒" : "机器人回调被拒";
+    err.kind === "reply" ? t("card.feedbackReply") : err.kind === "reaction" ? t("card.feedbackReaction") : t("card.feedbackOther");
 
   async function openHelp() {
     if (!err.help_url) return;
@@ -175,7 +176,7 @@ function FeedbackBanner({ err }: { err: NonNullable<HistoryMessage["feedback_err
             onClick={openHelp}
             className="mt-1 inline-flex items-center gap-1 text-accent hover:underline text-[11.5px]"
           >
-            去飞书后台开通权限
+            {t("card.feedbackOpenHelp")}
             <ExternalLink size={10} strokeWidth={2} />
           </button>
         )}

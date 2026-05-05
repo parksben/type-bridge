@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Keyboard, Zap } from "lucide-react";
 import { useAppStore, DEFAULT_SUBMIT_KEY, type Settings } from "../../store";
+import { useI18n } from "../../i18n";
 import KeyBindInput from "../KeyBindInput";
 
 export default function InputSettingsTab() {
   const { autoSubmit, submitKey, setAutoSubmit, setSubmitKey } = useAppStore();
+  const { t } = useI18n();
   const [hydrated, setHydrated] = useState(false);
 
   // 首次挂载时拉设置。ConnectionTab 也会拉；Zustand 允许重复写同值，重入
@@ -44,20 +46,20 @@ export default function InputSettingsTab() {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <Zap size={12} strokeWidth={1.75} />
-            自动提交
+            {t("inputSettings.autoSubmitGroup")}
           </div>
           <div className="flex items-center justify-between mt-1">
             <div className="flex flex-col">
-              <span className="text-[13px] text-text">输入后自动提交</span>
+              <span className="text-[13px] text-text">{t("inputSettings.autoSubmitTitle")}</span>
               <span className="text-[11px] text-subtle mt-0.5">
-                写入完成后模拟按下提交按键，完成一键发送
+                {t("inputSettings.autoSubmitDesc")}
               </span>
             </div>
             <button
               className="tb-toggle"
               data-on={autoSubmit}
               onClick={() => setAutoSubmit(!autoSubmit)}
-              aria-label="切换输入后自动提交"
+              aria-label={t("inputSettings.toggleAria")}
             />
           </div>
         </div>
@@ -67,13 +69,13 @@ export default function InputSettingsTab() {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <Keyboard size={12} strokeWidth={1.75} />
-            提交按键
+            {t("inputSettings.submitKeyGroup")}
           </div>
           <div className="flex items-center justify-between mt-1">
             <div className="flex flex-col">
-              <span className="text-[13px] text-text">按键 / 组合键</span>
+              <span className="text-[13px] text-text">{t("inputSettings.submitKeyTitle")}</span>
               <span className="text-[11px] text-subtle mt-0.5">
-                点击录入，Escape 取消；仅在"自动提交"开启时生效
+                {t("inputSettings.submitKeyDesc")}
               </span>
             </div>
             <KeyBindInput

@@ -1,18 +1,11 @@
 import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, Bell, Cable, Eraser, ExternalLink, Terminal } from "lucide-react";
-import { useAppStore, CHANNEL_LABEL, LogEntry, type ChannelId } from "../../store";
+import { useAppStore, LogEntry, type ChannelId } from "../../store";
+import { useI18n } from "../../i18n";
 
 // 系统日志 tab 只展示运维/系统事件，不含 message / inject（这些归历史消息 tab）
 const systemKinds: Set<LogEntry["kind"]> = new Set(["connect", "error", "notify"]);
-
-const kindLabel: Record<LogEntry["kind"], string> = {
-  connect: "连接",
-  message: "消息",
-  inject: "输入",
-  error: "错误",
-  notify: "通知",
-};
 
 const KindIcon: Record<LogEntry["kind"], typeof Cable> = {
   connect: Cable,
@@ -43,6 +36,7 @@ export default function SystemLogTab() {
   const clearLogs = useAppStore((s) => s.clearLogs);
   const logs = allLogs.filter((l) => systemKinds.has(l.kind));
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,7 +54,7 @@ export default function SystemLogTab() {
         <div className="flex items-center gap-2 text-muted">
           <Terminal size={14} strokeWidth={1.75} />
           <span className="text-[11px] font-mono uppercase tracking-[0.12em]">
-            {logs.length} 条记录
+            {logs.length} {t("systemLog.countSuffix")}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -68,14 +62,14 @@ export default function SystemLogTab() {
             <button
               onClick={clearLogs}
               className="tb-btn-ghost flex items-center gap-1.5"
-              title="清空当前 UI 显示，不影响文件日志"
+              title={t("systemLog.clearTooltip")}
             >
               <Eraser size={12} strokeWidth={1.75} />
-              清空
+              {t("systemLog.clear")}
             </button>
           )}
           <button onClick={openLogDir} className="tb-btn-ghost flex items-center gap-1.5">
-            在访达中显示
+            {t("systemLog.revealInFinder")}
             <ExternalLink size={12} strokeWidth={1.75} />
           </button>
         </div>
@@ -85,9 +79,9 @@ export default function SystemLogTab() {
         {logs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-subtle">
             <Terminal size={28} strokeWidth={1.25} className="mb-3 opacity-60" />
-            <div className="text-[15px] text-muted mb-1.5">暂无系统事件</div>
+            <div className="text-[15px] text-muted mb-1.5">{t("systemLog.emptyTitle")}</div>
             <div className="text-[11.5px] max-w-xs">
-              应用运行期间的连接、错误、通知事件将出现在这里
+              {t("systemLog.emptyHint")}
             </div>
           </div>
         ) : (
@@ -99,14 +93,14 @@ export default function SystemLogTab() {
                   <span className="text-subtle shrink-0 tabular-nums pt-[2px]">{log.time}</span>
                   <span className={`shrink-0 flex items-center gap-1 font-medium pt-[2px] ${kindClass[log.kind]}`}>
                     <Icon size={11} strokeWidth={1.75} />
-                    {kindLabel[log.kind]}
+                    {t(`systemLog.kind.${log.kind}` as any)}
                   </span>
                   {log.channel && (
                     <span
                       className="shrink-0 pt-[2px]"
                       style={{ color: CHANNEL_PREFIX_COLOR[log.channel] }}
                     >
-                      [{CHANNEL_LABEL[log.channel]}]
+                      [{t(`channel.${log.channel}` as any)}]
                     </span>
                   )}
                   <span className="text-text break-all">{log.text}</span>
