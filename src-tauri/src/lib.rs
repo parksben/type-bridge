@@ -1,3 +1,4 @@
+pub mod about;
 pub mod channel;
 pub mod history;
 pub mod injector;
@@ -44,6 +45,9 @@ pub fn run() {
             injector::request_accessibility,
             injector::inject_text_direct,
             logger::get_log_dir,
+            about::get_app_version,
+            about::check_update,
+            about::apply_update,
         ])
         .setup(|app| {
             tray::setup_tray(app)?;
