@@ -61,6 +61,10 @@ pub struct Settings {
     /// 自动提交使用的按键。默认 Enter。
     #[serde(default)]
     pub submit_key: SubmitKey,
+    /// UI 语言。空字符串表示「未选择」，前端首启时会弹语言选择卡片。
+    /// 取值：`""` / `"zh"` / `"en"`。
+    #[serde(default)]
+    pub language: String,
 }
 
 impl Default for Settings {
@@ -74,6 +78,7 @@ impl Default for Settings {
             wecom_secret: String::new(),
             auto_submit: true,
             submit_key: SubmitKey::default(),
+            language: String::new(),
         }
     }
 }
@@ -119,6 +124,10 @@ pub fn get_settings(app: tauri::AppHandle<Wry>) -> Settings {
             .and_then(|v| v.as_bool())
             .unwrap_or(true),
         submit_key,
+        language: store
+            .get("language")
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default(),
     }
 }
 
@@ -136,6 +145,7 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
         "submit_key",
         serde_json::to_value(&settings.submit_key).map_err(|e| e.to_string())?,
     );
+    store.set("language", settings.language);
     store.save().map_err(|e| e.to_string())?;
 
     if let Some(ctx) = app.try_state::<Arc<AppContext>>() {
