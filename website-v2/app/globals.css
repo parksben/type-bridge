@@ -1,0 +1,299 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   Color tokens — dark-first, light via .light-force
+   ───────────────────────────────────────────── */
+
+:root {
+  /* Dark defaults (base) */
+  --bg: #07070e;
+  --bg-2: #0d0d18;
+  --surface: #12121f;
+  --surface-elevated: #1a1a2a;
+  --text: #f3f3f8;
+  --muted: #9ca3b4;
+  --subtle: #6b7388;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --accent: #ff7a4d;
+  --accent-2: #c084fc;
+  --accent-3: #22d3ee;
+  --accent-glow: rgba(255, 122, 77, 0.35);
+
+  color-scheme: dark;
+}
+
+html.light-force {
+  --bg: #fefefe;
+  --bg-2: #f7f7fb;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --text: #0b0b14;
+  --muted: #4e4e5a;
+  --subtle: #8a8a95;
+  --border: rgba(10, 10, 20, 0.08);
+  --border-strong: rgba(10, 10, 20, 0.14);
+  --accent: #ff6b35;
+  --accent-2: #a855f7;
+  --accent-3: #0891b2;
+  --accent-glow: rgba(255, 107, 53, 0.22);
+
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ─────────────────────────────────────────────
+   Base + typography
+   ───────────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px; /* leaves room for fixed TopNav */
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Global ambient background — subtle gradient + grain */
+.page-bg {
+  background:
+    radial-gradient(800px circle at 20% 10%, rgba(255, 122, 77, 0.08), transparent 50%),
+    radial-gradient(900px circle at 80% 30%, rgba(192, 132, 252, 0.06), transparent 55%),
+    radial-gradient(700px circle at 50% 95%, rgba(34, 211, 238, 0.05), transparent 55%),
+    var(--bg);
+}
+
+html.light-force .page-bg {
+  background:
+    radial-gradient(800px circle at 20% 10%, rgba(255, 107, 53, 0.05), transparent 50%),
+    radial-gradient(900px circle at 80% 30%, rgba(168, 85, 247, 0.04), transparent 55%),
+    radial-gradient(700px circle at 50% 95%, rgba(8, 145, 178, 0.03), transparent 55%),
+    var(--bg);
+}
+
+/* Fine dotted noise overlay — performance-cheap */
+.noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.02;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+  background-size: 3px 3px;
+  z-index: 0;
+}
+
+html.light-force .noise::before {
+  opacity: 0.025;
+}
+
+/* ─────────────────────────────────────────────
+   Keyframes — animations used across sections
+   ───────────────────────────────────────────── */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes float-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes breathe-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 18px var(--accent-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 32px var(--accent-glow));
+  }
+}
+
+@keyframes blink-cursor {
+  0%, 45% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+@keyframes arc-flow {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes particle-travel {
+  0% {
+    transform: translateX(-20%) translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120%) translateY(0);
+    opacity: 0;
+  }
+}
+
+@keyframes type-cursor {
+  0% {
+    width: 0;
+  }
+  40% {
+    width: 88%;
+  }
+  70% {
+    width: 88%;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Utility classes referenced from components
+   ───────────────────────────────────────────── */
+
+.animate-fade-up {
+  animation: fade-up 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 600ms ease-out both;
+}
+
+.animate-float-soft {
+  animation: float-soft 6s ease-in-out infinite;
+}
+
+.animate-breathe-glow {
+  animation: breathe-glow 3.6s ease-in-out infinite;
+}
+
+.animate-blink-cursor {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+/* Accent gradient text utility */
+.text-accent-gradient {
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--accent-2) 55%,
+    var(--accent-3) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.bg-accent-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    var(--accent-2) 100%
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Section padding helpers
+   ───────────────────────────────────────────── */
+
+.section-x {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .section-x {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Scrollbar — subtle */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--subtle);
+}
+
+/* Prevent FOUC while the theme-flicker script runs */
+html:not(.light-force):not(.dark) {
+  /* Base already uses dark tokens via :root */
+}
