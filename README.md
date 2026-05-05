@@ -7,11 +7,11 @@
 <p align="center">手机上说话 · 电脑上输入</p>
 
 <p align="center">
-  <a href="https://typebridge.me"><strong>🌐 typebridge.me</strong></a>
+  <a href="https://typebridge.parksben.xyz"><strong>🌐 typebridge.parksben.xyz</strong></a>
   &nbsp;·&nbsp;
-  <a href="https://typebridge.me/docs">📖 Docs / 使用文档</a>
+  <a href="https://typebridge.parksben.xyz/docs">📖 Docs / 使用文档</a>
   &nbsp;·&nbsp;
-  <a href="https://typebridge.me/#download">⬇️ Download / 下载</a>
+  <a href="https://typebridge.parksben.xyz/#download">⬇️ Download / 下载</a>
 </p>
 
 ---
@@ -91,9 +91,9 @@ Phone (IM / Browser)          Mac (TypeBridge)            Target App
 | **DingTalk / 钉钉** | Internal app (Client ID + Secret, Stream Mode) | Teams already using DingTalk |
 | **WeCom / 企业微信** | Smart Bot (Bot ID + Secret) | Teams already using WeCom |
 
-> Detailed setup guides: [typebridge.me/docs](https://typebridge.me/docs)
+> Detailed setup guides: [typebridge.parksben.xyz/docs](https://typebridge.parksben.xyz/docs)
 >
-> 详细接入教程：[typebridge.me/docs](https://typebridge.me/docs)
+> 详细接入教程：[typebridge.parksben.xyz/docs](https://typebridge.parksben.xyz/docs)
 
 ---
 
@@ -104,7 +104,7 @@ Get the latest `.dmg` from our website:
 前往官网下载最新版本：
 
 <p align="center">
-  <a href="https://typebridge.me/#download"><strong>⬇️ Download TypeBridge / 下载 TypeBridge</strong></a>
+  <a href="https://typebridge.parksben.xyz/#download"><strong>⬇️ Download TypeBridge / 下载 TypeBridge</strong></a>
 </p>
 
 **System requirements / 系统要求：** macOS 13+ (Apple Silicon or Intel)
