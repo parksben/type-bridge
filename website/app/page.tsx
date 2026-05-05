@@ -1,24 +1,19 @@
-"use client";
+import { headers } from "next/headers";
+import { HomePageClient } from "./home-client";
+import type { Language } from "./lib/i18n";
 
-import { Download } from "./components/download";
-import { Flow } from "./components/flow";
-import { Footer } from "./components/footer";
-import { Hero } from "./components/hero";
-import { Scenes } from "./components/scenes";
-import { TopNav } from "./components/top-nav";
-import { LanguageProvider } from "./lib/i18n";
+async function detectLanguageFromHeaders(): Promise<Language> {
+  try {
+    const headersList = await headers();
+    const acceptLang = headersList.get("accept-language") || "";
+    const trimmed = acceptLang.trim().toLowerCase();
+    if (trimmed.startsWith("en")) return "en";
+    if (trimmed.startsWith("zh")) return "zh";
+  } catch {}
+  return "zh";
+}
 
-export default function HomePage() {
-  return (
-    <LanguageProvider>
-      <TopNav />
-      <main className="page-bg relative">
-        <Hero />
-        <Scenes />
-        <Flow />
-        <Download />
-      </main>
-      <Footer />
-    </LanguageProvider>
-  );
+export default async function HomePage() {
+  const initialLang = await detectLanguageFromHeaders();
+  return <HomePageClient initialLang={initialLang} />;
 }

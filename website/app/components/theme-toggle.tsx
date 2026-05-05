@@ -72,7 +72,7 @@ export function ThemeToggle() {
       aria-label={`当前：${LABEL[theme]}，点击切换到${nextLabel}`}
       title={LABEL[theme]}
       onClick={cycle}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)] hover:text-[var(--text)]"
+      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)] hover:text-[var(--text)]"
     >
       {mounted ? <Icon size={16} strokeWidth={1.8} /> : null}
     </button>
