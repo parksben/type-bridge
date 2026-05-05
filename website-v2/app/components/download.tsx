@@ -157,11 +157,9 @@ function GatekeeperNotice() {
   return (
     <div>
       <SectionHeader icon={Shield} title="首次安装须知">
-        应用当前
-        <strong className="mx-1 text-[var(--text)]">未经 Apple 公证</strong>
-        ，macOS Gatekeeper 可能会阻止首次打开。下面两种方法
-        <strong className="mx-1 text-[var(--text)]">二选一</strong>
-        都可以正常安装使用。
+        应用目前
+        <strong className="mx-1 text-[var(--text)]">未经过 Apple 公证</strong>
+        ，macOS 可能阻止首次打开。任选一种方法即可正常使用：
       </SectionHeader>
 
       {/* Two method boxes */}
@@ -173,17 +171,17 @@ function GatekeeperNotice() {
               A
             </span>
             <p className="text-[13px] font-semibold text-[var(--text)]">
-              在系统设置里点「仍要打开」
+              系统设置里点「仍要打开」
             </p>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
-            打开
+            进入
             <strong className="mx-1 text-[var(--text)]">
-              系统设置 → 隐私与安全性
+              系统设置 &gt; 隐私与安全性
             </strong>
-            ，在下方「安全性」区域找到被阻止的 TypeBridge 条目，点
+            ，找到被拦截的 TypeBridge，点击
             <strong className="mx-1 text-[var(--text)]">「仍要打开」</strong>
-            。之后再双击应用即可正常启动。
+            。
           </p>
         </div>
 
@@ -194,17 +192,11 @@ function GatekeeperNotice() {
               B
             </span>
             <p className="text-[13px] font-semibold text-[var(--text)]">
-              在终端执行一行命令
+              终端执行一行命令
             </p>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
-            把
-            <code className="mx-1 rounded bg-[var(--surface)] px-1 font-mono text-[11px]">
-              .app
-            </code>
-            拖入
-            <strong className="mx-1 text-[var(--text)]">应用程序</strong>
-            文件夹后，打开终端粘贴这一行移除 macOS 的"隔离"标记：
+            拖入应用程序文件夹后，在终端粘贴下面这行，移除隔离标记：
           </p>
           <div className="relative mt-3">
             <div className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2.5 pr-16 font-mono text-[11.5px] leading-relaxed text-[var(--text)]">
@@ -248,16 +240,16 @@ function GatekeeperNotice() {
 function AccessibilityNotice() {
   return (
     <div>
-      <SectionHeader icon={KeyRound} title="首次使用须授予「辅助功能」权限">
-        这是 TypeBridge 模拟
+      <SectionHeader icon={KeyRound} title="首次使用须开启「辅助功能」权限">
+        TypeBridge 需要模拟
         <code className="mx-1 rounded bg-[var(--surface)] px-1 font-mono text-[12px]">
           Cmd+V
         </code>
-        粘贴和自动提交按键所必需的，不授予无法注入消息。应用首次启动时会自动引导你打开
+        粘贴和按键操作。首次启动会自动引导你到
         <strong className="mx-1 text-[var(--text)]">
-          系统设置 → 隐私与安全性 → 辅助功能
+          系统设置 &gt; 隐私与安全性 &gt; 辅助功能
         </strong>
-        并勾选 TypeBridge。
+        ，勾选 TypeBridge 即可。
       </SectionHeader>
     </div>
   );

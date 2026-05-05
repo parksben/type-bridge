@@ -331,10 +331,11 @@ export function Hero() {
           className="animate-fade-up mx-auto mt-6 max-w-2xl text-balance text-base text-[var(--muted)] md:text-lg"
           style={{ animationDelay: "260ms" }}
         >
-          把你<strong className="font-semibold text-[var(--text)]">手机</strong>变成
-          <strong className="font-semibold text-[var(--text)]">电脑最快的输入设备</strong>
-          ，通过<strong className="font-semibold text-[var(--text)]">WebChat</strong>或
-          <strong className="font-semibold text-[var(--text)]">飞书 / 钉钉 / 企微</strong>等 IM 聊天，图文输入一键直达。
+          把你的
+          <strong className="font-semibold text-[var(--text)]">手机</strong>
+          变成电脑的
+          <strong className="font-semibold text-[var(--text)]">无线键盘</strong>
+          。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。
         </p>
 
         {/* CTA */}
@@ -353,7 +354,7 @@ export function Hero() {
             href="#flow"
             className="group inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 px-6 py-3 text-sm font-medium text-[var(--text)] backdrop-blur-sm transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)]"
           >
-            了解原理
+            怎么用
             <ArrowDown
               size={15}
               strokeWidth={2}

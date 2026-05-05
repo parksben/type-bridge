@@ -4,12 +4,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "TypeBridge — 手机即键盘",
   description:
-    "让手机成为桌面的输入设备。通过飞书 / 钉钉 / 企业微信 / 本地 WebChat，把手机说出的每一句话变成桌面当前输入框里的字。macOS 菜单栏应用。",
+    "把手机变成电脑的无线键盘。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
   metadataBase: new URL("https://typebridge.parksben.xyz"),
   openGraph: {
     title: "TypeBridge — 手机即键盘",
     description:
-      "让手机成为桌面的输入设备。飞书 / 钉钉 / 企微 / 本地 WebChat 作为桥梁，手机说一句，桌面就写一句。",
+      "把手机变成电脑的无线键盘。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。",
     url: "https://typebridge.parksben.xyz",
     type: "website",
   },
