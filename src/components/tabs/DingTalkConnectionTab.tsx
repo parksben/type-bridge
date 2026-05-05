@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   AlertCircle,
+  CheckCircle2,
   ExternalLink,
   Info,
   KeyRound,
@@ -9,6 +10,7 @@ import {
   Play,
   Radar,
   RotateCw,
+  Sparkles,
 } from "lucide-react";
 import { useAppStore, type Settings } from "../../store";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
@@ -138,31 +140,69 @@ export default function DingTalkConnectionTab() {
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
       <div className="max-w-md mx-auto flex flex-col gap-5">
-        {/* 引导 banner */}
-        <div
-          className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
-          style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <Info
-            size={13}
-            strokeWidth={1.75}
-            className="shrink-0 mt-0.5 text-accent"
-          />
-          <div className="flex-1 text-text">
-            还没有钉钉应用？先到{" "}
-            <button
-              onClick={openDingTalkDevPortal}
-              className="text-accent hover:underline inline-flex items-center gap-0.5"
+        {/* 顶部 banner：未连接时引导去后台拿凭据；已连接时提示用户去钉钉 App 里
+            找到机器人发消息，并提前告知 TypeBridge 不接收语音，给出语音输入替代路径 */}
+        {connected ? (
+          <div
+            className="flex flex-col gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <div className="flex items-start gap-2">
+              <CheckCircle2
+                size={13}
+                strokeWidth={1.75}
+                className="shrink-0 mt-0.5 text-accent"
+              />
+              <div className="flex-1 text-text">
+                <span className="font-medium">钉钉机器人已就绪。</span>
+                打开钉钉 App 找到你配置的机器人，发消息即自动注入到桌面当前焦点输入框。
+              </div>
+            </div>
+            <div
+              className="flex items-start gap-2 pt-2 text-[11.5px]"
+              style={{ borderTop: "1px solid var(--border)" }}
             >
-              钉钉开发者平台
-              <ExternalLink size={10} strokeWidth={2} />
-            </button>{" "}
-            创建「企业内部应用」，加机器人能力 + 选 Stream 模式后复制 Client ID / Secret 到下方。
+              <Sparkles
+                size={12}
+                strokeWidth={1.75}
+                className="shrink-0 mt-0.5 text-accent"
+              />
+              <div className="flex-1 text-muted">
+                TypeBridge 不接收语音消息。想用语音输入，请使用
+                <span className="text-text">钉钉</span>
+                的「语音转文字」功能或手机输入法的「语音输入」功能。
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <Info
+              size={13}
+              strokeWidth={1.75}
+              className="shrink-0 mt-0.5 text-accent"
+            />
+            <div className="flex-1 text-text">
+              还没有钉钉应用？先到{" "}
+              <button
+                onClick={openDingTalkDevPortal}
+                className="text-accent hover:underline inline-flex items-center gap-0.5"
+              >
+                钉钉开发者平台
+                <ExternalLink size={10} strokeWidth={2} />
+              </button>{" "}
+              创建「企业内部应用」，加机器人能力 + 选 Stream 模式后复制 Client ID / Secret 到下方。
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
