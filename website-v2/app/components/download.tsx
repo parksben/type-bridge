@@ -10,7 +10,7 @@ import {
   Shield,
   Terminal,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 function DownloadCard({
   arch,
@@ -56,18 +56,6 @@ function DownloadCard({
 }
 
 export function Download() {
-  const [version, setVersion] = useState<string>("…");
-
-  useEffect(() => {
-    fetch("https://api.github.com/repos/parksben/type-bridge/releases/latest")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.tag_name) setVersion(String(data.tag_name).replace(/^v/, ""));
-        else setVersion("latest");
-      })
-      .catch(() => setVersion("latest"));
-  }, []);
-
   return (
     <section
       id="download"
@@ -90,13 +78,6 @@ export function Download() {
           <br className="hidden md:block" />
           你桌面的<span className="text-accent-gradient">键盘</span>
         </h2>
-        <p className="mt-4 text-[var(--muted)]">
-          最新版本{" "}
-          <span className="inline-block rounded-md border border-[var(--border)] bg-[var(--surface)]/60 px-2 py-0.5 font-mono text-sm">
-            v{version}
-          </span>{" "}
-          · 支持 macOS 13+
-        </p>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <DownloadCard
