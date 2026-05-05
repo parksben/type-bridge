@@ -220,6 +220,21 @@ const DICT = {
 } as const;
 
 // ────────────────────────────────────────────
+// Page metadata (used for client-side <title> / <meta> updates on lang switch)
+// ────────────────────────────────────────────
+
+const META = {
+  title: {
+    zh: "TypeBridge — 手机即键盘",
+    en: "TypeBridge — Phone as Keyboard",
+  },
+  description: {
+    zh: "把手机变成电脑的无线键盘。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
+    en: "Turn your phone into a wireless keyboard for your Mac. Speak, type, or send an image — your phone message appears right where your cursor is. A macOS menu bar app.",
+  },
+} as const;
+
+// ────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────
 
@@ -261,19 +276,33 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Language>("zh");
-  const [ready, setReady] = useState(false);
+export function LanguageProvider({ children, initialLang }: { children: ReactNode; initialLang?: Language }) {
+  const [lang, setLangState] = useState<Language>(initialLang ?? "zh");
+  const [ready, setReady] = useState(!!initialLang);
 
   useEffect(() => {
-    setLangState(detectLanguage());
+    const detected = detectLanguage();
+    if (detected !== lang) {
+      setLangState(detected);
+    }
     setReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setLang = useCallback((newLang: Language) => {
     setLangState(newLang);
     try { localStorage.setItem("tb-lang", newLang); } catch {}
     document.documentElement.lang = newLang === "zh" ? "zh-CN" : "en";
+
+    // Update <title> and <meta> tags so browser tab / social previews reflect current language
+    document.title = META.title[newLang];
+    const setMeta = (selector: string, content: string) => {
+      const el = document.querySelector(selector);
+      if (el) el.setAttribute("content", content);
+    };
+    setMeta('meta[name="description"]', META.description[newLang]);
+    setMeta('meta[property="og:title"]', META.title[newLang]);
+    setMeta('meta[property="og:description"]', META.description[newLang]);
   }, []);
 
   const t = useCallback(
@@ -304,7 +333,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 
   if (!ready) {
-    // Render nothing until we've read localStorage to avoid flash of wrong language
+    // Render nothing only when no initialLang was passed (prevents flash of wrong language)
     return null;
   }
 
