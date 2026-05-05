@@ -299,3 +299,12 @@ html.light-force .noise::before {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--subtle);
 }
+
+/* Hide scrollbar on internal overflow containers — keep only the page-level one */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
