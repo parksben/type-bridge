@@ -219,6 +219,7 @@ export default function WebChatConnectionTab() {
             remainingSecs={remaining}
             busy={busy}
             onStop={stop}
+            onRotate={() => rotateOtp(true)}
           />
         )}
         {(phase === "expired" || phase === "error") && (
@@ -280,96 +281,121 @@ function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
   );
 }
 
-/// pending + bound 共用的"会话运行中"视图：QR + OTP + 进度条始终展示，
-/// 方便新手机追加扫码加入。区分度由外层 wifiBanner / boundBanner 完成。
+/// pending + bound 共用的"会话运行中"视图：QR + OTP 横向并排 + 进度条融入 OTP
+/// 容器底部做装饰，信息密度高、视觉紧凑。phase 区分度由外层 wifiBanner /
+/// boundBanner 完成。
 function SessionLiveView({
   snap,
   qrDataUrl,
   remainingSecs,
   busy,
   onStop,
+  onRotate,
 }: {
   snap: WebChatSnapshot;
   qrDataUrl: string | null;
   remainingSecs: number;
   busy: boolean;
   onStop: () => void;
+  onRotate: () => void;
 }) {
-  const otpDigits = (snap.otp || "").split("");
   const serverUrl = snap.lan_ip && snap.port ? `http://${snap.lan_ip}:${snap.port}` : "";
   const isBound = snap.phase.kind === "bound";
+  const otp = snap.otp || "";
 
   return (
     <>
-      {/* QR */}
-      <div className="flex flex-col items-center gap-3">
-        <div
-          className="rounded-lg p-3 flex items-center justify-center"
-          style={{
-            background: "white",
-            border: "1px solid var(--border)",
-            width: 232,
-            height: 232,
-          }}
-        >
-          {qrDataUrl ? (
-            <img src={qrDataUrl} alt="WebChat QR" width={208} height={208} />
-          ) : (
-            <RotateCw size={18} strokeWidth={1.75} className="animate-spin text-muted" />
+      {/* QR + OTP 横向并排：QR 160px、OTP 列 flex-1 */}
+      <div className="flex gap-4 items-stretch">
+        {/* Left: QR */}
+        <div className="flex flex-col items-center gap-2 shrink-0">
+          <div
+            className="rounded-lg p-2.5 flex items-center justify-center"
+            style={{
+              background: "white",
+              border: "1px solid var(--border)",
+              width: 180,
+              height: 180,
+            }}
+          >
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="WebChat QR" width={160} height={160} />
+            ) : (
+              <RotateCw size={18} strokeWidth={1.75} className="animate-spin text-muted" />
+            )}
+          </div>
+          <div className="flex items-center gap-1 text-[10.5px] text-muted">
+            <ScanLine size={10} strokeWidth={1.75} />
+            <span>用手机相机扫码</span>
+          </div>
+          {serverUrl && (
+            <div
+              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+              style={{
+                background: "var(--surface-2)",
+                color: "var(--muted)",
+              }}
+              title={serverUrl}
+            >
+              {serverUrl}
+            </div>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-[11.5px]">
-          <ScanLine size={12} strokeWidth={1.75} className="text-muted" />
-          <span className="text-muted">用手机相机或浏览器扫码</span>
-        </div>
-        {serverUrl && (
-          <div
-            className="text-[10.5px] font-mono px-2 py-0.5 rounded"
-            style={{
-              background: "var(--surface-2)",
-              color: "var(--muted)",
-            }}
-            title={serverUrl}
-          >
-            {serverUrl}
-          </div>
-        )}
-      </div>
 
-      {/* OTP 6 位 */}
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-          <span className="text-accent">●</span>
-          OTP 验证码
-        </label>
-        <div className="flex items-center justify-between gap-2">
-          {Array.from({ length: 6 }).map((_, i) => (
+        {/* Right: OTP column */}
+        <div className="flex-1 flex flex-col gap-2 justify-center min-w-0">
+          {/* label + 手动刷新 */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+              <span className="text-accent">●</span>
+              OTP 验证码
+            </label>
+            <button
+              onClick={onRotate}
+              disabled={busy}
+              className="flex items-center justify-center w-6 h-6 rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[var(--surface-2)]"
+              title="刷新验证码（旧码立即失效）"
+              aria-label="刷新验证码"
+            >
+              <RotateCw size={12} strokeWidth={2} className="text-muted" />
+            </button>
+          </div>
+
+          {/* OTP pill 单容器 + 底部进度条装饰 */}
+          <div
+            className="relative rounded-xl overflow-hidden"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+            }}
+          >
             <div
-              key={i}
-              className="flex-1 aspect-[3/4] flex items-center justify-center font-mono font-semibold tabular-nums rounded-lg"
+              className="flex items-center justify-center py-4 font-mono font-semibold tabular-nums text-text"
               style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                color: "var(--text)",
-                fontSize: "22px",
-                maxWidth: "52px",
+                fontSize: "24px",
+                letterSpacing: "0.38em",
+                // 右移半格弥补 letter-spacing 导致的视觉左偏
+                paddingLeft: "0.38em",
               }}
             >
-              {otpDigits[i] ?? ""}
+              {otp || "------"}
             </div>
-          ))}
+            <OtpProgressUnderline remainingSecs={remainingSecs} />
+          </div>
+
+          {/* 剩余时间（小字辅助，非主视觉） */}
+          <div className="flex items-center gap-1 text-[10.5px] font-mono tabular-nums text-muted">
+            <Timer size={10} strokeWidth={1.75} />
+            <span>剩余 {formatRemaining(remainingSecs)}</span>
+          </div>
         </div>
-
-        {/* 倒计时进度条：归零时桌面自动生成新 OTP（无需用户操作） */}
-        <OtpCountdownBar remainingSecs={remainingSecs} />
-
-        <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
-          手机扫码后会要求输入此 6 位 OTP 完成绑定。
-          验证码每 60 秒自动轮换，已绑定的手机不受影响。
-        </p>
       </div>
 
-      {/* 停止按钮（单独一个按钮，不再有「重启会话」） */}
+      <p className="text-[11px] text-muted leading-relaxed">
+        手机扫码后输入此 6 位 OTP 完成绑定。验证码每 60 秒自动轮换，已绑定的手机不受影响。
+      </p>
+
+      {/* 停止按钮 */}
       <button
         onClick={onStop}
         disabled={busy}
@@ -451,34 +477,27 @@ function ErrorView({
   );
 }
 
-/// OTP 倒计时进度条。从 100% 平滑缩到 0%，归零时上层自动调 rotate_webchat_otp，
-/// expires_at 更新后进度条会跳回 100% 重新开始。
-function OtpCountdownBar({ remainingSecs }: { remainingSecs: number }) {
+/// OTP 容器底部的装饰性倒计时进度条。高度 3px，吸底 + overflow-hidden 让它
+/// 看起来是容器的一部分。宽度从 100% 平滑缩到 0%，归零时上层自动调
+/// rotate_webchat_otp，expires_at 更新后跳回 100% 重新开始；最后 10s 变红。
+function OtpProgressUnderline({ remainingSecs }: { remainingSecs: number }) {
   const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
   const lowTime = remainingSecs <= 10;
   const fillColor = lowTime ? "var(--error)" : "var(--accent)";
 
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className="absolute bottom-0 left-0 right-0 h-[3px] pointer-events-none"
+      style={{ background: "var(--surface-2)" }}
+    >
       <div
-        className="flex-1 h-1.5 rounded-full overflow-hidden"
-        style={{ background: "var(--surface-2)" }}
-      >
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${percent}%`,
-            background: fillColor,
-            transition: "width 1s linear, background 200ms",
-          }}
-        />
-      </div>
-      <div className="flex items-center gap-1 text-[11px] font-mono tabular-nums min-w-[52px] justify-end">
-        <Timer size={11} strokeWidth={1.75} className={lowTime ? "text-error" : "text-muted"} />
-        <span className={lowTime ? "text-error" : "text-muted"}>
-          {formatRemaining(remainingSecs)}
-        </span>
-      </div>
+        className="h-full"
+        style={{
+          width: `${percent}%`,
+          background: fillColor,
+          transition: "width 1s linear, background 200ms",
+        }}
+      />
     </div>
   );
 }
