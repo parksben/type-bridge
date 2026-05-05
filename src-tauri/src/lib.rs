@@ -10,6 +10,7 @@ pub mod tray;
 pub mod webchat;
 pub mod webchat_net;
 pub mod webchat_server;
+pub mod window;
 
 use sidecar::AppContext;
 use tauri::{Emitter, Manager};
@@ -18,7 +19,7 @@ use tauri::{Emitter, Manager};
 pub fn run() {
     logger::init_file_logger();
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_shell::init())
@@ -50,6 +51,7 @@ pub fn run() {
             about::apply_update,
         ])
         .setup(|app| {
+            window::setup_main_window(app)?;
             tray::setup_tray(app)?;
             logger::cleanup_old_logs();
 
@@ -87,6 +89,22 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    // 拦截 macOS Dock 图标点击。Tauri 2 的 RunEvent::Reopen 对应 NSApplicationDelegate
+    // 的 applicationShouldHandleReopen — 用户在窗口已隐藏（红色关闭按钮收起）后再点
+    // Dock，has_visible_windows 为 false，我们这里把主窗口 show + 抢焦点，让用户
+    // 体验和原生 macOS 应用一致。
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::Reopen {
+            has_visible_windows,
+            ..
+        } = event
+        {
+            if !has_visible_windows {
+                window::show_or_create_main_window(app_handle);
+            }
+        }
+    });
 }
