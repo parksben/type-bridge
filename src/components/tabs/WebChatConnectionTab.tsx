@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import {
   AlertCircle,
   CheckCircle2,
+  Info,
   Play,
   PowerOff,
   RotateCw,
@@ -133,8 +134,9 @@ export default function WebChatConnectionTab() {
     }
   }
 
-  // 顶部 WiFi 提醒 banner（idle/pending 时展示，让用户确认同 WiFi）
-  const wifiBanner = (phase === "idle" || phase === "pending") && (
+  // 顶部 WiFi 提醒 banner（仅 pending 阶段展示 — 用户扫码前才需要确认同 WiFi；
+  // 启动前展示只是噪音，已绑定状态有自己的成功提示，过期/异常态有 ErrorView）
+  const wifiBanner = phase === "pending" && (
     <div
       className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
       style={{
@@ -191,19 +193,15 @@ export default function WebChatConnectionTab() {
 function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
   return (
     <>
-      <div className="flex flex-col gap-1.5">
-        <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-          <Smartphone size={12} strokeWidth={1.75} />
-          会话状态
-        </label>
-        <div
-          className="rounded-lg px-3.5 py-3 text-[12.5px] leading-relaxed"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            color: "var(--muted)",
-          }}
-        >
+      <div
+        className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+        style={{
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <Info size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
+        <div className="flex-1 text-text">
           点「启动会话」后，App 会在本机起一个局域网 HTTP 服务，生成二维码 +
           6 位 OTP。同 WiFi 下手机扫码、输入 OTP 后即可发消息。
         </div>
