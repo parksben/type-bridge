@@ -45,6 +45,9 @@ pub struct QueuedMessage {
     pub text: String,
     pub image_path: Option<String>, // 相对 typebridge_dir 的路径
     pub image_mime: Option<String>,
+    /// 控制键事件（KeyboardEvent.code）。Some 时 worker 跳过文本/图片粘贴流程，
+    /// 直接 simulate_submit；不写历史，不发反馈。详见 TECH_DESIGN §35.11。
+    pub key: Option<String>,
 }
 
 /// 注入服务：队列 sender
@@ -148,6 +151,13 @@ async fn process_one<R: Runtime>(
     bridge: &Arc<SidecarBridge>,
     msg: QueuedMessage,
 ) {
+    // 控制键事件分支：直接模拟一次按键，不走粘贴流程，不写历史，不发反馈。
+    // 详见 TECH_DESIGN §35.11
+    if let Some(code) = msg.key.clone() {
+        process_key_press(app, &msg, &code).await;
+        return;
+    }
+
     // 1. Processing
     history.update_status(&msg.id, MessageStatus::Processing, None);
     emit_status(app, &msg.id, "processing", None);
@@ -232,6 +242,51 @@ async fn inject_text_blocking(text: String) -> Result<(), String> {
     .map_err(|e| format!("worker panic: {}", e))?
 }
 
+/// 控制键事件分支：用户从 WebChat 手机端点了 Enter / Backspace / Arrow*。
+/// 不走剪贴板，不发任何 IM 反馈，不写历史；只 emit message-status 让
+/// webchat_server 的 pending_acks 能 ack 回手机。
+async fn process_key_press<R: Runtime>(app: &AppHandle<R>, msg: &QueuedMessage, code: &str) {
+    emit_status(app, &msg.id, "processing", None);
+
+    let code_owned = code.to_string();
+    let join = tauri::async_runtime::spawn_blocking(move || {
+        use crate::injector;
+        if !injector::check_accessibility() {
+            return Err("辅助功能权限未授予".to_string());
+        }
+        let sk = crate::store::SubmitKey {
+            key: code_owned,
+            cmd: false,
+            shift: false,
+            option: false,
+            ctrl: false,
+        };
+        injector::simulate_submit(&sk)
+    })
+    .await;
+
+    let result: Result<(), String> = match join {
+        Ok(inner) => inner,
+        Err(e) => Err(format!("worker panic: {}", e)),
+    };
+
+    match result {
+        Ok(_) => {
+            emit_status(app, &msg.id, "sent", None);
+            let _ = app.emit(
+                "typebridge://inject-result",
+                serde_json::json!({"success": true, "channel": msg.channel}),
+            );
+        }
+        Err(reason) => {
+            emit_status(app, &msg.id, "failed", Some(reason.clone()));
+            let _ = app.emit(
+                "typebridge://inject-result",
+                serde_json::json!({"success": false, "reason": reason, "channel": msg.channel}),
+            );
+        }
+    }
+}
 async fn inject_image_blocking(abs_path: std::path::PathBuf, mime: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         use crate::injector;
@@ -365,6 +420,7 @@ pub fn ingest_message<R: Runtime>(
         text,
         image_path,
         image_mime,
+        key: None,
     }) {
         tracing::error!("[queue] enqueue failed: {}", e);
     }
