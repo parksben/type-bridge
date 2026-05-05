@@ -1,25 +1,28 @@
 import { History, Info, Plug, Terminal, Settings2, LucideIcon } from "lucide-react";
 import { useAppStore, TabId } from "../store";
+import { useI18n, type TKey } from "../i18n";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 interface TabDef {
   id: TabId;
-  label: string;
+  labelKey: TKey;
   icon: LucideIcon;
 }
 
 // 主 tab 列表。
 // 关于 TypeBridge 不在这里 — 它作为弱化的 footer entry 独立渲染（小一号、灰一些）
 const TABS: TabDef[] = [
-  { id: "connection", label: "连接 TypeBridge", icon: Plug },
-  { id: "input", label: "输入设置", icon: Settings2 },
-  { id: "history", label: "历史消息", icon: History },
-  { id: "logs", label: "系统日志", icon: Terminal },
+  { id: "connection", labelKey: "sidebar.connection", icon: Plug },
+  { id: "input", labelKey: "sidebar.input", icon: Settings2 },
+  { id: "history", labelKey: "sidebar.history", icon: History },
+  { id: "logs", labelKey: "sidebar.logs", icon: Terminal },
 ];
 
-const ABOUT_TAB: TabDef = { id: "about", label: "关于 TypeBridge", icon: Info };
+const ABOUT_TAB: TabDef = { id: "about", labelKey: "sidebar.about", icon: Info };
 
 export default function SideBar() {
   const { activeTab, setActiveTab } = useAppStore();
+  const { t } = useI18n();
 
   return (
     <div
@@ -30,18 +33,26 @@ export default function SideBar() {
       }}
     >
       <nav className="flex flex-col gap-0.5 px-2 py-3">
-        {TABS.map((t) => (
-          <TabButton key={t.id} tab={t} active={t.id === activeTab} onClick={() => setActiveTab(t.id)} />
+        {TABS.map((tab) => (
+          <TabButton
+            key={tab.id}
+            tab={tab}
+            label={t(tab.labelKey)}
+            active={tab.id === activeTab}
+            onClick={() => setActiveTab(tab.id)}
+          />
         ))}
       </nav>
 
-      {/* 底部弱化入口：关于 TypeBridge。小一号 + 灰阶配色，跟主 tab 风格区分 */}
-      <div className="mt-auto px-2 py-2">
+      {/* 底部弱化入口区：关于 TypeBridge + 语言切换。两者视觉重量一致。 */}
+      <div className="mt-auto px-2 py-2 flex flex-col gap-0.5">
         <FooterTabButton
           tab={ABOUT_TAB}
+          label={t(ABOUT_TAB.labelKey)}
           active={activeTab === ABOUT_TAB.id}
           onClick={() => setActiveTab(ABOUT_TAB.id)}
         />
+        <LanguageSwitcher />
       </div>
     </div>
   );
@@ -49,10 +60,12 @@ export default function SideBar() {
 
 function TabButton({
   tab,
+  label,
   active,
   onClick,
 }: {
   tab: TabDef;
+  label: string;
   active: boolean;
   onClick: () => void;
 }) {
@@ -72,7 +85,7 @@ function TabButton({
         />
       )}
       <Icon size={14} strokeWidth={active ? 2 : 1.75} />
-      <span className="truncate">{tab.label}</span>
+      <span className="truncate">{label}</span>
     </button>
   );
 }
@@ -81,10 +94,12 @@ function TabButton({
 /// 仅微弱底色变化。这样视觉上和主功能 tab 拉开层级，避免「关于」抢主动线注意力。
 function FooterTabButton({
   tab,
+  label,
   active,
   onClick,
 }: {
   tab: TabDef;
+  label: string;
   active: boolean;
   onClick: () => void;
 }) {
@@ -98,7 +113,7 @@ function FooterTabButton({
       style={active ? { background: "var(--surface-2)" } : undefined}
     >
       <Icon size={12} strokeWidth={1.5} />
-      <span className="truncate">{tab.label}</span>
+      <span className="truncate">{label}</span>
     </button>
   );
 }

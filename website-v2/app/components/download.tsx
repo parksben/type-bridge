@@ -11,6 +11,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { useState } from "react";
+import { useT, renderMarked } from "../lib/i18n";
 
 function DownloadCard({
   arch,
@@ -56,6 +57,8 @@ function DownloadCard({
 }
 
 export function Download() {
+  const { t } = useT();
+
   return (
     <section
       id="download"
@@ -72,18 +75,16 @@ export function Download() {
       />
 
       <div className="relative mx-auto max-w-3xl text-center">
-        {/* Header — no eyebrow, no trailing period */}
+        {/* Header */}
         <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-          <span className="text-accent-gradient">下载</span>
-          <span className="mx-2 text-[var(--muted)]">&amp;</span>
-          <span className="text-accent-gradient">安装</span>
+          {renderMarked(t("download.heading"), "dl-h")}
         </h2>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <DownloadCard
             arch="arm64"
-            label="Apple Silicon"
-            chip="M1 / M2 / M3 / M4"
+            label={t("download.appleSilicon")}
+            chip={t("download.appleSiliconChip")}
             Mark={({ size = 22 }: { size?: number }) => (
               <Apple
                 size={size}
@@ -94,8 +95,8 @@ export function Download() {
           />
           <DownloadCard
             arch="x64"
-            label="Intel"
-            chip="x86_64"
+            label={t("download.intel")}
+            chip={t("download.intelChip")}
             Mark={({ size = 22 }: { size?: number }) => (
               <Cpu
                 size={size}
@@ -106,7 +107,7 @@ export function Download() {
           />
         </div>
 
-        {/* Post-install notices — two parallel sibling sections, no outer wrapper */}
+        {/* Post-install notices */}
         <div className="mt-12 space-y-8 text-left">
           <GatekeeperNotice />
           <AccessibilityNotice />
@@ -144,6 +145,7 @@ function SectionHeader({
 
 /** Parallel section #1 — Gatekeeper bypass (unsigned app) */
 function GatekeeperNotice() {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
 
   async function copyCmd() {
@@ -156,10 +158,8 @@ function GatekeeperNotice() {
 
   return (
     <div>
-      <SectionHeader icon={Shield} title="首次安装须知">
-        应用目前
-        <strong className="mx-1 text-[var(--text)]">未经过 Apple 公证</strong>
-        ，macOS 可能阻止首次打开。任选一种方法即可正常使用：
+      <SectionHeader icon={Shield} title={t("download.gatekeeperTitle")}>
+        {renderMarked(t("download.gatekeeperDesc"), "gk")}
       </SectionHeader>
 
       {/* Two method boxes */}
@@ -171,17 +171,11 @@ function GatekeeperNotice() {
               A
             </span>
             <p className="text-[13px] font-semibold text-[var(--text)]">
-              系统设置里点「仍要打开」
+              {t("download.methodA.title")}
             </p>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
-            进入
-            <strong className="mx-1 text-[var(--text)]">
-              系统设置 &gt; 隐私与安全性
-            </strong>
-            ，找到被拦截的 TypeBridge，点击
-            <strong className="mx-1 text-[var(--text)]">「仍要打开」</strong>
-            。
+            {renderMarked(t("download.methodA.desc"), "ma")}
           </p>
         </div>
 
@@ -192,11 +186,11 @@ function GatekeeperNotice() {
               B
             </span>
             <p className="text-[13px] font-semibold text-[var(--text)]">
-              终端执行一行命令
+              {t("download.methodB.title")}
             </p>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
-            拖入应用程序文件夹后，在终端粘贴下面这行，移除隔离标记：
+            {t("download.methodB.desc")}
           </p>
           <div className="relative mt-3">
             <div className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2.5 pr-16 font-mono text-[11.5px] leading-relaxed text-[var(--text)]">
@@ -211,7 +205,7 @@ function GatekeeperNotice() {
               type="button"
               onClick={copyCmd}
               className="absolute right-1.5 top-1.5 inline-flex h-7 items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] font-medium text-[var(--muted)] shadow-sm transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
-              aria-label="复制命令"
+              aria-label={copied ? t("download.copiedButton") : t("download.copyButton")}
             >
               {copied ? (
                 <>
@@ -220,12 +214,12 @@ function GatekeeperNotice() {
                     strokeWidth={2.4}
                     className="text-[var(--accent)]"
                   />
-                  已复制
+                  {t("download.copiedButton")}
                 </>
               ) : (
                 <>
                   <Copy size={12} strokeWidth={2} />
-                  复制
+                  {t("download.copyButton")}
                 </>
               )}
             </button>
@@ -238,18 +232,11 @@ function GatekeeperNotice() {
 
 /** Parallel section #2 — Accessibility permission runtime requirement */
 function AccessibilityNotice() {
+  const { t } = useT();
   return (
     <div>
-      <SectionHeader icon={KeyRound} title="首次使用须开启「辅助功能」权限">
-        TypeBridge 需要模拟
-        <code className="mx-1 rounded bg-[var(--surface)] px-1 font-mono text-[12px]">
-          Cmd+V
-        </code>
-        粘贴和按键操作。首次启动会自动引导你到
-        <strong className="mx-1 text-[var(--text)]">
-          系统设置 &gt; 隐私与安全性 &gt; 辅助功能
-        </strong>
-        ，勾选 TypeBridge 即可。
+      <SectionHeader icon={KeyRound} title={t("download.accessibilityTitle")}>
+        {renderMarked(t("download.accessibilityDesc"), "ax")}
       </SectionHeader>
     </div>
   );
