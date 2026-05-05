@@ -4,11 +4,11 @@ import { listen } from "@tauri-apps/api/event";
 import { Eraser, History } from "lucide-react";
 import {
   useAppStore,
-  CHANNEL_LABEL,
   type ChannelId,
   type HistoryMessage,
   type MessageStatus,
 } from "../../store";
+import { useI18n } from "../../i18n";
 import HistoryCard from "../HistoryCard";
 
 type ChannelFilter = "all" | ChannelId;
@@ -22,8 +22,10 @@ export default function HistoryTab() {
     removeHistoryMessage,
     clearHistoryDisplay,
   } = useAppStore();
+  const { t } = useI18n();
   const [imagesBaseDir, setImagesBaseDir] = useState<string>("");
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // 按渠道分组计数（不受 filter 影响；让 chip 始终显示各渠道总量）
   const channelCounts = useMemo(() => {
@@ -92,7 +94,7 @@ export default function HistoryTab() {
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
         <div className="flex items-center gap-1.5">
           <FilterChip
-            label="全部"
+            label={t("history.all")}
             count={visible.length}
             active={channelFilter === "all"}
             onClick={() => setChannelFilter("all")}
@@ -103,7 +105,7 @@ export default function HistoryTab() {
             return (
               <FilterChip
                 key={ch}
-                label={CHANNEL_LABEL[ch]}
+                label={t(`channel.${ch}` as any)}
                 count={count}
                 active={channelFilter === ch}
                 onClick={() => setChannelFilter(ch)}
@@ -111,27 +113,21 @@ export default function HistoryTab() {
             );
           })}
           <div className="text-[11.5px] font-mono text-muted ml-2">
-            <span className="text-success">已发送 {stats.sent}</span>
-            <span className="text-error ml-2">失败 {stats.failed}</span>
+            <span className="text-success">{t("history.sent", { count: stats.sent })}</span>
+            <span className="text-error ml-2">{t("history.failed", { count: stats.failed })}</span>
             {(stats.processing > 0 || stats.queued > 0) && (
-              <span className="text-accent ml-2">处理中 {stats.processing + stats.queued}</span>
+              <span className="text-accent ml-2">{t("history.processing", { count: stats.processing + stats.queued })}</span>
             )}
           </div>
         </div>
         {visible.length > 0 && (
           <button
-            onClick={async () => {
-              if (!window.confirm("清空全部历史消息？\n队列中尚未注入的对应条目也会被取消。")) {
-                return;
-              }
-              await invoke("clear_all_history").catch(() => {});
-              clearHistoryDisplay();
-            }}
+            onClick={() => setShowClearConfirm(true)}
             className="tb-btn-ghost flex items-center gap-1.5"
-            title="删除所有历史，并取消队列中尚未注入的对应条目"
+            title={t("history.clearTooltip")}
           >
             <Eraser size={12} strokeWidth={1.75} />
-            清空
+            {t("history.clear")}
           </button>
         )}
       </div>
@@ -140,9 +136,9 @@ export default function HistoryTab() {
         {visible.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-subtle">
             <History size={32} strokeWidth={1.25} className="mb-3 opacity-60" />
-            <div className="text-[15px] text-muted mb-1.5">暂无消息记录</div>
+            <div className="text-[15px] text-muted mb-1.5">{t("history.emptyTitle")}</div>
             <div className="text-[12px] max-w-xs">
-              连接飞书后，机器人收到的消息将进入队列并在这里展示
+              {t("history.emptyHint")}
             </div>
           </div>
         ) : (
@@ -158,6 +154,21 @@ export default function HistoryTab() {
           </div>
         )}
       </div>
+
+      {showClearConfirm && (
+        <ClearConfirmDialog
+          title={t("history.clearConfirmTitle")}
+          body={t("history.clearConfirmBody")}
+          okLabel={t("history.clearConfirmOk")}
+          cancelLabel={t("history.clearConfirmCancel")}
+          onCancel={() => setShowClearConfirm(false)}
+          onConfirm={async () => {
+            setShowClearConfirm(false);
+            await invoke("clear_all_history").catch(() => {});
+            clearHistoryDisplay();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -194,5 +205,64 @@ function FilterChip({
       <span>{label}</span>
       <span className="font-mono opacity-80">{count}</span>
     </button>
+  );
+}
+
+function ClearConfirmDialog({
+  title,
+  body,
+  okLabel,
+  cancelLabel,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  okLabel: string;
+  cancelLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.45)" }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div
+        className="w-[420px] rounded-lg p-5"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.30)",
+        }}
+      >
+        <h2 className="text-[15px] font-semibold text-text mb-2">{title}</h2>
+        <p className="text-[13px] text-muted leading-relaxed mb-4 whitespace-pre-line">
+          {body}
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="px-4 py-1.5 text-[13px] rounded-md border"
+            style={{
+              borderColor: "var(--border-strong)",
+              color: "var(--text)",
+              background: "var(--surface-2)",
+            }}
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="tb-btn-primary px-4 py-1.5"
+          >
+            {okLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
