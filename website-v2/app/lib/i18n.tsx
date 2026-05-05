@@ -35,7 +35,8 @@ const DICT = {
   "hero.ctaDownload": { zh: "免费下载", en: "Download Free" },
   "hero.ctaHowto": { zh: "如何使用", en: "How It Works" },
   "hero.desktopText": { zh: "手机即键盘", en: "Phone as Keyboard" },
-  "hero.phoneUserMsg": { zh: "手机及键盘", en: "Phone & Keyboard" },
+  "hero.phoneUserMsg": { zh: "手机即键盘", en: "Phone as Keyboard" },
+  "hero.phoneInputPlaceholder": { zh: "输入消息…", en: "Type a message…" },
 
   // ── Concept banner channel labels ──────────
   "channel.webchat": { zh: "WebChat", en: "WebChat" },
