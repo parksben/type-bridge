@@ -101,7 +101,7 @@ const CHANNELS: ChannelNode[] = [
 const BADGE_LEFT_PCT = 9;
 const BRIDGE_X_PCT = 52;
 const BRIDGE_Y_PCT = 50;
-const DESKTOP_ANCHOR_X_PCT = 82;
+const DESKTOP_ANCHOR_X_PCT = 76;
 
 function badgeTopPct(i: number, total: number) {
   // Spread across [20%, 80%]
@@ -181,9 +181,12 @@ function BridgeNode() {
 }
 
 function DesktopFrame() {
+  // Chatbot 输入框 — 粘贴 + 提交效果（非打字机）：
+  // 一段时间空白 → 文字「整段瞬间出现」（粘贴）→ 短停 → 「整段瞬间消失」+ 气泡上浮（发送）。
+  // 光标始终紧贴文字尾部（flex 自然布局，无 margin）。
   return (
     <div
-      className="animate-float-soft absolute right-3 top-1/2 w-[180px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 shadow-[0_12px_48px_-12px_var(--accent-glow)] backdrop-blur-sm sm:right-4 sm:w-[220px]"
+      className="animate-float-soft absolute right-3 top-1/2 w-[200px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 shadow-[0_12px_48px_-12px_var(--accent-glow)] backdrop-blur-sm sm:right-4 sm:w-[230px]"
       aria-hidden
     >
       <div className="flex items-center gap-1.5 border-b border-[var(--border)]/60 px-3 py-2">
@@ -194,21 +197,32 @@ function DesktopFrame() {
           桌面端输入框
         </span>
       </div>
-      <div className="space-y-1.5 px-3 py-3">
-        <div className="h-1.5 w-3/4 rounded bg-[var(--border-strong)]/70" />
-        <div className="h-1.5 w-1/2 rounded bg-[var(--border-strong)]/50" />
-        {/* 输入框 — 打字机效果：文字逐字出现 + 闪烁光标紧跟末尾 */}
-        <div className="mt-2 flex h-7 items-center overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-2)]/80 px-2">
+
+      <div className="relative h-[68px] px-3 pt-3">
+        <div
+          className="absolute right-3 top-3"
+          style={{ animation: "hero-bubble-submit 5s ease-out infinite" }}
+        >
+          <div className="rounded-lg rounded-tr-sm bg-accent-gradient px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_-4px_var(--accent-glow)]">
+            手机即键盘
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--border)]/40 px-3 py-2">
+        <div className="flex h-7 items-center overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-2)]/80 px-2">
+          {/* 文字整段瞬间出现（粘贴） / 整段瞬间清空（发送） */}
           <span
-            className="block overflow-hidden whitespace-nowrap font-mono text-[11px] text-[var(--text)]"
+            className="overflow-hidden whitespace-nowrap font-mono text-[11px] leading-none text-[var(--text)]"
             style={{
-              animation: "concept-typewriter 5s steps(5, end) infinite",
+              animation: "hero-input-paste 5s steps(1, end) infinite",
               width: 0,
             }}
           >
             手机即键盘
           </span>
-          <span className="animate-blink-cursor ml-[1px] inline-block h-3 w-[2px] rounded-full bg-[var(--accent)]" />
+          {/* 光标紧贴文字尾，无 margin */}
+          <span className="animate-blink-cursor inline-block h-3 w-[2px] rounded-full bg-[var(--accent)]" />
         </div>
       </div>
     </div>
@@ -231,7 +245,11 @@ function ConceptBanner() {
       />
 
       {/* SVG overlay — arcs from each badge into the bridge, plus bridge→desktop line.
-          viewBox 0 0 100 100 + preserveAspectRatio="none" means each unit = 1% of banner box. */}
+          viewBox 0 0 100 100 + preserveAspectRatio="none" means each unit = 1% of banner box.
+          Two-layer pattern per path:
+            (a) thin static "track" stroke (subtle, theme-adaptive)
+            (b) bright "sweep" overlay with strokeDasharray + animated strokeDashoffset
+                creating a single short bright pulse traveling along the path. */}
       <svg
         className="pointer-events-none absolute inset-0 h-full w-full"
         viewBox="0 0 100 100"
@@ -240,9 +258,9 @@ function ConceptBanner() {
       >
         <defs>
           <linearGradient id="hero-arc" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.15" />
-            <stop offset="60%" stopColor="var(--accent)" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="var(--accent-2)" stopOpacity="0.9" />
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18" />
+            <stop offset="60%" stopColor="var(--accent)" stopOpacity="0.42" />
+            <stop offset="100%" stopColor="var(--accent-2)" stopOpacity="0.55" />
           </linearGradient>
           <marker
             id="hero-arrow"
@@ -255,62 +273,64 @@ function ConceptBanner() {
           >
             <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-2)" />
           </marker>
+
+          {CHANNELS.map((ch, i) => {
+            const y = badgeTopPct(i, total);
+            const d = `M ${BADGE_LEFT_PCT} ${y} C ${BRIDGE_X_PCT - 18} ${y}, ${BRIDGE_X_PCT - 8} ${BRIDGE_Y_PCT}, ${BRIDGE_X_PCT - 2} ${BRIDGE_Y_PCT}`;
+            return <path key={ch.label} id={`hero-arc-path-${i}`} d={d} />;
+          })}
+          <path
+            id="hero-output-path"
+            d={`M ${BRIDGE_X_PCT + 2} ${BRIDGE_Y_PCT} L ${DESKTOP_ANCHOR_X_PCT} ${BRIDGE_Y_PCT}`}
+          />
         </defs>
 
-        {/* 4 input arcs — each starts exactly at the badge center and curves into the bridge */}
-        {CHANNELS.map((ch, i) => {
-          const y = badgeTopPct(i, total);
-          const d = `M ${BADGE_LEFT_PCT} ${y} C ${BRIDGE_X_PCT - 18} ${y}, ${BRIDGE_X_PCT - 8} ${BRIDGE_Y_PCT}, ${BRIDGE_X_PCT - 2} ${BRIDGE_Y_PCT}`;
-          return (
-            <g key={ch.label}>
-              {/* Soft glow echo */}
-              <path
-                d={d}
-                fill="none"
-                stroke="var(--accent)"
-                strokeOpacity="0.1"
-                strokeWidth="4"
-                vectorEffect="non-scaling-stroke"
-              />
-              {/* Primary flowing dashed line — bolder stroke + bigger dashes for visibility */}
-              <path
-                d={d}
-                fill="none"
-                stroke="url(#hero-arc)"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeDasharray="6 8"
-                vectorEffect="non-scaling-stroke"
-                style={{
-                  animation: `arc-flow 3.5s ${i * 0.25}s linear infinite`,
-                }}
-              />
-            </g>
-          );
-        })}
-
-        {/* Output arc — bridge to desktop */}
-        <g>
-          <path
-            d={`M ${BRIDGE_X_PCT + 2} ${BRIDGE_Y_PCT} L ${DESKTOP_ANCHOR_X_PCT} ${BRIDGE_Y_PCT}`}
-            fill="none"
-            stroke="var(--accent)"
-            strokeOpacity="0.1"
-            strokeWidth="4"
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d={`M ${BRIDGE_X_PCT + 2} ${BRIDGE_Y_PCT} L ${DESKTOP_ANCHOR_X_PCT} ${BRIDGE_Y_PCT}`}
-            fill="none"
+        {/* (a) Static thin track lines */}
+        {CHANNELS.map((_, i) => (
+          <use
+            key={`track-${i}`}
+            href={`#hero-arc-path-${i}`}
             stroke="url(#hero-arc)"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeDasharray="6 8"
+            strokeWidth="1"
+            fill="none"
             vectorEffect="non-scaling-stroke"
-            markerEnd="url(#hero-arrow)"
-            style={{ animation: "arc-flow 3.5s 1.2s linear infinite" }}
           />
-        </g>
+        ))}
+        <use
+          href="#hero-output-path"
+          stroke="url(#hero-arc)"
+          strokeWidth="1"
+          fill="none"
+          vectorEffect="non-scaling-stroke"
+          markerEnd="url(#hero-arrow)"
+        />
+
+        {/* (b) Sweep overlay — short bright dash travels along the same path */}
+        {CHANNELS.map((_, i) => (
+          <use
+            key={`sweep-${i}`}
+            href={`#hero-arc-path-${i}`}
+            stroke="var(--accent)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeDasharray="18 600"
+            fill="none"
+            vectorEffect="non-scaling-stroke"
+            style={{
+              animation: `hero-sweep 3s ${i * 0.45}s linear infinite`,
+            }}
+          />
+        ))}
+        <use
+          href="#hero-output-path"
+          stroke="var(--accent-2)"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeDasharray="14 400"
+          fill="none"
+          vectorEffect="non-scaling-stroke"
+          style={{ animation: "hero-sweep-output 2.4s 1.5s linear infinite" }}
+        />
       </svg>
 
       {/* Channel badges */}
@@ -358,51 +378,35 @@ export function Hero() {
       />
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
-        {/* Giant brand mark + wordmark — same composition as TopNav, bigger */}
-        <div className="animate-fade-up animate-breathe-glow mx-auto mb-8 inline-flex items-center">
+        {/* Giant brand mark + wordmark — bigger so it balances the headline below */}
+        <div className="animate-fade-up animate-breathe-glow mx-auto mb-10 inline-flex items-center">
           <BrandWordmark
             gradient
             gradientId="hero-brand-grad"
-            markSize={56}
+            markSize={72}
             gapClassName="gap-3 md:gap-4"
-            textClassName="text-[34px] md:text-[42px] font-extrabold tracking-tight"
+            textClassName="text-[44px] md:text-[60px] font-extrabold tracking-tight"
           />
         </div>
 
-        {/* Eyebrow */}
-        <div
-          className="animate-fade-up flex justify-center"
-          style={{ animationDelay: "100ms" }}
-        >
-          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)]/60 px-4 py-1.5 text-xs font-medium tracking-[0.12em] text-[var(--muted)] backdrop-blur-sm">
-            <span
-              aria-hidden
-              className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
-            />
-            支持语音输入的输入法
-          </p>
-        </div>
-
-        {/* Main headline */}
+        {/* Main headline — slightly toned down so it doesn't dwarf the brand wordmark */}
         <h1
-          className="animate-fade-up mt-6 text-[48px] font-extrabold leading-[1.05] tracking-tight md:text-[88px] lg:text-[104px]"
+          className="animate-fade-up text-[40px] font-extrabold leading-[1.05] tracking-tight md:text-[72px] lg:text-[84px]"
           style={{ animationDelay: "180ms" }}
         >
           手机
           <span className="text-accent-gradient">即键盘</span>
         </h1>
 
-        {/* Subtitle */}
+        {/* Subtitle — punchier, action-oriented */}
         <p
           className="animate-fade-up mx-auto mt-6 max-w-2xl text-balance text-base text-[var(--muted)] md:text-lg"
           style={{ animationDelay: "260ms" }}
         >
-          你的
-          <strong className="font-semibold text-[var(--text)]">
-            飞书 / 钉钉 / 企业微信 / 本地 WebChat
-          </strong>
-          ，正在变成桌面最快的输入法。手机说一句，桌面就写一句——文本、图片、图文混合，
-          一条消息直达编辑器 / 终端 / 浏览器输入框。
+          把你<strong className="font-semibold text-[var(--text)]">手机</strong>变成
+          <strong className="font-semibold text-[var(--text)]">电脑最快的输入设备</strong>
+          ，通过<strong className="font-semibold text-[var(--text)]">WebChat</strong>或
+          <strong className="font-semibold text-[var(--text)]">飞书 / 钉钉 / 企微</strong>等 IM 聊天，图文输入一键直达。
         </p>
 
         {/* CTA */}

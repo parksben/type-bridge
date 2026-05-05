@@ -228,6 +228,62 @@ html.light-force .noise::before {
   }
 }
 
+/* Hero 概念图 - 桌面 chatbot 输入框：粘贴 + 提交效果（非打字机） */
+@keyframes hero-input-paste {
+  0%,
+  30% {
+    width: 0;
+  }
+  31%,
+  50% {
+    width: 65px;
+  }
+  51%,
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes hero-bubble-submit {
+  0%,
+  49% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.94);
+  }
+  56% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  86%,
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(1);
+  }
+}
+
+/* Hero 概念图 - 线条扫光动效：strokeDashoffset 推动短亮 dash 走完一条路径 */
+@keyframes hero-sweep {
+  0% {
+    stroke-dashoffset: 600;
+  }
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes hero-sweep-output {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: -50;
+  }
+}
+
 /* ─────────────────────────────────────────────
    Utility classes referenced from components
    ───────────────────────────────────────────── */
