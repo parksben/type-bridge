@@ -1,3 +1,4 @@
+import { Flow } from "./components/flow";
 import { Hero } from "./components/hero";
 import { Scenes } from "./components/scenes";
 import { TopNav } from "./components/top-nav";
@@ -38,12 +39,7 @@ export default function HomePage() {
       <main className="page-bg relative">
         <Hero />
         <Scenes />
-        <SectionPlaceholder
-          id="flow"
-          eyebrow="流程"
-          title="看手机如何变成你的键盘。"
-          subtitle="下载 → 打开 → 连接 → 注入，流程图即将就位。"
-        />
+        <Flow />
         <SectionPlaceholder
           id="download"
           eyebrow="下载"
