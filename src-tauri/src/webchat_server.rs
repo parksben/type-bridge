@@ -53,7 +53,7 @@ use crate::sidecar::AppContext;
 
 const PORT_START: u16 = 8723;
 const PORT_RANGE: u16 = 10; // 8723..=8732 试十个
-const SESSION_TTL_SECS: u64 = 5 * 60; // 未握手前 5 分钟
+const SESSION_TTL_SECS: u64 = 60; // 每个 OTP 活 60 秒，归零时桌面自动轮换（不重启 server）
 const MAX_OTP_ATTEMPTS: u8 = 5;
 
 // ──────────────────────────────────────────────────────────────

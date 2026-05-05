@@ -38,7 +38,7 @@ interface WebChatSnapshot {
 }
 
 // 与 Rust 侧 SESSION_TTL_SECS 对齐（src-tauri/src/webchat_server.rs）
-const SESSION_TTL_SECS = 5 * 60;
+const SESSION_TTL_SECS = 60;
 
 export default function WebChatConnectionTab() {
   const [snap, setSnap] = useState<WebChatSnapshot | null>(null);
@@ -345,7 +345,7 @@ function PendingView({
 
         <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
           手机扫码后会要求输入此 6 位 OTP 完成绑定。
-          验证码每 5 分钟自动轮换，已绑定的手机不受影响。
+          验证码每 60 秒自动轮换，已绑定的手机不受影响。
         </p>
       </div>
 
@@ -493,7 +493,7 @@ function ErrorView({
 /// expires_at 更新后进度条会跳回 100% 重新开始。
 function OtpCountdownBar({ remainingSecs }: { remainingSecs: number }) {
   const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
-  const lowTime = remainingSecs <= 30;
+  const lowTime = remainingSecs <= 10;
   const fillColor = lowTime ? "var(--error)" : "var(--accent)";
 
   return (
