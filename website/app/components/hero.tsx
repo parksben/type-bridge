@@ -108,7 +108,7 @@ function PhoneNode() {
   return (
     <div
       className="relative flex flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)]/90 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.4)] backdrop-blur-md"
-      style={{ width: "160px", height: "280px" }}
+      style={{ width: "140px", height: "240px" }}
       aria-hidden
     >
       {/* Dynamic island */}
@@ -196,7 +196,7 @@ function BridgeNode() {
         <img
           src="/typebridge.png"
           alt=""
-          className="animate-breathe-glow h-14 w-14 rounded-2xl shadow-[0_8px_32px_-8px_var(--accent-glow)]"
+          className="animate-breathe-glow h-12 w-12 rounded-2xl shadow-[0_8px_32px_-8px_var(--accent-glow)]"
           aria-hidden
         />
       </div>
@@ -216,7 +216,7 @@ function MonitorNode() {
       {/* Monitor body */}
       <div
         className="relative overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]/90 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.4)] backdrop-blur-md"
-        style={{ width: "160px", height: "110px" }}
+        style={{ width: "140px", height: "96px" }}
         aria-hidden
       >
         {/* Window title bar */}
@@ -245,8 +245,8 @@ function MonitorNode() {
 /** ConceptBanner — phone → bridge → monitor, flex layout for symmetry */
 function ConceptBanner() {
   return (
-    <div className="noise relative mt-10 w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm"
-      style={{ height: "min(380px, calc(100vh - 420px))", minHeight: "240px" }}
+    <div className="noise relative w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm"
+      style={{ height: "min(320px, calc(100vh - 360px))", minHeight: "250px" }}
     >
       {/* Grid pattern */}
       <div
@@ -312,7 +312,7 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative flex h-screen flex-col items-center justify-center px-6 pb-4 pt-16 md:pt-20"
+      className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-4 pt-20 md:pt-24"
     >
       {/* Ambient glow — large orb behind content */}
       <div
@@ -326,19 +326,19 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
         {/* Giant brand mark + wordmark */}
-        <div className="animate-fade-up animate-breathe-glow mx-auto mb-6 inline-flex items-center sm:mb-10">
+        <div className="animate-fade-up animate-breathe-glow mx-auto mb-4 inline-flex items-center sm:mb-8">
           <BrandWordmark
             gradient
             gradientId="hero-brand-grad"
-            markSize={56}
+            markSize={44}
             gapClassName="gap-2 md:gap-4"
-            textClassName="text-[36px] md:text-[60px] font-extrabold tracking-tight"
+            textClassName="text-[28px] sm:text-[36px] md:text-[60px] font-extrabold tracking-tight"
           />
         </div>
 
         {/* Main headline */}
         <h1
-          className="animate-fade-up text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[40px] md:text-[72px] lg:text-[84px]"
+          className="animate-fade-up text-[28px] font-extrabold leading-[1.1] tracking-tight sm:text-[34px] md:text-[56px] lg:text-[72px]"
           style={{ animationDelay: "180ms" }}
         >
           {t("hero.headline")}
@@ -346,7 +346,7 @@ export function Hero() {
 
         {/* Subtitle */}
         <p
-          className="animate-fade-up mx-auto mt-4 max-w-2xl text-balance text-sm text-[var(--muted)] sm:mt-6 sm:text-base md:text-lg"
+          className="animate-fade-up mx-auto mt-3 max-w-2xl text-balance text-sm text-[var(--muted)] sm:mt-5 sm:text-base md:text-lg"
           style={{ animationDelay: "260ms" }}
         >
           {renderMarked(t("hero.subtitle"), "hero-sub")}
@@ -354,7 +354,7 @@ export function Hero() {
 
         {/* CTA */}
         <div
-          className="animate-fade-up mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row sm:mt-10 sm:gap-3"
+          className="animate-fade-up mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row sm:mt-8 sm:gap-3"
           style={{ animationDelay: "340ms" }}
         >
           <a
@@ -380,7 +380,7 @@ export function Hero() {
 
       {/* Concept banner */}
       <div
-        className="animate-fade-up relative z-10 mx-auto mt-8 w-full max-w-5xl sm:mt-12"
+        className="animate-fade-up relative z-10 mx-auto mt-6 w-full max-w-5xl sm:mt-10"
         style={{ animationDelay: "420ms" }}
       >
         <ConceptBanner />
