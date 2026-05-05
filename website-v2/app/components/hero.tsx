@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, Download, Globe } from "lucide-react";
-import { BrandMark } from "./logo";
+import { BrandMark, BrandWordmark } from "./logo";
 
 // ────────────────────────────────────────────
 // IM official logo SVGs — shared with old site
@@ -300,22 +300,30 @@ export function Hero() {
       />
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
-        {/* Giant brand mark (animated breathing) */}
-        <div className="animate-fade-up animate-breathe-glow mx-auto mb-8 inline-block">
-          <BrandMark size={72} gradient gradientId="hero-brand-grad" />
+        {/* Giant brand mark + wordmark — same composition as TopNav, bigger */}
+        <div className="animate-fade-up animate-breathe-glow mx-auto mb-8 inline-flex items-center">
+          <BrandWordmark
+            gradient
+            gradientId="hero-brand-grad"
+            markSize={56}
+            gapClassName="gap-3 md:gap-4"
+            textClassName="text-[34px] md:text-[42px] font-extrabold tracking-tight"
+          />
         </div>
 
-        {/* Eyebrow */}
-        <p
-          className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)]/60 px-4 py-1.5 text-xs font-medium tracking-[0.2em] text-[var(--muted)] backdrop-blur-sm"
+        {/* Eyebrow — use flex centering to avoid tracking-induced offset */}
+        <div
+          className="animate-fade-up flex justify-center"
           style={{ animationDelay: "100ms" }}
         >
-          <span
-            aria-hidden
-            className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
-          />
-          让手机成为桌面输入设备
-        </p>
+          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)]/60 px-4 py-1.5 text-xs font-medium tracking-[0.12em] text-[var(--muted)] backdrop-blur-sm">
+            <span
+              aria-hidden
+              className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"
+            />
+            让手机成为桌面输入设备
+          </p>
+        </div>
 
         {/* Main headline */}
         <h1
@@ -324,7 +332,6 @@ export function Hero() {
         >
           手机
           <span className="text-accent-gradient">即键盘</span>
-          <span className="text-[var(--text)]">。</span>
         </h1>
 
         {/* Subtitle */}
