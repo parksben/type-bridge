@@ -16,13 +16,13 @@ type KeySpec = {
 };
 
 const KEYS: KeySpec[] = [
-  { code: "Backspace", Icon: Delete, labelKey: "composer.shortcutBackspace" },
-  { code: "ArrowLeft", Icon: ArrowLeft, labelKey: "composer.shortcutArrowLeft" },
   { code: "ArrowUp", Icon: ArrowUp, labelKey: "composer.shortcutArrowUp" },
   { code: "ArrowDown", Icon: ArrowDown, labelKey: "composer.shortcutArrowDown" },
+  { code: "ArrowLeft", Icon: ArrowLeft, labelKey: "composer.shortcutArrowLeft" },
   { code: "ArrowRight", Icon: ArrowRight, labelKey: "composer.shortcutArrowRight" },
   { code: "Space", Icon: Space, labelKey: "composer.shortcutSpace" },
   { code: "Enter", Icon: CornerDownLeft, labelKey: "composer.shortcutEnter" },
+  { code: "Backspace", Icon: Delete, labelKey: "composer.shortcutBackspace" },
 ];
 
 type Props = {

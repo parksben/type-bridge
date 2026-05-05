@@ -75,37 +75,35 @@ export default function ComposerBar({
   return (
     <>
       <div
-        className="border-t safe-area-bottom"
+        className="border-t safe-area-bottom relative"
         style={{
           background: "var(--tb-surface)",
           borderColor: "var(--tb-border)",
         }}
       >
-        {/* 顶部居中切换按钮：展开/收起控制键面板 */}
-        <div className="flex justify-center -mb-1">
-          <button
-            type="button"
-            onClick={toggleShortcuts}
-            aria-label={t(
-              shortcutsExpanded
-                ? "composer.shortcutsCollapse"
-                : "composer.shortcutsExpand",
-            )}
-            className="h-6 px-3 rounded-b-md flex items-center justify-center transition-colors"
-            style={{
-              background: "var(--tb-bg)",
-              color: "var(--tb-muted)",
-              border: "1px solid var(--tb-border)",
-              borderTop: "none",
-            }}
-          >
-            {shortcutsExpanded ? (
-              <ChevronDown size={14} strokeWidth={2.2} />
-            ) : (
-              <ChevronUp size={14} strokeWidth={2.2} />
-            )}
-          </button>
-        </div>
+        {/* 异形悬浮 tab：绝对定位漂浮在 ComposerBar 顶边外侧，不占内部布局空间 */}
+        <button
+          type="button"
+          onClick={toggleShortcuts}
+          aria-label={t(
+            shortcutsExpanded
+              ? "composer.shortcutsCollapse"
+              : "composer.shortcutsExpand",
+          )}
+          className="absolute left-1/2 -translate-x-1/2 -top-px -translate-y-full h-6 px-3 rounded-t-md flex items-center justify-center transition-colors"
+          style={{
+            background: "var(--tb-surface)",
+            color: "var(--tb-muted)",
+            border: "1px solid var(--tb-border)",
+            borderBottom: "none",
+          }}
+        >
+          {shortcutsExpanded ? (
+            <ChevronDown size={14} strokeWidth={2.2} />
+          ) : (
+            <ChevronUp size={14} strokeWidth={2.2} />
+          )}
+        </button>
 
         {shortcutsExpanded && (
           <ShortcutKeysPanel onPress={onSendKey} disabled={disabled} />
