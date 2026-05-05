@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Command, Option, ChevronUp, ArrowBigUp, RotateCcw } from "lucide-react";
 import { DEFAULT_SUBMIT_KEY, type SubmitKey } from "../store";
+import { t } from "../i18n";
 
 interface Props {
   value: SubmitKey;
@@ -100,10 +101,10 @@ export default function KeyBindInput({ value, onChange, disabled }: Props) {
         justifyContent: "center",
       }}
       role="button"
-      aria-label="设置提交按键"
+      aria-label={t("keybind.setAria")}
     >
       {capturing ? (
-        <span className="text-accent">按下目标组合…</span>
+        <span className="text-accent">{t("keybind.pressTarget")}</span>
       ) : (
         <>
           {value.ctrl && <ChevronUp size={12} strokeWidth={2} />}
@@ -114,7 +115,7 @@ export default function KeyBindInput({ value, onChange, disabled }: Props) {
           {!disabled && (
             <button
               onClick={handleReset}
-              title="重置为 Enter"
+              title={t("keybind.resetTooltip")}
               className="ml-1.5 text-subtle hover:text-muted"
               tabIndex={-1}
             >

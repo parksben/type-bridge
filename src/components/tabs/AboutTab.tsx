@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import logoUrl from "../../assets/icons/typebridge.png";
+import { useI18n, t as ti18n } from "../../i18n";
 
 // 与 src-tauri/src/about.rs 的 UpdateCheckResult 对齐
 interface UpdateCheckResult {
@@ -25,11 +26,12 @@ export default function AboutTab() {
   const [status, setStatus] = useState<CheckStatus>({ kind: "idle" });
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     invoke<string>("get_app_version")
       .then(setVersion)
-      .catch(() => setVersion("未知"));
+      .catch(() => setVersion(t("about.versionUnknown")));
   }, []);
 
   async function handleCheck() {
@@ -104,12 +106,12 @@ export default function AboutTab() {
           {status.kind === "checking" ? (
             <>
               <RefreshCw size={12} strokeWidth={1.75} className="animate-spin" />
-              检查中…
+              {t("about.checking")}
             </>
           ) : (
             <>
               <RefreshCw size={12} strokeWidth={1.75} />
-              检查更新
+              {t("about.check")}
             </>
           )}
         </button>
@@ -143,7 +145,7 @@ function CheckResultLine({
     return (
       <div className="flex items-center gap-1.5 text-[13px] text-muted">
         <CheckCircle2 size={14} strokeWidth={1.75} className="text-success" />
-        当前版本已是最新版
+        {ti18n("about.upToDate")}
       </div>
     );
   }
@@ -152,13 +154,13 @@ function CheckResultLine({
     return (
       <div className="flex flex-col items-center gap-2">
         <p className="text-[13px] text-text">
-          发现新版本 <span className="font-mono font-semibold">v{status.latest}</span>
+          {ti18n("about.foundNewPrefix")}<span className="font-mono font-semibold">v{status.latest}</span>
         </p>
         <button
           onClick={onShowConfirm}
           className="text-[12px] underline text-accent hover:opacity-80"
         >
-          立即下载安装
+          {ti18n("about.installNow")}
         </button>
       </div>
     );
@@ -198,20 +200,20 @@ function ConfirmInstallDialog({
           boxShadow: "0 20px 60px rgba(0,0,0,0.30)",
         }}
       >
-        <h2 className="text-[15px] font-semibold text-text mb-2">确认安装新版本？</h2>
+        <h2 className="text-[15px] font-semibold text-text mb-2">{ti18n("about.confirmTitle")}</h2>
         <p className="text-[13px] text-muted leading-relaxed mb-4">
-          检测到新版 <span className="font-mono text-text">v{latest}</span>（当前
-          <span className="font-mono text-text"> v{current}</span>）。
+          {ti18n("about.confirmDetectedPrefix")}<span className="font-mono text-text">v{latest}</span>{ti18n("about.confirmCurrentPrefix")}
+          <span className="font-mono text-text">v{current}</span>{ti18n("about.confirmCurrentSuffix")}
           <br />
-          点击「确认」后：
+          {ti18n("about.confirmStepsHead")}
           <br />
-          1. 应用将<span className="text-text font-medium">退出</span>
+          1. {ti18n("about.confirmStep1")}<span className="text-text font-medium">{ti18n("about.confirmStep1Bold")}</span>
           <br />
-          2. 自动下载新版 .dmg 到「下载」文件夹
+          2. {ti18n("about.confirmStep2")}
           <br />
-          3. 在 Finder 中打开 .dmg
+          3. {ti18n("about.confirmStep3")}
           <br />
-          请按 macOS 标准方式将新版拖入「应用程序」文件夹覆盖旧版，再手动重新启动 TypeBridge。
+          {ti18n("about.confirmFooter")}
         </p>
 
         <div className="flex justify-end gap-2">
@@ -225,7 +227,7 @@ function ConfirmInstallDialog({
               background: "var(--surface-2)",
             }}
           >
-            取消
+            {ti18n("about.cancel")}
           </button>
           <button
             onClick={onConfirm}
@@ -235,10 +237,10 @@ function ConfirmInstallDialog({
             {installing ? (
               <>
                 <RefreshCw size={13} strokeWidth={1.75} className="animate-spin" />
-                下载中…
+                {ti18n("about.downloading")}
               </>
             ) : (
-              "确认更新"
+              ti18n("about.confirm")
             )}
           </button>
         </div>

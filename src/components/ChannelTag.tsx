@@ -1,4 +1,5 @@
-import { CHANNEL_LABEL, type ChannelId } from "../store";
+import { type ChannelId } from "../store";
+import { t } from "../i18n";
 import ChannelIcon from "./ChannelIcon";
 
 interface Props {
@@ -21,7 +22,7 @@ export default function ChannelTag({ channel }: Props) {
       style={{ color: color.fg, background: color.bg }}
     >
       <ChannelIcon channel={channel} size={10} />
-      {CHANNEL_LABEL[channel]}
+      {t(`channel.${channel}` as any)}
     </span>
   );
 }
