@@ -74,9 +74,9 @@ export function Download() {
       <div className="relative mx-auto max-w-3xl text-center">
         {/* Header — no eyebrow, no trailing period */}
         <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-          马上把<span className="text-accent-gradient">手机</span>变成
-          <br className="hidden md:block" />
-          你桌面的<span className="text-accent-gradient">键盘</span>
+          <span className="text-accent-gradient">下载</span>
+          <span className="mx-2 text-[var(--muted)]">&amp;</span>
+          <span className="text-accent-gradient">安装</span>
         </h2>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">

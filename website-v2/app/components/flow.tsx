@@ -271,8 +271,8 @@ export function Flow() {
         {/* Header — no eyebrow, no trailing period */}
         <div className="mb-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-            看<span className="text-accent-gradient">手机</span>如何变成
-            <span className="text-accent-gradient">你的键盘</span>
+            马上把<span className="text-accent-gradient">手机</span>
+            变成你桌面的<span className="text-accent-gradient">键盘</span>
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-[var(--muted)]">
             四步上手，两条连接路径可任选其一；消息发出后桌面当前聚焦的输入框自动落字

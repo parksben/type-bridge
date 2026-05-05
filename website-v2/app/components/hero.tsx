@@ -119,10 +119,12 @@ function ChannelBadge({
 }) {
   return (
     <div
-      className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-2"
+      // 用 calc(BADGE_LEFT_PCT% - 22px) 让 icon 左边缘 - 22px，即 icon 中心精确对到 BADGE_LEFT_PCT%。
+      // 这样不同 label 长度的 badge，icon 的 x 坐标完全一致（左侧居左对齐）。
+      className="absolute flex -translate-y-1/2 items-center gap-2"
       style={{
         top: `${badgeTopPct(index, total)}%`,
-        left: `${BADGE_LEFT_PCT}%`,
+        left: `calc(${BADGE_LEFT_PCT}% - 22px)`,
         animation: `fade-up 700ms ${channel.delayMs}ms both ease-out`,
       }}
     >
@@ -156,10 +158,16 @@ function ChannelBadge({
 }
 
 function BridgeNode() {
+  // icon 是 h-16 w-16 = 64px；top 往上偏半个 icon 高度，使 icon 中心
+  // 精确落在 BRIDGE_Y_PCT（= 50% banner 高度，和 SVG 弧线终点一致），
+  // 文字继续挂在 icon 下方。
   return (
     <div
-      className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3"
-      style={{ left: `${BRIDGE_X_PCT}%`, top: `${BRIDGE_Y_PCT}%` }}
+      className="absolute flex -translate-x-1/2 flex-col items-center gap-3"
+      style={{
+        left: `${BRIDGE_X_PCT}%`,
+        top: `calc(${BRIDGE_Y_PCT}% - 32px)`,
+      }}
     >
       <div className="animate-breathe-glow relative flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-gradient text-white shadow-[0_8px_32px_-8px_var(--accent-glow)]">
         <BrandMark size={32} className="text-white" />
@@ -183,18 +191,24 @@ function DesktopFrame() {
         <span className="h-2 w-2 rounded-full bg-[#febc2e]" />
         <span className="h-2 w-2 rounded-full bg-[#28c840]" />
         <span className="ml-2 text-[9px] font-medium tracking-wide text-[var(--subtle)]">
-          你的编辑器
+          桌面端输入框
         </span>
       </div>
       <div className="space-y-1.5 px-3 py-3">
         <div className="h-1.5 w-3/4 rounded bg-[var(--border-strong)]/70" />
         <div className="h-1.5 w-1/2 rounded bg-[var(--border-strong)]/50" />
-        <div className="relative mt-2 rounded-md border border-[var(--border)] bg-[var(--bg-2)]/80 px-2 py-2">
-          <div
-            className="h-2 rounded bg-accent-gradient"
-            style={{ animation: "type-cursor 4.2s ease-in-out infinite" }}
-          />
-          <span className="animate-blink-cursor absolute right-2 top-1/2 h-3 w-[2px] -translate-y-1/2 rounded-full bg-[var(--accent)]" />
+        {/* 输入框 — 打字机效果：文字逐字出现 + 闪烁光标紧跟末尾 */}
+        <div className="mt-2 flex h-7 items-center overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-2)]/80 px-2">
+          <span
+            className="block overflow-hidden whitespace-nowrap font-mono text-[11px] text-[var(--text)]"
+            style={{
+              animation: "concept-typewriter 5s steps(5, end) infinite",
+              width: 0,
+            }}
+          >
+            手机即键盘
+          </span>
+          <span className="animate-blink-cursor ml-[1px] inline-block h-3 w-[2px] rounded-full bg-[var(--accent)]" />
         </div>
       </div>
     </div>
