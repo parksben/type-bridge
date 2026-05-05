@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAppStore, DEFAULT_SUBMIT_KEY, type Settings } from "../../store";
+import { useI18n } from "../../i18n";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
 
 type ConnState = "idle" | "connecting" | "connected";
@@ -37,6 +38,7 @@ export default function ConnectionTab() {
     setSubmitKey,
     addLog,
   } = useAppStore();
+  const { t } = useI18n();
 
   const connected = channelConnected.feishu === true;
   const connState: ConnState = connected ? "connected" : starting ? "connecting" : "idle";
@@ -78,9 +80,9 @@ export default function ConnectionTab() {
     const errs: FieldErrors = {};
     const id = appId.trim();
     const secret = appSecret.trim();
-    if (!id) errs.appId = "App ID 不能为空";
-    else if (!id.startsWith("cli_")) errs.appId = "App ID 应以 cli_ 开头";
-    if (!secret) errs.appSecret = "App Secret 不能为空";
+    if (!id) errs.appId = t("feishu.appIdEmpty");
+    else if (!id.startsWith("cli_")) errs.appId = t("feishu.appIdPrefix");
+    if (!secret) errs.appSecret = t("feishu.appSecretEmpty");
     return errs;
   }
 
@@ -96,10 +98,10 @@ export default function ConnectionTab() {
         appId: appId.trim(),
         appSecret: appSecret.trim(),
       });
-      addLog({ kind: "connect", channel: "feishu", text: "正在启动长连接..." });
+      addLog({ kind: "connect", channel: "feishu", text: t("feishu.starting") });
     } catch (e) {
       setStarting(false);
-      addLog({ kind: "error", channel: "feishu", text: `启动失败: ${e}` });
+      addLog({ kind: "error", channel: "feishu", text: t("feishu.startFailed", { error: String(e) }) });
     }
   }
 
@@ -117,10 +119,10 @@ export default function ConnectionTab() {
         kind: allOk ? "connect" : "error",
         channel: "feishu",
         text: allOk
-          ? "连接测试通过：全部 API scope 校验成功"
+          ? t("feishu.selftestPassed")
           : res.credentials_ok
-          ? `连接测试：${failedCount} 项 scope 缺失`
-          : `连接测试失败：${res.credentials_reason}`,
+          ? t("feishu.selftestPartial", { count: failedCount })
+          : t("feishu.selftestFailed", { reason: res.credentials_reason ?? "" }),
       });
     } catch (e) {
       // invoke 本身抛异常（sidecar 未启动 / 超时等）→ 造一个凭据错误型结果展示
@@ -129,7 +131,7 @@ export default function ConnectionTab() {
         credentials_reason: String(e),
         probes: [],
       });
-      addLog({ kind: "error", channel: "feishu", text: `连接测试异常：${e}` });
+      addLog({ kind: "error", channel: "feishu", text: t("feishu.selftestException", { error: String(e) }) });
     } finally {
       setSelftesting(false);
     }
@@ -178,8 +180,8 @@ export default function ConnectionTab() {
                 className="shrink-0 mt-0.5 text-accent"
               />
               <div className="flex-1 text-text">
-                <span className="font-medium">飞书机器人已就绪。</span>
-                打开飞书 App 找到你配置的机器人，发消息即自动注入到桌面当前焦点输入框。
+                <span className="font-medium">{t("feishu.bannerConnectedTitle")}</span>
+                {t("feishu.bannerConnectedBody")}
               </div>
             </div>
             <div
@@ -192,9 +194,9 @@ export default function ConnectionTab() {
                 className="shrink-0 mt-0.5 text-accent"
               />
               <div className="flex-1 text-muted">
-                TypeBridge 不接收语音消息。想用语音输入，请使用
-                <span className="text-text">飞书</span>
-                的「语音转文字」功能或手机输入法的「语音输入」功能。
+                {t("feishu.voiceHintPrefix")}
+                <span className="text-text">{t("feishu.voiceHintApp")}</span>
+                {t("feishu.voiceHintSuffix")}
               </div>
             </div>
           </div>
@@ -212,15 +214,15 @@ export default function ConnectionTab() {
               className="shrink-0 mt-0.5 text-accent"
             />
             <div className="flex-1 text-text">
-              还没有自建应用？先到{" "}
+              {t("feishu.bannerIdleBefore")}
               <button
                 onClick={openFeishuDevPortal}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                飞书开发者后台
+                {t("feishu.bannerIdlePortal")}
                 <ExternalLink size={10} strokeWidth={2} />
-              </button>{" "}
-              创建一个，复制 App ID / Secret 到下方。
+              </button>
+              {t("feishu.bannerIdleAfter")}
             </div>
           </div>
         )}
@@ -256,7 +258,7 @@ export default function ConnectionTab() {
           <input
             type="password"
             className="tb-input"
-            placeholder="请输入 App Secret"
+            placeholder={t("feishu.appSecretPlaceholder")}
             value={appSecret}
             onChange={(e) => setAppSecret(e.target.value)}
             spellCheck={false}
@@ -282,12 +284,12 @@ export default function ConnectionTab() {
             {starting ? (
               <>
                 <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
-                启动中
+                {t("conn.starting")}
               </>
             ) : (
               <>
                 <Play size={14} strokeWidth={1.75} />
-                {connected ? "重启长连接" : "启动长连接"}
+                {connected ? t("conn.restart") : t("conn.start")}
               </>
             )}
           </button>
@@ -301,17 +303,17 @@ export default function ConnectionTab() {
               color: canSelftest ? "var(--text)" : "var(--subtle)",
               cursor: canSelftest ? "pointer" : "not-allowed",
             }}
-            title={connected ? "向飞书发一次 ping 请求以验证凭据和网络" : "请先启动长连接"}
+            title={connected ? t("feishu.selftestTooltip") : t("conn.testTooltipDisabled")}
           >
             {selftesting ? (
               <>
                 <RotateCw size={13} strokeWidth={1.75} className="animate-spin" />
-                测试中
+                {t("conn.testing")}
               </>
             ) : (
               <>
                 <Radar size={13} strokeWidth={1.75} />
-                测试连接
+                {t("conn.test")}
               </>
             )}
           </button>
@@ -329,7 +331,7 @@ export default function ConnectionTab() {
             }`}
           />
           <span className="text-[12.5px] text-muted">
-            {connState === "connected" ? "已连接" : connState === "connecting" ? "启动中" : "未连接"}
+            {connState === "connected" ? t("conn.statusConnected") : connState === "connecting" ? t("conn.statusConnecting") : t("conn.statusIdle")}
           </span>
         </div>
 
@@ -345,15 +347,15 @@ export default function ConnectionTab() {
           >
             <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
             <div className="flex-1">
-              长连接已启动。请前往{" "}
+              {t("feishu.afterStartBefore")}
               <button
                 onClick={openFeishuDevPortal}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
-                飞书开发者后台
+                {t("feishu.afterStartPortal")}
                 <ExternalLink size={10} strokeWidth={2} />
-              </button>{" "}
-              的「事件订阅」里完成长连接验证，再点「测试连接」验证双向通信。
+              </button>
+              {t("feishu.afterStartAfter")}
             </div>
           </div>
         )}
