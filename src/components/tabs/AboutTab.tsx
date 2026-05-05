@@ -73,13 +73,13 @@ export default function AboutTab() {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-12">
-      <div className="max-w-md mx-auto flex flex-col items-center text-center gap-5">
+    <div className="h-full overflow-y-auto flex items-center justify-center px-8 py-8">
+      <div className="w-full max-w-md flex flex-col items-center text-center gap-5">
         <img
           src={logoUrl}
           alt="TypeBridge"
-          width={96}
-          height={96}
+          width={88}
+          height={88}
           className="rounded-2xl"
           style={{
             boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
@@ -87,23 +87,28 @@ export default function AboutTab() {
         />
 
         <div>
-          <h1 className="text-[20px] font-semibold text-text">TypeBridge</h1>
-          <p className="text-[13px] text-muted mt-1 font-mono">{version}</p>
+          <h1 className="text-[18px] font-semibold text-text">TypeBridge</h1>
+          <p className="text-[12px] text-muted mt-1 font-mono">{version}</p>
         </div>
 
         <button
           onClick={handleCheck}
           disabled={status.kind === "checking" || installing}
-          className="tb-btn-primary flex items-center justify-center gap-1.5 min-w-[140px]"
+          className="flex items-center justify-center gap-1.5 text-[12px] rounded-md px-3.5 py-1.5 transition-colors disabled:cursor-not-allowed"
+          style={{
+            background: "var(--surface-2)",
+            border: "1px solid var(--border-strong)",
+            color: "var(--text)",
+          }}
         >
           {status.kind === "checking" ? (
             <>
-              <RefreshCw size={14} strokeWidth={1.75} className="animate-spin" />
+              <RefreshCw size={12} strokeWidth={1.75} className="animate-spin" />
               检查中…
             </>
           ) : (
             <>
-              <RefreshCw size={14} strokeWidth={1.75} />
+              <RefreshCw size={12} strokeWidth={1.75} />
               检查更新
             </>
           )}
