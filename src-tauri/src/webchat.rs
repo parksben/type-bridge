@@ -77,8 +77,8 @@ impl WebChatSnapshot {
         Self {
             phase,
             session_id: Some(server.session_id.clone()),
-            otp: Some(server.otp_plain.clone()),
-            expires_at: Some(server.expires_at_unix_ms),
+            otp: Some(server.otp_plain()),
+            expires_at: Some(server.expires_at_ms()),
             lan_ip: Some(server.lan_ip.to_string()),
             port: Some(server.port),
             wifi_name: server.wifi_name.clone(),
@@ -189,6 +189,19 @@ impl WebChatBridge {
         *self.last_error.lock().unwrap() = None;
     }
 
+    /// 轮换当前 server 的 OTP。server 不重启，bindings 不被清空。
+    /// 返回 true 表示成功轮换；false 表示当前没有在跑的 server（调用方应先 start）。
+    pub fn rotate_otp(&self) -> bool {
+        let s = self.server.lock().unwrap();
+        match s.as_ref() {
+            Some(server) => {
+                server.rotate_otp();
+                true
+            }
+            None => false,
+        }
+    }
+
     /// 当前持有的 server（供全局 ack listener 查询）。
     fn current_server(&self) -> Option<Arc<WebChatServer>> {
         self.server.lock().ok().and_then(|g| g.clone())
@@ -276,6 +289,24 @@ pub async fn stop_webchat<R: Runtime>(app: AppHandle<R>) {
         .clone();
     ctx.webchat.stop().await;
     emit_session_update(&app, &ctx.webchat.snapshot());
+}
+
+/// 轮换 OTP：前端倒计时归零时自动调、或锁定态用户点「重置 OTP」。
+/// 只生成新 OTP + 重置倒计时，**不重启 server、不清 bindings**。
+/// 若当前没有 server 在跑，返回当前（idle）snapshot 让前端自己决定是否调 start_webchat。
+#[tauri::command]
+pub async fn rotate_webchat_otp<R: Runtime>(app: AppHandle<R>) -> WebChatSnapshot {
+    let ctx = app
+        .state::<Arc<crate::sidecar::AppContext>>()
+        .inner()
+        .clone();
+    let ok = ctx.webchat.rotate_otp();
+    if !ok {
+        tracing::warn!("[webchat] rotate_otp called but no server is running");
+    }
+    let snap = ctx.webchat.snapshot();
+    emit_session_update(&app, &snap);
+    snap
 }
 
 #[tauri::command]
