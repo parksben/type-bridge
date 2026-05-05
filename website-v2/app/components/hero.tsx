@@ -151,8 +151,37 @@ function PhoneNode() {
         </div>
       </div>
 
+      {/* IM input bar — makes phone look like a real chat app */}
+      <div className="mt-auto flex items-center gap-1.5 border-t border-[var(--border)]/40 px-3 py-2">
+        {/* Input field */}
+        <div
+          className="flex-1 rounded-lg border border-[var(--border)]/50 bg-[var(--surface)]/60 px-2 py-1 text-[9px] text-[var(--muted)]"
+        >
+          <span className="opacity-60">{t("hero.phoneInputPlaceholder")}</span>
+        </div>
+        {/* Send button */}
+        <div
+          className="flex h-[20px] w-[20px] items-center justify-center rounded-md"
+          style={{ backgroundColor: "var(--accent)" }}
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+
       {/* Home indicator */}
-      <div className="mt-auto flex justify-center pb-2">
+      <div className="flex justify-center pb-1.5">
         <span className="h-[3px] w-[40px] rounded-full bg-[var(--border)]" />
       </div>
     </div>
