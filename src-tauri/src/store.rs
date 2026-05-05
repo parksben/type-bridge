@@ -1,7 +1,7 @@
 use crate::sidecar::AppContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tauri::{Manager, Wry};
+use tauri::{Emitter, Manager, Wry};
 use tauri_plugin_store::StoreExt;
 
 const STORE_PATH: &str = "config.json";
@@ -145,11 +145,22 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
         "submit_key",
         serde_json::to_value(&settings.submit_key).map_err(|e| e.to_string())?,
     );
-    store.set("language", settings.language);
+    store.set("language", settings.language.clone());
     store.save().map_err(|e| e.to_string())?;
 
     if let Some(ctx) = app.try_state::<Arc<AppContext>>() {
         ctx.set_submit_config(settings.auto_submit, settings.submit_key);
+
+        // 语言改了的话，正在跑的 WebChat 会话需要把 QR URL 里的 &lang= 同步刷新，
+        // 否则手机扫到的还是旧 QR（embed 了切换前的语言）。snapshot 现在会读最新的
+        // store，这里只需重新 emit 一次让前端重渲染二维码。
+        let lang = if settings.language == "zh" || settings.language == "en" {
+            Some(settings.language.as_str())
+        } else {
+            None
+        };
+        let snap = ctx.webchat.snapshot(lang);
+        let _ = app.emit("typebridge://webchat-session-update", &snap);
     }
 
     Ok(())
