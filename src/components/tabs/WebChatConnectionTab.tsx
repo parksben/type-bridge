@@ -10,7 +10,6 @@ import {
   PowerOff,
   RotateCw,
   ScanLine,
-  Smartphone,
   Timer,
   Wifi,
 } from "lucide-react";
@@ -167,7 +166,7 @@ export default function WebChatConnectionTab() {
   }, [phase, remaining, snap?.expires_at]);
 
   // 顶部 WiFi 提醒 banner（仅 pending 阶段展示 — 用户扫码前才需要确认同 WiFi；
-  // 启动前展示只是噪音，已绑定状态有自己的成功提示，过期/异常态有 ErrorView）
+  // bound 态另展示"已连接 N 台设备"的成功横条，过期/异常态有 ErrorView）
   const wifiBanner = phase === "pending" && (
     <div
       className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
@@ -188,14 +187,33 @@ export default function WebChatConnectionTab() {
     </div>
   );
 
+  // 已绑定成功横条（仅 bound 阶段）— 告诉用户 QR + OTP 仍有效、其他手机可继续加入
+  const boundBanner = phase === "bound" && (
+    <div
+      className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+      style={{
+        background: "var(--accent-soft)",
+        border: "1px solid var(--border)",
+        color: "var(--text)",
+      }}
+    >
+      <CheckCircle2 size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
+      <div className="flex-1">
+        已连接 <span className="font-medium">{snap?.bound_devices ?? 0}</span> 台设备。
+        QR / OTP 继续有效，其他手机扫同一码即可加入。
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
       <div className="max-w-md mx-auto flex flex-col gap-5">
         {wifiBanner}
+        {boundBanner}
 
         {phase === "idle" && <IdleView busy={busy} onStart={start} />}
-        {phase === "pending" && (
-          <PendingView
+        {(phase === "pending" || phase === "bound") && (
+          <SessionLiveView
             snap={snap!}
             qrDataUrl={qrDataUrl}
             remainingSecs={remaining}
@@ -203,7 +221,6 @@ export default function WebChatConnectionTab() {
             onStop={stop}
           />
         )}
-        {phase === "bound" && <BoundView snap={snap!} busy={busy} onStop={stop} />}
         {(phase === "expired" || phase === "error") && (
           <ErrorView
             phase={phase}
@@ -263,7 +280,9 @@ function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
   );
 }
 
-function PendingView({
+/// pending + bound 共用的"会话运行中"视图：QR + OTP + 进度条始终展示，
+/// 方便新手机追加扫码加入。区分度由外层 wifiBanner / boundBanner 完成。
+function SessionLiveView({
   snap,
   qrDataUrl,
   remainingSecs,
@@ -278,6 +297,7 @@ function PendingView({
 }) {
   const otpDigits = (snap.otp || "").split("");
   const serverUrl = snap.lan_ip && snap.port ? `http://${snap.lan_ip}:${snap.port}` : "";
+  const isBound = snap.phase.kind === "bound";
 
   return (
     <>
@@ -361,65 +381,7 @@ function PendingView({
         }}
       >
         <PowerOff size={13} strokeWidth={1.75} />
-        停止
-      </button>
-    </>
-  );
-}
-
-function BoundView({
-  snap,
-  busy,
-  onStop,
-}: {
-  snap: WebChatSnapshot;
-  busy: boolean;
-  onStop: () => void;
-}) {
-  const n = snap.bound_devices;
-
-  return (
-    <>
-      <div
-        className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
-        style={{
-          background: "var(--accent-soft)",
-          border: "1px solid var(--border)",
-          color: "var(--text)",
-        }}
-      >
-        <CheckCircle2 size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
-        <div className="flex-1">
-          会话已绑定。手机端发的消息会自动注入到当前焦点输入框；手机上会看到「已送达」反馈。
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-          <Smartphone size={12} strokeWidth={1.75} />
-          已连接设备
-        </label>
-        <div
-          className="rounded-lg px-3.5 py-3 flex items-center justify-between"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <span className="text-[13px] text-text">{n} 台设备</span>
-          {snap.wifi_name && (
-            <span className="text-[11.5px] text-muted font-mono">{snap.wifi_name}</span>
-          )}
-        </div>
-      </div>
-
-      <button
-        onClick={onStop}
-        disabled={busy}
-        className="tb-btn-primary flex items-center justify-center gap-1.5 mt-1"
-      >
-        <PowerOff size={14} strokeWidth={1.75} />
-        停止会话
+        {isBound ? "停止会话" : "停止"}
       </button>
     </>
   );
