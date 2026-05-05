@@ -13,6 +13,10 @@
   <a href="README.en.md">English</a>
 </p>
 
+<p align="center">
+  <img src="public/readme-hero-concept.png" alt="TypeBridge 手机到桌面输入概念图" width="760" />
+</p>
+
 ---
 
 ## 这是什么？
