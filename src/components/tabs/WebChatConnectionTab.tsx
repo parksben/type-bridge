@@ -37,7 +37,8 @@ interface WebChatSnapshot {
   qr_url: string | null;
 }
 
-const ERROR_PHASES = new Set<Phase>(["expired", "error"]);
+// 与 Rust 侧 SESSION_TTL_SECS 对齐（src-tauri/src/webchat_server.rs）
+const SESSION_TTL_SECS = 5 * 60;
 
 export default function WebChatConnectionTab() {
   const [snap, setSnap] = useState<WebChatSnapshot | null>(null);
@@ -45,6 +46,8 @@ export default function WebChatConnectionTab() {
   const [now, setNow] = useState<number>(Date.now());
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const tickRef = useRef<number | null>(null);
+  // 防止 remainingSecs=0 那一刻被多次 effect 连续触发
+  const rotatingRef = useRef(false);
   const addLog = useAppStore((s) => s.addLog);
 
   // 初始化 snapshot
@@ -63,7 +66,7 @@ export default function WebChatConnectionTab() {
     };
   }, []);
 
-  // 倒计时（仅 pending / bound）
+  // 倒计时（仅 pending / bound — 这两个态 OTP 都在倒计时）
   useEffect(() => {
     const phase = snap?.phase.kind;
     const needTick = phase === "pending" || phase === "bound";
@@ -108,7 +111,6 @@ export default function WebChatConnectionTab() {
   }, [snap?.expires_at, now]);
 
   const phase: Phase = snap?.phase.kind ?? "idle";
-  const isError = ERROR_PHASES.has(phase);
 
   async function start() {
     setBusy(true);
@@ -133,6 +135,36 @@ export default function WebChatConnectionTab() {
       setBusy(false);
     }
   }
+
+  async function rotateOtp(manual: boolean) {
+    if (rotatingRef.current) return;
+    rotatingRef.current = true;
+    try {
+      await invoke<WebChatSnapshot>("rotate_webchat_otp");
+      if (manual) {
+        addLog({ kind: "connect", channel: "webchat", text: "WebChat OTP 已重置（手动）" });
+      }
+      // 自动轮换路径不记日志，避免每 5 分钟刷屏
+    } catch (e) {
+      addLog({ kind: "error", channel: "webchat", text: `WebChat OTP 轮换失败：${e}` });
+    } finally {
+      // 稍延迟解锁，等 snapshot 更新到来刷新 expires_at 再允许下一次
+      window.setTimeout(() => {
+        rotatingRef.current = false;
+      }, 500);
+    }
+  }
+
+  // OTP 自动轮换：pending / bound 态下 remaining 归零时桌面端无感刷新 OTP。
+  // 锁定态（expired）故意 NOT 自动轮换 — 要求用户手动「重置 OTP」，保留
+  // brute-force 防护语义
+  useEffect(() => {
+    if (phase !== "pending" && phase !== "bound") return;
+    if (!snap?.expires_at) return;
+    if (remaining > 0) return;
+    rotateOtp(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, remaining, snap?.expires_at]);
 
   // 顶部 WiFi 提醒 banner（仅 pending 阶段展示 — 用户扫码前才需要确认同 WiFi；
   // 启动前展示只是噪音，已绑定状态有自己的成功提示，过期/异常态有 ErrorView）
@@ -168,15 +200,18 @@ export default function WebChatConnectionTab() {
             qrDataUrl={qrDataUrl}
             remainingSecs={remaining}
             busy={busy}
-            onRestart={start}
             onStop={stop}
           />
         )}
-        {phase === "bound" && (
-          <BoundView snap={snap!} busy={busy} onStop={stop} onRestart={start} />
-        )}
-        {isError && (
-          <ErrorView phase={phase} snap={snap} busy={busy} onRestart={start} />
+        {phase === "bound" && <BoundView snap={snap!} busy={busy} onStop={stop} />}
+        {(phase === "expired" || phase === "error") && (
+          <ErrorView
+            phase={phase}
+            snap={snap}
+            busy={busy}
+            onRotate={() => rotateOtp(true)}
+            onStart={start}
+          />
         )}
 
         {/* 连接状态 pill */}
@@ -233,18 +268,15 @@ function PendingView({
   qrDataUrl,
   remainingSecs,
   busy,
-  onRestart,
   onStop,
 }: {
   snap: WebChatSnapshot;
   qrDataUrl: string | null;
   remainingSecs: number;
   busy: boolean;
-  onRestart: () => void;
   onStop: () => void;
 }) {
   const otpDigits = (snap.otp || "").split("");
-  const lowTime = remainingSecs <= 60;
   const serverUrl = snap.lan_ip && snap.port ? `http://${snap.lan_ip}:${snap.port}` : "";
 
   return (
@@ -269,15 +301,6 @@ function PendingView({
         <div className="flex items-center gap-1.5 text-[11.5px]">
           <ScanLine size={12} strokeWidth={1.75} className="text-muted" />
           <span className="text-muted">用手机相机或浏览器扫码</span>
-          <span className="text-subtle mx-1">·</span>
-          <Timer
-            size={12}
-            strokeWidth={1.75}
-            className={lowTime ? "text-error" : "text-muted"}
-          />
-          <span className={lowTime ? "text-error font-mono" : "text-muted font-mono"}>
-            剩余 {formatRemaining(remainingSecs)}
-          </span>
         </div>
         {serverUrl && (
           <div
@@ -294,7 +317,7 @@ function PendingView({
       </div>
 
       {/* OTP 6 位 */}
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
           <span className="text-accent">●</span>
           OTP 验证码
@@ -316,44 +339,30 @@ function PendingView({
             </div>
           ))}
         </div>
+
+        {/* 倒计时进度条：归零时桌面自动生成新 OTP（无需用户操作） */}
+        <OtpCountdownBar remainingSecs={remainingSecs} />
+
         <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
           手机扫码后会要求输入此 6 位 OTP 完成绑定。
+          验证码每 5 分钟自动轮换，已绑定的手机不受影响。
         </p>
       </div>
 
-      {/* 双按钮 */}
-      <div className="flex gap-2 mt-1">
-        <button
-          onClick={onRestart}
-          disabled={busy}
-          className="tb-btn-primary flex-1 flex items-center justify-center gap-1.5"
-        >
-          {busy ? (
-            <>
-              <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
-              处理中
-            </>
-          ) : (
-            <>
-              <RotateCw size={14} strokeWidth={1.75} />
-              重启会话
-            </>
-          )}
-        </button>
-        <button
-          onClick={onStop}
-          disabled={busy}
-          className="flex-1 flex items-center justify-center gap-1.5 text-[13px] rounded-lg py-[10px] transition-colors disabled:cursor-not-allowed"
-          style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--border-strong)",
-            color: busy ? "var(--subtle)" : "var(--text)",
-          }}
-        >
-          <PowerOff size={13} strokeWidth={1.75} />
-          停止
-        </button>
-      </div>
+      {/* 停止按钮（单独一个按钮，不再有「重启会话」） */}
+      <button
+        onClick={onStop}
+        disabled={busy}
+        className="flex items-center justify-center gap-1.5 text-[13px] rounded-lg py-[10px] mt-1 transition-colors disabled:cursor-not-allowed"
+        style={{
+          background: "var(--surface-2)",
+          border: "1px solid var(--border-strong)",
+          color: busy ? "var(--subtle)" : "var(--text)",
+        }}
+      >
+        <PowerOff size={13} strokeWidth={1.75} />
+        停止
+      </button>
     </>
   );
 }
@@ -362,12 +371,10 @@ function BoundView({
   snap,
   busy,
   onStop,
-  onRestart,
 }: {
   snap: WebChatSnapshot;
   busy: boolean;
   onStop: () => void;
-  onRestart: () => void;
 }) {
   const n = snap.bound_devices;
 
@@ -406,29 +413,14 @@ function BoundView({
         </div>
       </div>
 
-      <div className="flex gap-2 mt-1">
-        <button
-          onClick={onStop}
-          disabled={busy}
-          className="tb-btn-primary flex-1 flex items-center justify-center gap-1.5"
-        >
-          <PowerOff size={14} strokeWidth={1.75} />
-          停止会话
-        </button>
-        <button
-          onClick={onRestart}
-          disabled={busy}
-          className="flex-1 flex items-center justify-center gap-1.5 text-[13px] rounded-lg py-[10px] transition-colors disabled:cursor-not-allowed"
-          style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--border-strong)",
-            color: busy ? "var(--subtle)" : "var(--text)",
-          }}
-        >
-          <RotateCw size={13} strokeWidth={1.75} />
-          重启会话
-        </button>
-      </div>
+      <button
+        onClick={onStop}
+        disabled={busy}
+        className="tb-btn-primary flex items-center justify-center gap-1.5 mt-1"
+      >
+        <PowerOff size={14} strokeWidth={1.75} />
+        停止会话
+      </button>
     </>
   );
 }
@@ -437,18 +429,22 @@ function ErrorView({
   phase,
   snap,
   busy,
-  onRestart,
+  onRotate,
+  onStart,
 }: {
   phase: Phase;
   snap: WebChatSnapshot | null;
   busy: boolean;
-  onRestart: () => void;
+  onRotate: () => void;
+  onStart: () => void;
 }) {
-  const title = phase === "expired" ? "会话已过期" : "会话异常";
-  const body =
-    phase === "expired"
-      ? "5 分钟内未完成握手，会话已自动作废。点「重启会话」生成新二维码。"
-      : snap?.error || "会话出现异常，请「重启会话」重试。";
+  // expired 态语义是 "OTP 被锁定（5 次输错）"，这时 server 还在跑、bindings 还在，
+  // 手动轮换 OTP 即可恢复。error 态是 server 启动失败，需要重新 start。
+  const locked = phase === "expired";
+  const title = locked ? "验证码已锁定" : "会话异常";
+  const body = locked
+    ? "连续 5 次 OTP 错误，当前验证码已锁定。点下方按钮生成新 OTP 解锁（已绑定设备不会受影响）。"
+    : snap?.error || "会话启动异常，请重试。";
 
   return (
     <>
@@ -468,7 +464,7 @@ function ErrorView({
       </div>
 
       <button
-        onClick={onRestart}
+        onClick={locked ? onRotate : onStart}
         disabled={busy}
         className="tb-btn-primary flex items-center justify-center gap-1.5"
       >
@@ -477,14 +473,51 @@ function ErrorView({
             <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
             处理中
           </>
-        ) : (
+        ) : locked ? (
           <>
             <RotateCw size={14} strokeWidth={1.75} />
-            重启会话
+            重置 OTP
+          </>
+        ) : (
+          <>
+            <Play size={14} strokeWidth={1.75} />
+            重试
           </>
         )}
       </button>
     </>
+  );
+}
+
+/// OTP 倒计时进度条。从 100% 平滑缩到 0%，归零时上层自动调 rotate_webchat_otp，
+/// expires_at 更新后进度条会跳回 100% 重新开始。
+function OtpCountdownBar({ remainingSecs }: { remainingSecs: number }) {
+  const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
+  const lowTime = remainingSecs <= 30;
+  const fillColor = lowTime ? "var(--error)" : "var(--accent)";
+
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="flex-1 h-1.5 rounded-full overflow-hidden"
+        style={{ background: "var(--surface-2)" }}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${percent}%`,
+            background: fillColor,
+            transition: "width 1s linear, background 200ms",
+          }}
+        />
+      </div>
+      <div className="flex items-center gap-1 text-[11px] font-mono tabular-nums min-w-[52px] justify-end">
+        <Timer size={11} strokeWidth={1.75} className={lowTime ? "text-error" : "text-muted"} />
+        <span className={lowTime ? "text-error" : "text-muted"}>
+          {formatRemaining(remainingSecs)}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -499,7 +532,7 @@ function ConnectionPill({ phase, bound }: { phase: Phase; bound: number }) {
       : phase === "idle"
       ? "未启动"
       : phase === "expired"
-      ? "已过期"
+      ? "验证码已锁定"
       : "异常";
   return (
     <div className="flex items-center gap-2.5 px-0.5 py-1">
@@ -514,10 +547,3 @@ function formatRemaining(secs: number): string {
   const s = secs % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
-
-// 留做 future 用（simplifyUa 等）
-function _unused(ua: string | null): string {
-  if (!ua) return "未知设备";
-  return ua;
-}
-void _unused;

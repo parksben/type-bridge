@@ -38,6 +38,7 @@ pub fn run() {
             sidecar::copy_image_to_clipboard,
             webchat::start_webchat,
             webchat::stop_webchat,
+            webchat::rotate_webchat_otp,
             webchat::webchat_snapshot,
             injector::check_accessibility,
             injector::request_accessibility,

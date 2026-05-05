@@ -26,7 +26,6 @@
 use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -74,8 +73,6 @@ pub struct WebChatServer {
     pub lan_ip: IpAddr,
     pub wifi_name: Option<String>,
     pub session_id: String,
-    pub otp_plain: String,
-    pub expires_at_unix_ms: i64,
 }
 
 impl WebChatServer {
@@ -89,19 +86,14 @@ impl WebChatServer {
 
         // 本地生成 sessionId / OTP / OTP hash
         let session_id = generate_session_id();
-        let otp_plain = generate_otp();
-        let otp_hash = sha256_hash(otp_plain.as_bytes());
-        let expires_at_unix_ms = now_ms() + (SESSION_TTL_SECS as i64) * 1000;
+        let initial_otp = make_otp_state();
 
         let state = Arc::new(ServerState {
             session_id: session_id.clone(),
-            otp_hash,
-            otp_attempts: AtomicU8::new(0),
-            otp_locked: AtomicBool::new(false),
+            otp: SyncMutex::new(initial_otp),
             bindings: SyncMutex::new(Vec::new()),
             injector: ctx.injector.clone(),
             history: ctx.history.clone(),
-            expires_at_unix_ms,
             pending_acks: SyncMutex::new(HashMap::new()),
         });
 
@@ -160,8 +152,6 @@ impl WebChatServer {
             lan_ip,
             wifi_name,
             session_id,
-            otp_plain,
-            expires_at_unix_ms,
         })
     }
 
@@ -186,6 +176,43 @@ impl WebChatServer {
             .lock()
             .map(|v| v.len())
             .unwrap_or(0)
+    }
+
+    /// 当前 OTP 明文（供 UI 展示）。
+    pub fn otp_plain(&self) -> String {
+        self.state
+            .otp
+            .lock()
+            .ok()
+            .map(|g| g.plain.clone())
+            .unwrap_or_default()
+    }
+
+    /// 当前 OTP 过期时间（unix ms）。
+    pub fn expires_at_ms(&self) -> i64 {
+        self.state
+            .otp
+            .lock()
+            .ok()
+            .map(|g| g.expires_at_ms)
+            .unwrap_or(0)
+    }
+
+    /// 轮换 OTP：生成新的 6 位 OTP + 重置倒计时 + 清空错误计数/锁定。
+    /// **保留 session_id、bindings、server task 本身**（已绑定手机继续通过
+    /// userToken 发消息，不受影响）。
+    ///
+    /// 触发场景：
+    /// - 倒计时归零（前端自动调）
+    /// - 用户在锁定态手动点「重置 OTP」
+    pub fn rotate_otp(&self) -> (String, i64) {
+        let fresh = make_otp_state();
+        let (plain, expires_at_ms) = (fresh.plain.clone(), fresh.expires_at_ms);
+        if let Ok(mut g) = self.state.otp.lock() {
+            *g = fresh;
+        }
+        tracing::info!("[webchat] OTP rotated, new expires_at_ms={}", expires_at_ms);
+        (plain, expires_at_ms)
     }
 
     /// 外部触发：某条消息注入完成 / 失败 / 被取消，从 pending_acks 取出
@@ -228,7 +255,12 @@ impl WebChatServer {
 
     /// 会话是否锁定（OTP 5 次错）。
     pub fn is_locked(&self) -> bool {
-        self.state.otp_locked.load(Ordering::SeqCst)
+        self.state
+            .otp
+            .lock()
+            .ok()
+            .map(|g| g.locked)
+            .unwrap_or(false)
     }
 }
 
@@ -249,18 +281,39 @@ impl Drop for WebChatServer {
 struct ServerState {
     #[allow(dead_code)] // 后续 ack 回流 / 多 server 识别时会用到
     session_id: String,
-    otp_hash: [u8; 32],
-    otp_attempts: AtomicU8,
-    otp_locked: AtomicBool,
+    /// OTP 相关全量状态。rotate_otp 一把锁替换即可。
+    otp: SyncMutex<OtpState>,
     bindings: SyncMutex<Vec<Binding>>,
     injector: Arc<crate::queue::Injector>,
     history: Arc<crate::history::HistoryStore>,
-    expires_at_unix_ms: i64,
     /// 等待 injection 真实结果的 ack：key 是 queue 里的 composite_id
     /// `{channel}:{source_message_id}`，和 typebridge://message-status 事件
     /// payload.id 完全一致。注入完成时上层 Bridge 会调 `deliver_ack` 取出
     /// 对应 AckSender 回调给手机。
     pending_acks: SyncMutex<HashMap<String, AckSender>>,
+}
+
+/// OTP 全量状态。rotate 时一把锁整体替换，避免字段间不一致。
+struct OtpState {
+    plain: String,
+    hash: [u8; 32],
+    expires_at_ms: i64,
+    attempts: u8,
+    locked: bool,
+}
+
+/// 生成一个新鲜的 OtpState（含 5 分钟 expires_at）。
+fn make_otp_state() -> OtpState {
+    let plain = generate_otp();
+    let hash = sha256_hash(plain.as_bytes());
+    let expires_at_ms = now_ms() + (SESSION_TTL_SECS as i64) * 1000;
+    OtpState {
+        plain,
+        hash,
+        expires_at_ms,
+        attempts: 0,
+        locked: false,
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -432,25 +485,28 @@ async fn handle_hello(
     msg: &HelloMsg,
     state: Arc<ServerState>,
 ) -> Result<String, &'static str> {
-    if state.otp_locked.load(Ordering::SeqCst) {
-        return Err("OTP_LOCKED");
-    }
-    if now_ms() > state.expires_at_unix_ms {
-        return Err("SESSION_EXPIRED");
-    }
-
-    // 用 constant-time 对比哈希避免 timing attack
+    // 用 constant-time 对比哈希避免 timing attack。lock 一次拿所有检查需要的字段，
+    // 如果 OTP 错就原地 ++attempts / 置 locked；成功则 drop 锁后再签 userToken。
     let submitted_hash = sha256_hash(msg.otp.as_bytes());
-    if !constant_time_eq(&submitted_hash, &state.otp_hash) {
-        let attempts = state.otp_attempts.fetch_add(1, Ordering::SeqCst) + 1;
-        if attempts >= MAX_OTP_ATTEMPTS {
-            state.otp_locked.store(true, Ordering::SeqCst);
+    {
+        let mut otp = state.otp.lock().map_err(|_| "LOCK_POISONED")?;
+        if otp.locked {
             return Err("OTP_LOCKED");
         }
-        return Err("OTP_INVALID");
+        if now_ms() > otp.expires_at_ms {
+            return Err("SESSION_EXPIRED");
+        }
+        if !constant_time_eq(&submitted_hash, &otp.hash) {
+            otp.attempts = otp.attempts.saturating_add(1);
+            if otp.attempts >= MAX_OTP_ATTEMPTS {
+                otp.locked = true;
+                return Err("OTP_LOCKED");
+            }
+            return Err("OTP_INVALID");
+        }
+        // 通过：放锁，下面处理 bindings
     }
 
-    // 通过：签发 userToken
     let user_token = generate_token();
     let user_token_hash = sha256_hash(user_token.as_bytes());
     {
