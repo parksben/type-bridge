@@ -133,8 +133,17 @@ const CG_FLAG_OPTION: u64 = 0x00080000;
 
 fn simulate_cmd_v() -> Result<(), String> {
     const V_KEYCODE: u16 = 0x09;
+    const CMD_KEYCODE: u16 = 0x37; // kVK_Command
 
     unsafe {
+        // Cmd down
+        let cmd_down = CGEventCreateKeyboardEvent(std::ptr::null_mut(), CMD_KEYCODE, true);
+        if !cmd_down.is_null() {
+            CGEventPost(0, cmd_down);
+            CFRelease(cmd_down);
+        }
+
+        // V down
         let key_down = CGEventCreateKeyboardEvent(std::ptr::null_mut(), V_KEYCODE, true);
         if key_down.is_null() {
             return Err("CGEventCreateKeyboardEvent failed".to_string());
@@ -142,6 +151,7 @@ fn simulate_cmd_v() -> Result<(), String> {
         set_event_flags(key_down, CG_FLAG_COMMAND);
         CGEventPost(0, key_down);
 
+        // V up
         let key_up = CGEventCreateKeyboardEvent(std::ptr::null_mut(), V_KEYCODE, false);
         if !key_up.is_null() {
             set_event_flags(key_up, CG_FLAG_COMMAND);
@@ -149,6 +159,13 @@ fn simulate_cmd_v() -> Result<(), String> {
             CFRelease(key_up);
         }
         CFRelease(key_down);
+
+        // Cmd up — must release or modifier sticks and corrupts subsequent key events
+        let cmd_up = CGEventCreateKeyboardEvent(std::ptr::null_mut(), CMD_KEYCODE, false);
+        if !cmd_up.is_null() {
+            CGEventPost(0, cmd_up);
+            CFRelease(cmd_up);
+        }
     }
     Ok(())
 }
