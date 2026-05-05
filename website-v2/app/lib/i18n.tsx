@@ -27,7 +27,7 @@ const DICT = {
   "nav.githubAria": { zh: "查看 TypeBridge GitHub 仓库", en: "View TypeBridge on GitHub" },
 
   // ── Hero ───────────────────────────────────
-  "hero.headline": { zh: "手机即键盘", en: "Your Phone Is the Keyboard" },
+  "hero.headline": { zh: "手机即键盘", en: "Phone as Keyboard" },
   "hero.subtitle": {
     zh: "把你的**手机**变成电脑的**无线键盘**。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。",
     en: "Turn your **phone** into a **wireless keyboard** for your Mac. Speak, type, or send an image — your phone message appears right where your cursor is.",
@@ -47,7 +47,7 @@ const DICT = {
   // ── Scenes ─────────────────────────────────
   "scenes.heading": {
     zh: "每一个场景，都在验证**手机即键盘**",
-    en: "Every use case proves: **Your Phone Is the Keyboard**",
+    en: "Every use case proves: **Phone as Keyboard**",
   },
   "scenes.subheading": { zh: "5 个典型用法，找到你的那个", en: "Five ways to use it. Pick yours." },
   "scenes.tipLabel": { zh: "提示：", en: "Tip: " },
