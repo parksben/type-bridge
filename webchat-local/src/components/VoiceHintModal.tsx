@@ -1,4 +1,5 @@
 import { Mic, X } from "lucide-react";
+import { t } from "@/i18n";
 
 type Props = {
   onClose: () => void;
@@ -44,16 +45,16 @@ export default function VoiceHintModal({ onClose }: Props) {
             </div>
             <div className="flex-1">
               <p className="text-[16px] font-semibold text-[var(--tb-text)] mb-1">
-                请使用输入法语音输入功能
+                {t("voiceModal.title")}
               </p>
               <p className="text-[13px] text-[var(--tb-muted)] leading-relaxed">
-                WebChat 页面暂不支持语音输入，请使用输入法自带的语音功能进行语音输入。
+                {t("voiceModal.desc")}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              aria-label="关闭"
+              aria-label={t("voiceModal.closeAria")}
               className="shrink-0 -m-1 p-1 text-[var(--tb-muted)]"
             >
               <X size={16} strokeWidth={2} />
@@ -66,7 +67,7 @@ export default function VoiceHintModal({ onClose }: Props) {
             className="w-full h-11 rounded-lg font-medium text-[14px] text-white"
             style={{ background: "var(--tb-accent)" }}
           >
-            我知道了
+            {t("voiceModal.ok")}
           </button>
         </div>
       </div>

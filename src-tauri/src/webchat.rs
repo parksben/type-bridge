@@ -65,7 +65,7 @@ impl WebChatSnapshot {
         }
     }
 
-    fn from_server(server: &WebChatServer) -> Self {
+    fn from_server(server: &WebChatServer, lang: Option<&str>) -> Self {
         let count = server.bound_devices_count();
         let phase = if server.is_locked() {
             WebChatPhase::Expired
@@ -84,7 +84,7 @@ impl WebChatSnapshot {
             wifi_name: server.wifi_name.clone(),
             bound_devices: count,
             error: None,
-            qr_url: Some(server.qr_url()),
+            qr_url: Some(server.qr_url(lang)),
         }
     }
 }
@@ -128,10 +128,10 @@ impl WebChatBridge {
             .unwrap_or(false)
     }
 
-    pub fn snapshot(&self) -> WebChatSnapshot {
+    pub fn snapshot(&self, lang: Option<&str>) -> WebChatSnapshot {
         let g = self.server.lock().unwrap();
         match g.as_ref() {
-            Some(server) => WebChatSnapshot::from_server(server),
+            Some(server) => WebChatSnapshot::from_server(server, lang),
             None => {
                 let mut s = WebChatSnapshot::idle();
                 s.error = self.last_error.lock().unwrap().clone();
@@ -267,6 +267,23 @@ fn emit_session_update<R: Runtime>(app: &AppHandle<R>, snap: &WebChatSnapshot) {
     let _ = app.emit("typebridge://webchat-session-update", snap);
 }
 
+/// 从持久化 Settings 读 UI 语言（`""`/`"zh"`/`"en"`）。`""` 视为未选择，
+/// QR URL 不附加 `&lang=`，让移动端 SPA 自己检测。
+fn current_lang(app: &AppHandle<impl Runtime>) -> Option<String> {
+    let _ = app;
+    // get_settings 当前签名是 fn(AppHandle<Wry>)，跨 Runtime 不通用，
+    // 这里直接读 store 文件以保持泛型；store 路径与 store.rs 保持一致。
+    use tauri_plugin_store::StoreExt;
+    let store = app.store("config.json").ok()?;
+    let v = store.get("language")?;
+    let s = v.as_str()?.to_string();
+    if s == "zh" || s == "en" {
+        Some(s)
+    } else {
+        None
+    }
+}
+
 #[tauri::command]
 pub async fn start_webchat<R: Runtime>(
     app: AppHandle<R>,
@@ -276,7 +293,8 @@ pub async fn start_webchat<R: Runtime>(
         .inner()
         .clone();
     ctx.webchat.start(ctx.clone(), &app).await?;
-    let snap = ctx.webchat.snapshot();
+    let lang = current_lang(&app);
+    let snap = ctx.webchat.snapshot(lang.as_deref());
     emit_session_update(&app, &snap);
     Ok(snap)
 }
@@ -288,7 +306,8 @@ pub async fn stop_webchat<R: Runtime>(app: AppHandle<R>) {
         .inner()
         .clone();
     ctx.webchat.stop().await;
-    emit_session_update(&app, &ctx.webchat.snapshot());
+    let lang = current_lang(&app);
+    emit_session_update(&app, &ctx.webchat.snapshot(lang.as_deref()));
 }
 
 /// 轮换 OTP：前端倒计时归零时自动调、或锁定态用户点「重置 OTP」。
@@ -304,7 +323,8 @@ pub async fn rotate_webchat_otp<R: Runtime>(app: AppHandle<R>) -> WebChatSnapsho
     if !ok {
         tracing::warn!("[webchat] rotate_otp called but no server is running");
     }
-    let snap = ctx.webchat.snapshot();
+    let lang = current_lang(&app);
+    let snap = ctx.webchat.snapshot(lang.as_deref());
     emit_session_update(&app, &snap);
     snap
 }
@@ -315,5 +335,6 @@ pub fn webchat_snapshot<R: Runtime>(app: AppHandle<R>) -> WebChatSnapshot {
         .state::<Arc<crate::sidecar::AppContext>>()
         .inner()
         .clone();
-    ctx.webchat.snapshot()
+    let lang = current_lang(&app);
+    ctx.webchat.snapshot(lang.as_deref())
 }

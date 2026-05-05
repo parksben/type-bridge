@@ -4,6 +4,7 @@ import MessageBubble, { type ChatMessage } from "./MessageBubble";
 import { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
 import type { CompressResult } from "@/lib/image";
+import { t } from "@/i18n";
 
 type Props = {
   client: WebChatClient;
@@ -120,7 +121,7 @@ export default function ChatPage({ client }: Props) {
               </span>
             </p>
             <p className="text-[11px] text-[var(--tb-muted)] mt-1">
-              消息将注入到桌面当前聚焦的输入框
+              {t("chat.headerHint")}
             </p>
           </div>
         </div>
@@ -141,22 +142,20 @@ export default function ChatPage({ client }: Props) {
               animation: wifi === "connected" ? "pulse-dot 2s ease-in-out infinite" : undefined,
             }}
           />
-          <span>{wifi === "connected" ? "已连接" : "重连中"}</span>
+          <span>{wifi === "connected" ? t("chat.statusConnected") : t("chat.statusReconnecting")}</span>
         </div>
       </header>
 
       {/* Message list */}
       <div className="flex-1 overflow-y-auto scrollbar-none px-3 py-3">
         {empty && (
-          <div className="text-center text-[13px] text-[var(--tb-muted)] mt-12 leading-relaxed px-6">
-            发出去的每一条消息会自动写入你
-            <br />
-            桌面当前聚焦的输入框。
+          <div className="text-center text-[13px] text-[var(--tb-muted)] mt-12 leading-relaxed px-6 whitespace-pre-line">
+            {t("chat.emptyHint")}
             <br />
             <br />
-            可以试试发一条文本，或点图片按钮拍照 / 上传。
+            {t("chat.emptyHintTry")}
             <br />
-            语音输入可以用手机键盘的麦克风按钮。
+            {t("chat.emptyHintVoice")}
           </div>
         )}
 

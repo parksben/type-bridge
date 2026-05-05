@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Image as ImageIcon, X } from "lucide-react";
 import { compressImage, type CompressResult } from "@/lib/image";
+import { t } from "@/i18n";
 
 type Props = {
   /** 已选但还没发送的图片（展示预览） */
@@ -25,7 +26,7 @@ export default function ImagePicker({ staged, onPicked, onCleared, onError }: Pr
       const previewUrl = URL.createObjectURL(blob);
       onPicked({ previewUrl, compressed });
     } catch (e) {
-      onError((e as Error).message || "图片处理失败");
+      onError((e as Error).message || t("composer.imageProcessFail"));
     }
   }
 
@@ -46,7 +47,7 @@ export default function ImagePicker({ staged, onPicked, onCleared, onError }: Pr
             URL.revokeObjectURL(staged.previewUrl);
             onCleared();
           }}
-          aria-label="移除图片"
+          aria-label={t("composer.imageRemoveAria")}
           className="text-[var(--tb-muted)] p-1 -m-1"
         >
           <X size={14} strokeWidth={2} />
@@ -71,7 +72,7 @@ export default function ImagePicker({ staged, onPicked, onCleared, onError }: Pr
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        aria-label="发送图片"
+        aria-label={t("composer.imagePickAria")}
         className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors"
         style={{
           background: "var(--tb-bg)",
