@@ -63,7 +63,7 @@ export function Download() {
   return (
     <section
       id="download"
-      className="relative flex min-h-screen flex-col overflow-hidden px-6 py-24 md:py-32"
+      className="relative flex min-h-screen flex-col overflow-hidden px-6 py-8 md:py-12"
     >
       {/* Decorative orb */}
       <div
@@ -75,7 +75,7 @@ export function Download() {
         }}
       />
 
-      <div className="relative mx-auto w-full max-w-3xl flex-1 text-center">
+      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center text-center">
         {/* Header */}
         <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
           {t("download.heading")}
