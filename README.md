@@ -3,272 +3,141 @@
 </p>
 
 <h1 align="center">TypeBridge</h1>
-<p align="center"><strong>Speak on your phone. Type on your Mac.</strong></p>
+<p align="center"><strong>手机上说话 · 电脑上输入</strong></p>
 
 <p align="center">
-  <a href="https://typebridge.parksben.xyz"><strong>typebridge.parksben.xyz</strong></a>
+  <a href="https://typebridge.parksben.xyz"><strong>官网</strong></a>
   &nbsp;·&nbsp;
-  <a href="README.zh-CN.md">中文文档</a>
+  <a href="https://typebridge.parksben.xyz/#download"><strong>下载</strong></a>
+  &nbsp;·&nbsp;
+  <a href="README.en.md">English</a>
 </p>
 
 ---
 
-## What is TypeBridge?
+## 这是什么？
 
-TypeBridge is a lightweight macOS menu bar app that bridges your phone and your Mac. Send a message from any supported IM app on your phone — TypeBridge instantly types it into whatever input field is focused on your Mac.
+TypeBridge 是一款轻量的 macOS 菜单栏应用。**在手机 IM 里给机器人发消息，电脑上当前聚焦的输入框就会自动打出这些文字。**
 
-## Why?
+## 为什么需要？
 
-Typing on a phone keyboard is slow. Voice dictation on a phone is fast, but transferring dictated text to your desktop is a hassle — copy, paste, email yourself… it breaks your flow.
+手机打字慢，语音转文字快——但把文字弄到电脑上却很折腾：复制粘贴、发给自己、切来切去，思路全断。
 
-TypeBridge eliminates that friction. Dictate on your phone. Text appears on your Mac. One seamless motion.
+TypeBridge 消灭了这个摩擦：**手机上说完话，电脑上字已经到了。**
 
-## Key Features
+## 核心能力
 
-| Feature | |
+| 能力 | |
 |---|---|
-| **4 channels, 1 queue** | Feishu, DingTalk, WeCom & built-in WebChat — all feed into a single FIFO queue. Use whichever is most convenient. |
-| **Universal paste** | Uses system clipboard + simulated `Cmd+V`. Works in *any* macOS app: VS Code, Terminal, Chrome, Obsidian, Slack… |
-| **Auto-submit** | Optionally presses `Enter` (or any custom key) right after pasting — one-shot send into chat apps, terminals, AI assistants. |
-| **Image support** | Images sent from IM are also injected as clipboard images. |
-| **Offline WebChat** | No IM account? No cloud dependency. Built-in local WiFi server — scan a QR, enter OTP, start chatting. Works fully offline. |
-| **Privacy-first** | WebChat runs entirely on your LAN. No messages ever leave your local network. |
+| **四渠道统一队列** | 飞书、钉钉、企微、内置 WebChat 四选一/多开，消息按 FIFO 顺序逐条注入。 |
+| **通用粘贴** | 剪贴板 + 模拟 Cmd+V，任何 macOS 应用都能用。 |
+| **自动提交** | 可选粘贴后自动按 Enter（或自定义按键），聊天/终端/AI 对话一键发送。 |
+| **支持图片** | IM 端发送的图片同样通过剪贴板注入。 |
+| **离线 WebChat** | 无需任何 IM 账号，桌面 App 内置局域网服务器，手机扫码 + OTP 即连。完全离线可用。 |
+| **隐私优先** | WebChat 数据不出局域网，不依赖任何云服务。 |
 
-## How It Works
+## 工作原理
 
 ```
-Phone (IM / Browser)          Mac (TypeBridge)            Target App
+手机端 (IM / 浏览器)          Mac (TypeBridge)            目标应用
     │                              │                          │
-    ├─ Send message ──→  Bot / Socket.IO ──→ Queue ──→  Cmd+V ──→  Focused input
+    ├─ 发送消息 ──→  机器人 / Socket.IO ──→ 队列 ──→  Cmd+V ──→  聚焦的输入框
     │                              │                          │
-    └── ◀── Status feedback ──────┘              ←── (optional Enter)
+    └── ◀── 状态反馈 ──────────────┘              ←── (可选 Enter)
 ```
 
-1. **Connect** a channel: fill in bot credentials for Feishu / DingTalk / WeCom, or start a local WebChat session.
-2. **Send** text (or voice→text) from your phone to that bot.
-3. TypeBridge **receives** the message and queues it.
-4. It **pastes** the content into your Mac's currently focused input field.
-5. **Done.** No copy-paste. No context switch.
+1. **接入渠道**：填写飞书/钉钉/企微机器人的凭据，或启动内置 WebChat 局域网会话。
+2. **手机发消息**：在 IM 里给机器人发文字（或语音转文字）。
+3. TypeBridge **收到消息**，进入队列。
+4. 自动**粘贴**到 Mac 当前聚焦的输入框。
+5. **完成。** 无需任何复制粘贴操作。
 
-## Supported Channels
+## 支持渠道
 
-| Channel | What you need | Best for |
+| 渠道 | 需要什么 | 适用场景 |
 |---|---|---|
-| **WebChat** | Nothing. Just start session, scan QR. | Quick start, no accounts, offline use |
-| **Feishu** | Self-built app (App ID + Secret) | Teams already using Feishu |
-| **DingTalk** | Internal app (Client ID + Secret, Stream Mode) | Teams already using DingTalk |
-| **WeCom** | Smart Bot (Bot ID + Secret) | Teams already using WeCom |
+| **WebChat** | 无需任何账号。启动会话，扫码即连。 | 快速上手，离线使用 |
+| **飞书** | 自建应用（App ID + Secret） | 已在用飞书的团队 |
+| **钉钉** | 企业内部应用（Client ID + Secret，Stream 模式） | 已在用钉钉的团队 |
+| **企业微信** | 智能机器人（Bot ID + Secret） | 已在用企业微信的团队 |
 
-## System Requirements
+## 系统要求
 
-macOS 13+ (Apple Silicon or Intel)
+macOS 13+（Apple Silicon 或 Intel）
 
-First launch will prompt for **Accessibility** permission — this is required for the simulated paste to work. TypeBridge does not read or monitor your screen content.
+首次启动会申请**辅助功能**权限——粘贴注入需要它。TypeBridge 不会读取或监控你的屏幕内容。
 
-## For Developers
+## 开发者
 
-### Prerequisites
+### 环境要求
 
-| Dependency | Version |
+| 依赖 | 版本 |
 |---|---|
 | Node.js | 20+ |
 | Rust | stable (1.95+) |
 | Go | 1.21+ |
-| Xcode Command Line Tools | required |
+| Xcode Command Line Tools | 必须安装 |
 
-### Quick Start
+### 快速开始
 
 ```bash
 npm install
 
-# Build Go sidecars (aarch64)
+# 编译 Go sidecar（aarch64）
 for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
   (cd "$bridge" && GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
     go build -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
 done
 
-# Start dev mode
+# 启动开发模式
 npm run tauri dev
 ```
 
-### Project Layout
+### 项目结构
 
 ```
 type-bridge/
-├── src/                     React frontend (Vite + Tailwind + Zustand)
-├── src-tauri/               Tauri / Rust backend
+├── src/                     前端（Vite + Tailwind + Zustand）
+├── src-tauri/               Tauri / Rust 后端
 │   └── src/
-│       ├── injector.rs      Text injection via CGEventPost + NSPasteboard
-│       ├── sidecar.rs       Go sidecar process management
-│       ├── webchat.rs       Built-in LAN WebChat server host
-│       ├── queue.rs         FIFO injection queue + feedback
+│       ├── injector.rs      文本注入（CGEventPost + NSPasteboard）
+│       ├── sidecar.rs       Go sidecar 进程管理
+│       ├── webchat.rs       内置局域网 WebChat 服务宿主
+│       ├── queue.rs         FIFO 注入队列 + 反馈
 │       └── ...
-├── feishu-bridge/           Feishu Go sidecar (long-connection WebSocket)
-├── dingtalk-bridge/         DingTalk Go sidecar (Stream Mode)
-├── wecom-bridge/            WeCom Go sidecar (WSS + AES image decrypt)
-├── website/                 Product site (Next.js, single-page landing)
-├── webchat-local/           WebChat mobile SPA (Vite + React + TS)
+├── feishu-bridge/           飞书 Go sidecar（长连接 WebSocket）
+├── dingtalk-bridge/         钉钉 Go sidecar（Stream 模式）
+├── wecom-bridge/            企业微信 Go sidecar（WSS + AES 图片解密）
+├── website/                 官网（Next.js，单页落地页）
+├── webchat-local/           WebChat 手机端 SPA（Vite + React + TS）
 └── docs/
-    ├── REQUIREMENTS.md      Product spec (what & why)
-    └── TECH_DESIGN.md       Architecture & technical decisions (how)
+    ├── REQUIREMENTS.md      产品规格（做什么 & 为什么）
+    └── TECH_DESIGN.md       架构与技术决策（怎么做）
 ```
 
-### Development Notes
+### 开发注意事项
 
-- **Go sidecars require manual rebuild** — `tauri dev` does not recompile Go. After editing `.go` files, run `go build` for the affected bridge, then restart `tauri dev`.
-- **Frontend HMR** works automatically for `src/` changes.
-- **Rust changes** are picked up automatically by `tauri dev` (cargo rebuild).
-- For full development workflow, architecture details, and inter-process event contracts, see [CLAUDE.md](CLAUDE.md).
+- **Go sidecar 需手动重新编译** — `tauri dev` 不会自动编译 Go。修改 `.go` 文件后需手动 `go build` 对应 bridge，然后重启 `tauri dev`。
+- **前端 HMR** 对 `src/` 的修改自动生效。
+- **Rust 修改** 会被 `tauri dev` 自动检测（cargo 增量编译）。
+- 完整的开发流程、架构细节和跨进程事件约定见 [CLAUDE.md](CLAUDE.md)。
 
-### Build & Package
+### 构建与打包
 
 ```bash
-# Single arch
+# 单架构
 npm run tauri build -- --target aarch64-apple-darwin
 
-# Both archs
+# 双架构
 ./scripts/build-all.sh
 ```
 
-Output: `src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
+产物：`src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
 
 ### CI/CD
 
-Push a `v*` tag or trigger the `Release` workflow manually via GitHub Actions. Detailed docs: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
+推送 `v*` 标签或通过 GitHub Actions 手动触发 `Release` workflow。详见 [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) 和 [docs/TECH_DESIGN.md](docs/TECH_DESIGN.md)。
 
-## License
-
-[MIT](LICENSE)
-
-
----
-
-## What is TypeBridge?
-
-TypeBridge is a lightweight macOS menu bar app that bridges your phone and your Mac. Send a message from any supported IM app on your phone — TypeBridge instantly types it into whatever input field is focused on your Mac.
-
-## Why?
-
-Typing on a phone keyboard is slow. Voice dictation on a phone is fast, but transferring dictated text to your desktop is a hassle — copy, paste, email yourself… it breaks your flow.
-
-TypeBridge eliminates that friction. Dictate on your phone. Text appears on your Mac. One seamless motion.
-
-## Key Features
-
-| Feature | |
-|---|---|
-| **4 channels, 1 queue** | Feishu, DingTalk, WeCom & built-in WebChat — all feed into a single FIFO queue. Use whichever is most convenient. |
-| **Universal paste** | Uses system clipboard + simulated `Cmd+V`. Works in *any* macOS app: VS Code, Terminal, Chrome, Obsidian, Slack… |
-| **Auto-submit** | Optionally presses `Enter` (or any custom key) right after pasting — one-shot send into chat apps, terminals, AI assistants. |
-| **Image support** | Images sent from IM are also injected as clipboard images. |
-| **Offline WebChat** | No IM account? No cloud dependency. Built-in local WiFi server — scan a QR, enter OTP, start chatting. Works fully offline. |
-| **Privacy-first** | WebChat runs entirely on your LAN. No messages ever leave your local network. |
-
-## How It Works
-
-```
-Phone (IM / Browser)          Mac (TypeBridge)            Target App
-    │                              │                          │
-    ├─ Send message ──→  Bot / Socket.IO ──→ Queue ──→  Cmd+V ──→  Focused input
-    │                              │                          │
-    └── ◀── Status feedback ──────┘              ←── (optional Enter)
-```
-
-1. **Connect** a channel: fill in bot credentials for Feishu / DingTalk / WeCom, or start a local WebChat session.
-2. **Send** text (or voice→text) from your phone to that bot.
-3. TypeBridge **receives** the message and queues it.
-4. It **pastes** the content into your Mac's currently focused input field.
-5. **Done.** No copy-paste. No context switch.
-
-## Supported Channels
-
-| Channel | What you need | Best for |
-|---|---|---|
-| **WebChat** | Nothing. Just start session, scan QR. | Quick start, no accounts, offline use |
-| **Feishu** | Self-built app (App ID + Secret) | Teams already using Feishu |
-| **DingTalk** | Internal app (Client ID + Secret, Stream Mode) | Teams already using DingTalk |
-| **WeCom** | Smart Bot (Bot ID + Secret) | Teams already using WeCom |
-
-## System Requirements
-
-macOS 13+ (Apple Silicon or Intel)
-
-First launch will prompt for **Accessibility** permission — this is required for the simulated paste to work. TypeBridge does not read or monitor your screen content.
-
-## For Developers
-
-### Prerequisites
-
-| Dependency | Version |
-|---|---|
-| Node.js | 20+ |
-| Rust | stable (1.95+) |
-| Go | 1.21+ |
-| Xcode Command Line Tools | required |
-
-### Quick Start
-
-```bash
-npm install
-
-# Build Go sidecars (aarch64)
-for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
-  (cd "$bridge" && GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
-    go build -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
-done
-
-# Start dev mode
-npm run tauri dev
-```
-
-### Project Layout
-
-```
-type-bridge/
-├── src/                     React frontend (Vite + Tailwind + Zustand)
-├── src-tauri/               Tauri / Rust backend
-│   └── src/
-│       ├── injector.rs      Text injection via CGEventPost + NSPasteboard
-│       ├── sidecar.rs       Go sidecar process management
-│       ├── webchat.rs       Built-in LAN WebChat server host
-│       ├── queue.rs         FIFO injection queue + feedback
-│       └── ...
-├── feishu-bridge/           Feishu Go sidecar (long-connection WebSocket)
-├── dingtalk-bridge/         DingTalk Go sidecar (Stream Mode)
-├── wecom-bridge/            WeCom Go sidecar (WSS + AES image decrypt)
-├── website/                 Product site (Next.js, single-page landing)
-├── webchat-local/           WebChat mobile SPA (Vite + React + TS)
-└── docs/
-    ├── REQUIREMENTS.md      Product spec (what & why)
-    └── TECH_DESIGN.md       Architecture & technical decisions (how)
-```
-
-### Development Notes
-
-- **Go sidecars require manual rebuild** — `tauri dev` does not recompile Go. After editing `.go` files, run `go build` for the affected bridge, then restart `tauri dev`.
-- **Frontend HMR** works automatically for `src/` changes.
-- **Rust changes** are picked up automatically by `tauri dev` (cargo rebuild).
-- For full development workflow, architecture details, and inter-process event contracts, see [CLAUDE.md](CLAUDE.md).
-
-### Build & Package
-
-```bash
-# Single arch
-npm run tauri build -- --target aarch64-apple-darwin
-
-# Both archs
-./scripts/build-all.sh
-```
-
-Output: `src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
-
-### CI/CD
-
-Push a `v*` tag or trigger the `Release` workflow manually via GitHub Actions. Detailed docs: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
-
----
-
-## License
+## 许可证
 
 [MIT](LICENSE)
-
