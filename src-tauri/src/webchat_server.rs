@@ -30,7 +30,7 @@ use std::sync::{Arc, Mutex as SyncMutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse};
+use axum::response::{Html, IntoResponse, Redirect};
 use axum::routing::get;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -103,29 +103,47 @@ impl WebChatServer {
             .build_layer();
         io.ns("/", on_connect);
 
-        // 静态资源：用 tower-http ServeDir 提供 webchat-local/dist/ 下所有文件；
-        // SPA 路由 fallback 到 index.html，让前端 React Router（如有）自行处理
-        let index_path = spa_dir.join("index.html");
-        let serve_dir = ServeDir::new(&spa_dir)
-            .append_index_html_on_directories(true)
-            .fallback(ServeFile::new(&index_path));
+        // 端口递增 fallback —— 提到 router 构建之前，让 dev redirect handler 能拿到 port
+        let (listener, port) = bind_with_fallback(lan_ip).await?;
 
-        // 如果 SPA 目录不存在（dev 未构建前端等），给一个占位 fallback，避免
-        // server 完全没响应
+        // 静态资源 / dev redirect 二选一：
+        // - debug build：fallback 改成 302 → http://<lan>:5173<path>?<query>&apiPort=<port>
+        //   手机端从 Vite dev server 加载页面，HMR 原生工作；Socket.IO 仍走 :port
+        //   (CORS already permissive)。这要求 webchat-local 的 Vite 在 :5173 运行
+        //   (由根 package.json 的 dev 脚本通过 concurrently 拉起)
+        // - release build：fallback 走 ServeDir，serve `webchat-local/dist/`
         //
         // ⚠️ axum 0.7 的 `.layer()` 只作用于**调用它之前**已注册的 routes/fallback。
-        // 必须先 `.fallback_service(serve_dir)` 再 `.layer(io_layer)`，否则
-        // `/socket.io/*` 请求会落到 fallback 被 ServeDir 404 吃掉，socketioxide
-        // 永远收不到手机端握手 → 前端报「握手超时」。详见 TECH_DESIGN §35.9.1
-        let router = axum::Router::new()
+        // 必须先 `.fallback*(...)` 再 `.layer(io_layer)`，否则 `/socket.io/*`
+        // 请求会落到 fallback 被吃掉，socketioxide 永远收不到手机端握手。
+        // 详见 TECH_DESIGN §35.9.1
+        let mut router = axum::Router::new()
             .route("/healthz", get(healthz))
-            .route("/__placeholder", get(serve_placeholder))
-            .fallback_service(serve_dir)
+            .route("/__placeholder", get(serve_placeholder));
+
+        if cfg!(debug_assertions) {
+            let lan_ip_for_handler = lan_ip;
+            let port_for_handler = port;
+            router = router.fallback(move |uri: axum::http::Uri| async move {
+                redirect_to_vite_dev(uri, lan_ip_for_handler, port_for_handler)
+            });
+            tracing::info!(
+                "[webchat] dev mode: fallback → http://{}:5173 (HMR via Vite); Socket.IO at :{}",
+                lan_ip,
+                port
+            );
+        } else {
+            let index_path = spa_dir.join("index.html");
+            let serve_dir = ServeDir::new(&spa_dir)
+                .append_index_html_on_directories(true)
+                .fallback(ServeFile::new(&index_path));
+            router = router.fallback_service(serve_dir);
+        }
+
+        let router = router
             .layer(io_layer)
             .layer(tower_http::cors::CorsLayer::very_permissive());
 
-        // 端口递增 fallback
-        let (listener, port) = bind_with_fallback(lan_ip).await?;
         tracing::info!(
             "[webchat] Server started at http://{}:{} (sessionId={})",
             lan_ip,
@@ -689,6 +707,24 @@ async fn serve_placeholder() -> impl IntoResponse {
 
 async fn healthz() -> impl IntoResponse {
     (StatusCode::OK, "ok")
+}
+
+/// dev-only fallback：把任意未匹配请求 302 到 Vite dev server (5173)，并把
+/// `apiPort=<server_port>` 追加到 query，让 SPA 知道跨源 Socket.IO 该连哪。
+///
+/// 设计要点：
+/// - 仅在 `cfg!(debug_assertions)` 下注册。release build 走 ServeDir
+/// - 不动 path（保留原 `?s=<sessionId>` 等 query），仅追加 apiPort
+/// - 用 307（temporary）保留 method 和 body — 实际只对 GET 生效，但保险
+fn redirect_to_vite_dev(uri: axum::http::Uri, lan_ip: IpAddr, port: u16) -> Redirect {
+    let path = uri.path();
+    let new_url = match uri.query() {
+        Some(q) if !q.is_empty() => {
+            format!("http://{}:5173{}?{}&apiPort={}", lan_ip, path, q, port)
+        }
+        _ => format!("http://{}:5173{}?apiPort={}", lan_ip, path, port),
+    };
+    Redirect::temporary(&new_url)
 }
 
 // ──────────────────────────────────────────────────────────────

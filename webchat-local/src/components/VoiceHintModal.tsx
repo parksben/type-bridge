@@ -1,4 +1,4 @@
-import { Keyboard, Mic, X } from "lucide-react";
+import { Mic, X } from "lucide-react";
 
 type Props = {
   onClose: () => void;
@@ -44,13 +44,10 @@ export default function VoiceHintModal({ onClose }: Props) {
             </div>
             <div className="flex-1">
               <p className="text-[16px] font-semibold text-[var(--tb-text)] mb-1">
-                用键盘麦克风输入语音
+                请使用输入法语音输入功能
               </p>
               <p className="text-[13px] text-[var(--tb-muted)] leading-relaxed">
-                点"我知道了"后，输入框会自动聚焦 → 弹出键盘 → 点键盘上的
-                <strong className="text-[var(--tb-text)]">麦克风按钮</strong>即可语音输入。
-                <br />
-                搜狗 / 百度 / 讯飞 / 系统键盘都内置。
+                WebChat 页面暂不支持语音输入，请使用输入法自带的语音功能进行语音输入。
               </p>
             </div>
             <button
@@ -61,25 +58,6 @@ export default function VoiceHintModal({ onClose }: Props) {
             >
               <X size={16} strokeWidth={2} />
             </button>
-          </div>
-
-          <div
-            className="rounded-lg p-3 mb-5 flex items-start gap-2 text-[12px] leading-relaxed"
-            style={{
-              background: "var(--tb-bg)",
-              border: "1px solid var(--tb-border)",
-              color: "var(--tb-muted)",
-            }}
-          >
-            <Keyboard
-              size={12}
-              strokeWidth={2}
-              className="mt-0.5 shrink-0"
-              style={{ color: "var(--tb-accent)" }}
-            />
-            <span>
-              语音识别完全在手机端完成，音频不会离开你的手机。
-            </span>
           </div>
 
           <button
