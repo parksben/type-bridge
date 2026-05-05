@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Wifi, WifiOff } from "lucide-react";
 import ComposerBar from "./ComposerBar";
 import MessageBubble, { type ChatMessage } from "./MessageBubble";
 import { WebChatClient } from "@/lib/socket";
@@ -142,17 +141,7 @@ export default function ChatPage({ client }: Props) {
               animation: wifi === "connected" ? "pulse-dot 2s ease-in-out infinite" : undefined,
             }}
           />
-          {wifi === "connected" ? (
-            <>
-              <Wifi size={11} strokeWidth={2.2} />
-              <span>已连接</span>
-            </>
-          ) : (
-            <>
-              <WifiOff size={11} strokeWidth={2.2} />
-              <span>重连中</span>
-            </>
-          )}
+          <span>{wifi === "connected" ? "已连接" : "重连中"}</span>
         </div>
       </header>
 
