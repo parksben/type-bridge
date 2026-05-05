@@ -50,8 +50,17 @@ export default function App() {
     // 进握手
     setState({ kind: "handshake", sessionId: sid });
 
-    // 创建 client 并 connect；同源 HTTP server
+    // dev 模式下，Rust server 会 302 把页面重定向到 Vite dev (5173) 并在 query 里
+    // 加 apiPort=<rust_port>。这里读出来后让 socket.io-client 显式连那个端口
+    // (跨源；CORS 已 permissive)。生产环境不存在这个参数，回落同源。
+    const apiPort = params.get("apiPort");
+    const apiUrl = apiPort
+      ? `http://${window.location.hostname}:${apiPort}`
+      : undefined;
+
+    // 创建 client 并 connect
     const client = new WebChatClient({
+      url: apiUrl,
       onStatusChange: (s) => setSocketStatus(s),
     });
     clientRef.current = client;
