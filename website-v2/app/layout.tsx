@@ -20,7 +20,18 @@ export const metadata: Metadata = {
  * Reads localStorage.tb-theme: "system" (default) | "light" | "dark".
  * For "system", consults prefers-color-scheme. Writes html.light-force for light.
  */
+/**
+ * Theme flicker prevention — runs before React hydration.
+ * Reads localStorage.tb-theme: "system" (default) | "light" | "dark".
+ * For "system", consults prefers-color-scheme. Writes html.light-force for light.
+ */
 const themeInit = `(function(){try{var t=localStorage.getItem('tb-theme')||'system';var light=t==='light'||(t==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(light)document.documentElement.classList.add('light-force');}catch(e){}})()`;
+
+/**
+ * Language detection — runs before React hydration.
+ * Reads localStorage.tb-lang. Falls back to navigator.language, then zh-CN.
+ */
+const langInit = `(function(){try{var l=localStorage.getItem('tb-lang');if(!l){var n=navigator.language||'';l=n.startsWith('en')?'en':n.startsWith('zh')?'zh':null;}if(l==='en')document.documentElement.lang='en';else document.documentElement.lang='zh-CN';}catch(e){}})()`;
 
 export default function RootLayout({
   children,
@@ -36,6 +47,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+        <script dangerouslySetInnerHTML={{ __html: langInit }} />
       </head>
       <body className="antialiased">{children}</body>
     </html>

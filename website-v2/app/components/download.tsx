@@ -77,7 +77,7 @@ export function Download() {
       <div className="relative mx-auto max-w-3xl text-center">
         {/* Header */}
         <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-          {renderMarked(t("download.heading"), "dl-h")}
+          {t("download.heading")}
         </h2>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
