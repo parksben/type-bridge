@@ -21,7 +21,6 @@ export async function GET(
 ) {
   const { arch } = await params;
 
-  // Validate arch
   if (arch !== "arm64" && arch !== "x64") {
     return new NextResponse("Invalid architecture. Use /arm64 or /x64", {
       status: 400,
@@ -29,16 +28,14 @@ export async function GET(
   }
 
   try {
-    // Fetch latest release metadata
     const releaseRes = await fetch(GITHUB_API, {
       headers: {
         Accept: "application/vnd.github.v3+json",
-        // Use GITHUB_TOKEN if available for higher rate limits
         ...(process.env.GITHUB_TOKEN
           ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
           : {}),
       },
-      next: { revalidate: 300 }, // Cache release metadata for 5 min
+      next: { revalidate: 300 },
     });
 
     if (!releaseRes.ok) {
@@ -50,9 +47,7 @@ export async function GET(
 
     const release: GitHubRelease = await releaseRes.json();
 
-    // Match the correct asset
-    const pattern =
-      arch === "arm64" ? /_aarch64\.dmg$/ : /_x64\.dmg$/;
+    const pattern = arch === "arm64" ? /_aarch64\.dmg$/ : /_x64\.dmg$/;
     const asset = release.assets.find((a) => pattern.test(a.name));
 
     if (!asset) {
@@ -62,11 +57,8 @@ export async function GET(
       );
     }
 
-    // Stream-proxy the download from GitHub
     const assetRes = await fetch(asset.browser_download_url, {
-      headers: {
-        Accept: "application/octet-stream",
-      },
+      headers: { Accept: "application/octet-stream" },
     });
 
     if (!assetRes.ok || !assetRes.body) {

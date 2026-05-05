@@ -156,8 +156,7 @@ type-bridge/
 ├── feishu-bridge/           Feishu Go sidecar (long-connection WebSocket)
 ├── dingtalk-bridge/         DingTalk Go sidecar (Stream Mode)
 ├── wecom-bridge/            WeCom Go sidecar (WSS + AES image decrypt)
-├── website/                 Product site (Next.js, current live)
-├── website-v2/              New single-page landing (Next.js, in dev)
+├── website/                 Product site (Next.js, single-page landing)
 ├── webchat-local/           WebChat mobile SPA (Vite + React + TS)
 └── docs/
     ├── REQUIREMENTS.md      Product spec (what & why)

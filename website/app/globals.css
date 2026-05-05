@@ -1,317 +1,296 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #faf9f6;
-  --color-bg-dark: #0e0e10;
-  --color-surface: #ffffff;
-  --color-surface-dark: #18181b;
-  --color-border: #e7e5e1;
-  --color-border-dark: #27272a;
-  --color-text: #18181b;
-  --color-text-dark: #fafafa;
-  --color-muted: #71717a;
-  --color-muted-dark: #a1a1aa;
-  --color-accent: #c2410c;
-  --color-accent-dark: #fb923c;
-  --color-success: #16a34a;
-  --color-success-dark: #34d399;
-}
+/* ─────────────────────────────────────────────
+   Color tokens — aligned with the desktop app's palette
+   (warm zinc neutrals + single warm-orange accent),
+   dark-first, light via .light-force
+   ───────────────────────────────────────────── */
 
-/* ============ Theme: Light (default) ============ */
 :root {
-  --tb-bg: #faf9f6;
-  --tb-surface: #ffffff;
-  --tb-border: #e7e5e1;
-  --tb-text: #18181b;
-  --tb-muted: #71717a;
-  --tb-accent: #c2410c;
+  /* Dark defaults — matches src/styles/globals.css dark vars */
+  --bg: #0e0e10;
+  --bg-2: #18181b;
+  --surface: #18181b;
+  --surface-2: #1f1f23;
+  --surface-elevated: #1f1f23;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --subtle: #71717a;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --accent: #ea580c;
+  --accent-hover: #fb923c;
+  --accent-fg: #1c1917;
+  --accent-soft: rgba(234, 88, 12, 0.14);
+  --accent-glow: rgba(234, 88, 12, 0.32);
+
+  color-scheme: dark;
 }
 
-/* ============ Theme: System dark (media query fallback) ============ */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light-force) {
-    --tb-bg: #0e0e10;
-    --tb-surface: #18181b;
-    --tb-border: #27272a;
-    --tb-text: #fafafa;
-    --tb-muted: #a1a1aa;
-    --tb-accent: #fb923c;
-  }
+html.light-force {
+  --bg: #faf9f6;
+  --bg-2: #f4f2ec;
+  --surface: #ffffff;
+  --surface-2: #f4f2ec;
+  --surface-elevated: #ffffff;
+  --text: #18181b;
+  --muted: #71717a;
+  --subtle: #a1a1aa;
+  --border: rgba(10, 10, 20, 0.08);
+  --border-strong: rgba(10, 10, 20, 0.14);
+  --accent: #c2410c;
+  --accent-hover: #9a3412;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(194, 65, 12, 0.1);
+  --accent-glow: rgba(194, 65, 12, 0.18);
+
+  color-scheme: light;
 }
 
-/* ============ Theme: Manual dark (overrides media query) ============ */
-.dark {
-  --tb-bg: #0e0e10;
-  --tb-surface: #18181b;
-  --tb-border: #27272a;
-  --tb-text: #fafafa;
-  --tb-muted: #a1a1aa;
-  --tb-accent: #fb923c;
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* ============ Theme: Manual light (overrides system dark) ============ */
-.light-force {
-  --tb-bg: #faf9f6;
-  --tb-surface: #ffffff;
-  --tb-border: #e7e5e1;
-  --tb-text: #18181b;
-  --tb-muted: #71717a;
-  --tb-accent: #c2410c;
+/* ─────────────────────────────────────────────
+   Base + typography
+   ───────────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 84px;
 }
 
-/* ============ Banner theme overrides — light mode ============ */
-:root .hero-orb,
-.light-force .hero-orb {
-  opacity: 0.12;
-}
-
-/* ============ Banner theme overrides — dark mode ============ */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light-force) .hero-orb {
-    opacity: 0.2;
-  }
-}
-.dark .hero-orb {
-  opacity: 0.2;
-}
-
-/* Base */
 body {
-  background-color: var(--tb-bg);
-  color: var(--tb-text);
-  font-family: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  text-rendering: optimizeLegibility;
 }
 
-/* Noise texture overlay */
-.noise-bg {
-  position: relative;
+/* Global ambient background — minimal, just two faint warm orbs.
+   No more rainbow / multi-hue. */
+.page-bg {
+  background:
+    radial-gradient(720px circle at 22% 12%, var(--accent-soft), transparent 55%),
+    radial-gradient(620px circle at 80% 88%, var(--accent-soft), transparent 55%),
+    var(--bg);
 }
-.noise-bg::before {
+
+/* Fine dotted noise overlay — performance-cheap */
+.noise::before {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size: 256px 256px;
   pointer-events: none;
+  opacity: 0.02;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+  background-size: 3px 3px;
   z-index: 0;
 }
 
-/* Gradient glow for accent moments */
-.glow-orange {
-  background: radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in srgb, var(--tb-accent) 18%, transparent), transparent 60%);
+html.light-force .noise::before {
+  opacity: 0.025;
 }
 
-/* Staggered fade-in animation */
+/* ─────────────────────────────────────────────
+   Keyframes
+   ───────────────────────────────────────────── */
+
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-up {
-  animation: fade-up 0.7s ease-out forwards;
-}
-.animate-delay-1 { animation-delay: 0.1s; opacity: 0; }
-.animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
-.animate-delay-3 { animation-delay: 0.3s; opacity: 0; }
-.animate-delay-4 { animation-delay: 0.4s; opacity: 0; }
-.animate-delay-5 { animation-delay: 0.5s; opacity: 0; }
-
-/* Gradient border utilities */
-.gradient-border-t {
-  border-top: 1px solid;
-  border-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tb-accent) 30%, transparent), transparent) 1;
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* ============ Hero Banner Animations ============ */
-
-/* Floating desktop */
-@keyframes float-desktop {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-.animate-float-desktop {
-  animation: float-desktop 4.5s ease-in-out infinite;
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-/* Blinking cursor */
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes breathe-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 16px var(--accent-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 28px var(--accent-glow));
+  }
+}
+
 @keyframes blink-cursor {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
 }
+
+@keyframes arc-flow {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Hero 概念图 - 桌面输入框：粘贴 → 短停 → 清空，循环 */
+@keyframes hero-input-paste {
+  0%,
+  35% {
+    width: 0;
+  }
+  36%,
+  68% {
+    width: 65px;
+  }
+  69%,
+  100% {
+    width: 0;
+  }
+}
+
+/* Hero 概念图 - 线条扫光：strokeDashoffset 推一段短亮 dash 走完路径
+   值按 SVG viewBox（0-100）单位：arc 路径长 ~55，output ~30 */
+@keyframes hero-sweep {
+  0% {
+    stroke-dashoffset: 20;
+  }
+  100% {
+    stroke-dashoffset: -58;
+  }
+}
+
+@keyframes hero-sweep-output {
+  0% {
+    stroke-dashoffset: 12;
+  }
+  100% {
+    stroke-dashoffset: -34;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Utility classes
+   ───────────────────────────────────────────── */
+
+.animate-fade-up {
+  animation: fade-up 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 600ms ease-out both;
+}
+
+.animate-float-soft {
+  animation: float-soft 6s ease-in-out infinite;
+}
+
+.animate-breathe-glow {
+  animation: breathe-glow 3.6s ease-in-out infinite;
+}
+
 .animate-blink-cursor {
   animation: blink-cursor 1s step-end infinite;
 }
 
-/* Grid pattern for hero — adapts to theme */
-.hero-grid-pattern {
-  background-image:
-    linear-gradient(var(--tb-text) 1px, transparent 1px),
-    linear-gradient(90deg, var(--tb-text) 1px, transparent 1px);
-  background-size: 40px 40px;
+/* Brand accent gradient — only TWO stops (accent → accent-hover),
+   not a rainbow. Used for the bridge mark + a few brand wordmark touches. */
+.bg-brand-grad {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
 }
 
-/* Ambient color orbs — more subtle in light mode */
-.hero-orb {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  filter: blur(80px);
-  z-index: 1;
-}
-.hero-orb-blue {
-  background: #3370FF;
-  top: 10%;
-  left: 5%;
-}
-.hero-orb-sky {
-  background: #0089FF;
-  top: 45%;
-  left: 12%;
-}
-.hero-orb-green {
-  background: #06BA6A;
-  bottom: 5%;
-  left: 8%;
+/* Accent text — solid color now, no rainbow gradient.
+   Kept the class name so existing markup keeps compiling; semantic = "accent text". */
+.text-accent-gradient {
+  color: var(--accent);
 }
 
-/* Bridge center node */
-.hero-bridge-node {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: radial-gradient(circle at center, var(--tb-accent), color-mix(in srgb, var(--tb-accent) 60%, #a16207));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 20px 4px color-mix(in srgb, var(--tb-accent) 50%, transparent);
-  animation: pulse-glow 2s ease-in-out infinite;
+/* Legacy alias — solid accent fill button bg. */
+.bg-accent-gradient {
+  background-color: var(--accent);
+  color: var(--accent-fg);
 }
 
-/* Pulse glow */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 12px 2px color-mix(in srgb, var(--tb-accent) 40%, transparent); transform: scale(1); }
-  50% { box-shadow: 0 0 28px 8px color-mix(in srgb, var(--tb-accent) 65%, transparent); transform: scale(1.05); }
+/* ─────────────────────────────────────────────
+   Section padding helpers
+   ───────────────────────────────────────────── */
+
+.section-x {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
-/* IM icon ring — animated border glow */
-.hero-icon-ring {
-  padding: 2px;
-  border-radius: 16px;
-  border: 2px solid;
-  animation: icon-ring-pulse 3s ease-in-out infinite;
-}
-@keyframes icon-ring-pulse {
-  0%, 100% { border-color: inherit; opacity: 0.6; }
-  50% { opacity: 1; }
+@media (min-width: 768px) {
+  .section-x {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 
-/* Desktop frame — theme-aware */
-.hero-desktop-frame {
-  width: 160px;
-  border-radius: 12px;
-  border: 1px solid var(--tb-border);
-  background: var(--tb-surface);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-/* Injected text shimmer */
-.hero-injected-text {
-  animation: text-shimmer 2s ease-in-out infinite;
-}
-@keyframes text-shimmer {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 0.35; }
-}
-
-/* Arc dash animation */
-@keyframes arc-dash {
-  to { stroke-dashoffset: -40; }
-}
-.hero-arc-dash {
-  stroke-dasharray: 6 4;
-  animation: arc-dash 1.5s linear infinite;
-  opacity: 0.5;
-}
-.hero-arc-dash-delay-1 {
-  animation-delay: 0.2s;
-}
-.hero-arc-dash-delay-2 {
-  animation-delay: 0.4s;
-}
-
-/* Flow particles */
-@keyframes flow-particle {
-  0% { left: 5%; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { left: 95%; opacity: 0; }
-}
-.hero-flow-particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  animation: flow-particle 2.5s ease-in-out infinite;
-  opacity: 0;
-  z-index: 10;
-}
-
-/* Scanlines overlay — only visible in dark mode */
-.hero-scanlines {
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
-  );
-}
-
-/* ============ Page-level Glow Effects ============ */
-
-/* Hero section ambient glow */
-.hero-section-glow {
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 30%, color-mix(in srgb, #3370FF 6%, transparent), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 50% 50%, color-mix(in srgb, var(--tb-accent) 8%, transparent), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 70%, color-mix(in srgb, #06BA6A 4%, transparent), transparent 50%);
-  pointer-events: none;
-}
-
-/* Feature section glow */
-.section-glow-accent {
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--tb-accent) 15%, transparent), transparent 60%);
-}
-
-/* Feature card hover glow */
-.feature-card-glow:hover {
-  box-shadow: 0 0 20px 0 color-mix(in srgb, var(--tb-accent) 15%, transparent);
-}
-
-/* Download section glow */
-.section-glow-download {
-  background: radial-gradient(ellipse 70% 40% at 50% 50%, color-mix(in srgb, var(--tb-accent) 8%, transparent), transparent 60%);
-}
-
-/* Thin scrollbar for doc sidebars */
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: var(--tb-border) transparent;
-}
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-thin::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--tb-border);
-  border-radius: 2px;
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: var(--tb-muted);
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--subtle);
 }
