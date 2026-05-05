@@ -13,7 +13,7 @@ async function isEnglishRequest(): Promise<boolean> {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const en = isEnglishRequest();
+  const en = await isEnglishRequest();
   return {
     title: en ? "TypeBridge — Phone as Keyboard" : "TypeBridge — 手机即键盘",
     description: en
@@ -54,7 +54,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const en = isEnglishRequest();
+  const en = await isEnglishRequest();
   return (
     <html lang={en ? "en" : "zh-CN"} suppressHydrationWarning>
       <head>
