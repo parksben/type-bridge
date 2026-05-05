@@ -248,7 +248,7 @@ export function Flow() {
 
   return (
     <section id="flow" className="relative flex min-h-screen flex-col items-center justify-center px-6 py-8 md:py-12">
-      <div className="mx-auto w-full max-w-6xl overflow-y-auto">
+      <div className="mx-auto w-full max-w-6xl overflow-y-auto no-scrollbar">
         {/* Header */}
         <div className="mb-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
