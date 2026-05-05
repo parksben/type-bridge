@@ -15,13 +15,13 @@ type Scene = {
   id: string;
   tabLabel: string;
   icon: LucideIcon;
-  tint: string; // tailwind-like color used on watermark
+  tint: string;
   title: string;
   subtitle: string;
   description: string;
   details: string[];
   tip: string;
-  theme: string; // memorable line that repeats「手机即键盘」main phrase
+  theme: string;
 };
 
 const SCENES: Scene[] = [
@@ -116,61 +116,58 @@ const AUTO_PLAY_MS = 5000;
 
 export function Scenes() {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [tickKey, setTickKey] = useState(0); // resets progress animation
-  const timerRef = useRef<number | null>(null);
+  const [hovered, setHovered] = useState(false);
+  const [inView, setInView] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  // Autoplay
+  // Viewport pause: only play when ≥ 30% of the card is visible
   useEffect(() => {
-    if (paused) return;
-    timerRef.current = window.setTimeout(() => {
-      setIndex((i) => (i + 1) % SCENES.length);
-      setTickKey((k) => k + 1);
-    }, AUTO_PLAY_MS);
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-    };
-  }, [index, paused]);
+    const el = cardRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.3 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
-  function select(i: number) {
+  const playing = inView && !hovered;
+
+  function goTo(i: number) {
     if (i === index) return;
     setIndex(i);
-    setTickKey((k) => k + 1);
+  }
+
+  function next() {
+    setIndex((i) => (i + 1) % SCENES.length);
   }
 
   const active = SCENES[index];
   const Icon = active.icon;
 
   return (
-    <section
-      id="scenes"
-      className="relative px-6 py-24 md:py-32"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
+    <section id="scenes" className="relative px-6 py-24 md:py-32">
       <div className="mx-auto max-w-5xl">
-        {/* Section header */}
+        {/* Header — no eyebrow, no trailing period */}
         <div className="mb-12 text-center">
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-[var(--subtle)]">
-            使用场景
-          </p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-5xl">
+          <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
             每一个场景，都是
             <span className="text-accent-gradient">手机即键盘</span>
-            的一次验证。
+            的一次验证
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-[var(--muted)]">
-            5 种典型场景，看看 TypeBridge 在你工作流里的落点。
+            5 种典型场景，看看 TypeBridge 在你工作流里的落点
           </p>
         </div>
 
         {/* Pill tabs */}
-        <div className="mb-10 flex flex-wrap items-center justify-center gap-2">
+        <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
           {SCENES.map((scene, i) => (
             <button
               key={scene.id}
               type="button"
-              onClick={() => select(i)}
+              onClick={() => goTo(i)}
               aria-current={i === index}
               className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
                 i === index
@@ -188,119 +185,131 @@ export function Scenes() {
           ))}
         </div>
 
-        {/* Scene content card */}
-        <div className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/60 p-6 backdrop-blur-sm md:p-10">
-          {/* Watermark icon — large, blurred */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-8 -top-8 flex h-72 w-72 items-center justify-center rounded-full opacity-90"
-            style={{
-              background: `radial-gradient(circle, ${active.tint}, transparent 65%)`,
-            }}
-          >
-            <Icon
-              size={220}
-              strokeWidth={1.1}
-              className="text-[var(--text)]/[0.045]"
+        {/* Card — top border acts as the rotation progress rail */}
+        <div
+          ref={cardRef}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/60 backdrop-blur-sm"
+        >
+          {/* Progress rail at card top — acts as the top border */}
+          <div className="absolute inset-x-0 top-0 z-20 h-[3px] bg-[var(--border)]/60">
+            <span
+              key={`prog-${index}`}
+              className="block h-full bg-accent-gradient"
+              style={{
+                width: 0,
+                animation: `scene-progress ${AUTO_PLAY_MS}ms linear forwards`,
+                animationPlayState: playing ? "running" : "paused",
+              }}
+              onAnimationEnd={() => {
+                if (playing) next();
+              }}
             />
           </div>
 
-          {/* Content — fades in on index change via `key` */}
-          <div key={active.id} className="animate-fade-up relative z-10">
-            {/* Scene title block */}
-            <div className="mb-5 flex items-start gap-4">
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 backdrop-blur-sm"
-                style={{ boxShadow: `0 8px 24px -12px ${active.tint}` }}
-              >
-                <Icon
-                  size={22}
-                  strokeWidth={1.8}
-                  className="text-[var(--accent)]"
-                />
+          <div className="relative p-6 pt-8 md:p-10 md:pt-12">
+            {/* Watermark icon */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-8 -top-8 flex h-72 w-72 items-center justify-center rounded-full opacity-90"
+              style={{
+                background: `radial-gradient(circle, ${active.tint}, transparent 65%)`,
+              }}
+            >
+              <Icon
+                size={220}
+                strokeWidth={1.1}
+                className="text-[var(--text)]/[0.045]"
+              />
+            </div>
+
+            {/* Scene content (keyed for fade-up on change) */}
+            <div key={active.id} className="animate-fade-up relative z-10">
+              {/* Title row + page indicator on the right */}
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div className="flex min-w-0 flex-1 items-start gap-4">
+                  <div
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 backdrop-blur-sm"
+                    style={{ boxShadow: `0 8px 24px -12px ${active.tint}` }}
+                  >
+                    <Icon
+                      size={22}
+                      strokeWidth={1.8}
+                      className="text-[var(--accent)]"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-bold tracking-tight md:text-2xl">
+                      {active.title}
+                    </h3>
+                    <p className="mt-1 text-sm font-medium text-[var(--muted)]">
+                      {active.subtitle}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Page indicator — only element needed for progress signal now */}
+                <div className="shrink-0 font-mono text-xs tabular-nums tracking-widest">
+                  <span className="text-[var(--text)] font-bold">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="mx-1 text-[var(--subtle)]">/</span>
+                  <span className="text-[var(--subtle)]">
+                    {String(SCENES.length).padStart(2, "0")}
+                  </span>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h3 className="text-xl font-bold tracking-tight md:text-2xl">
-                  {active.title}
-                </h3>
-                <p className="mt-1 text-sm font-medium text-[var(--muted)]">
-                  {active.subtitle}
+
+              <p className="max-w-3xl text-[15px] leading-relaxed text-[var(--text)]/90">
+                {active.description}
+              </p>
+
+              <ul className="mt-6 space-y-3">
+                {active.details.map((detail, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 text-[14px] leading-relaxed text-[var(--text)]/85"
+                  >
+                    <Sparkles
+                      size={15}
+                      strokeWidth={1.8}
+                      className="mt-0.5 shrink-0 text-[var(--accent)]"
+                    />
+                    <span>{detail}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--bg-2)]/60 p-4">
+                <p className="text-[13px] leading-relaxed text-[var(--muted)]">
+                  <span className="font-semibold text-[var(--accent)]">
+                    提示：
+                  </span>{" "}
+                  {active.tip}
                 </p>
               </div>
+
+              {/* Theme repeat — 主题短语复诵 */}
+              <div className="mt-8 flex items-center gap-3 border-t border-[var(--border)] pt-6">
+                <span
+                  aria-hidden
+                  className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent"
+                />
+                <p className="text-sm font-semibold tracking-tight text-[var(--text)]/90">
+                  <span className="text-accent-gradient">{active.theme}</span>
+                </p>
+                <span
+                  aria-hidden
+                  className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent"
+                />
+              </div>
             </div>
-
-            <p className="max-w-3xl text-[15px] leading-relaxed text-[var(--text)]/90">
-              {active.description}
-            </p>
-
-            <ul className="mt-6 space-y-3">
-              {active.details.map((detail, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-3 text-[14px] leading-relaxed text-[var(--text)]/85"
-                >
-                  <Sparkles
-                    size={15}
-                    strokeWidth={1.8}
-                    className="mt-0.5 shrink-0 text-[var(--accent)]"
-                  />
-                  <span>{detail}</span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--bg-2)]/60 p-4">
-              <p className="text-[13px] leading-relaxed text-[var(--muted)]">
-                <span className="font-semibold text-[var(--accent)]">
-                  提示：
-                </span>{" "}
-                {active.tip}
-              </p>
-            </div>
-
-            {/* Theme repeat — 主题短语在每个场景底部复诵一次 */}
-            <div className="mt-8 flex items-center gap-3 border-t border-[var(--border)] pt-6">
-              <span
-                aria-hidden
-                className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent"
-              />
-              <p className="text-sm font-semibold tracking-tight text-[var(--text)]/90">
-                <span className="text-accent-gradient">{active.theme}</span>
-              </p>
-              <span
-                aria-hidden
-                className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Progress bar — animates over AUTO_PLAY_MS; pauses when paused */}
-          <div className="relative z-10 mt-8 flex items-center gap-4">
-            <span className="text-xs font-medium tabular-nums text-[var(--subtle)]">
-              {String(index + 1).padStart(2, "0")} /{" "}
-              {String(SCENES.length).padStart(2, "0")}
-            </span>
-            <div className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-[var(--border)]">
-              <span
-                key={`bar-${tickKey}-${paused ? "p" : "r"}`}
-                className="absolute inset-y-0 left-0 bg-accent-gradient"
-                style={{
-                  animation: paused
-                    ? "none"
-                    : `scene-progress ${AUTO_PLAY_MS}ms linear forwards`,
-                  width: paused ? "100%" : undefined,
-                  opacity: paused ? 0.25 : 1,
-                }}
-              />
-            </div>
-            <span className="text-xs font-medium text-[var(--subtle)]">
-              {paused ? "悬停暂停" : "自动播放"}
-            </span>
           </div>
         </div>
       </div>
 
-      {/* Scene progress keyframe — declared inline so it ships only when Scenes mounts */}
+      {/* Inline keyframe — only required by this component */}
       <style>{`
         @keyframes scene-progress {
           from { width: 0%; }

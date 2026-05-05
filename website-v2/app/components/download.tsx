@@ -6,6 +6,7 @@ import {
   Copy,
   Cpu,
   Download as DownloadIcon,
+  KeyRound,
   Shield,
   Terminal,
 } from "lucide-react";
@@ -83,13 +84,11 @@ export function Download() {
       />
 
       <div className="relative mx-auto max-w-3xl text-center">
-        <p className="text-xs font-medium uppercase tracking-[0.3em] text-[var(--subtle)]">
-          下载
-        </p>
-        <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-5xl">
+        {/* Header — no eyebrow, no trailing period */}
+        <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
           马上把<span className="text-accent-gradient">手机</span>变成
           <br className="hidden md:block" />
-          你桌面的<span className="text-accent-gradient">键盘</span>。
+          你桌面的<span className="text-accent-gradient">键盘</span>
         </h2>
         <p className="mt-4 text-[var(--muted)]">
           最新版本{" "}
@@ -105,7 +104,11 @@ export function Download() {
             label="Apple Silicon"
             chip="M1 / M2 / M3 / M4"
             Mark={({ size = 22 }: { size?: number }) => (
-              <Apple size={size} strokeWidth={1.6} className="text-[var(--text)]" />
+              <Apple
+                size={size}
+                strokeWidth={1.6}
+                className="text-[var(--text)]"
+              />
             )}
           />
           <DownloadCard
@@ -113,13 +116,20 @@ export function Download() {
             label="Intel"
             chip="x86_64"
             Mark={({ size = 22 }: { size?: number }) => (
-              <Cpu size={size} strokeWidth={1.6} className="text-[var(--text)]" />
+              <Cpu
+                size={size}
+                strokeWidth={1.6}
+                className="text-[var(--text)]"
+              />
             )}
           />
         </div>
 
-        {/* First-time install notice — two paths (GUI / CLI) */}
-        <InstallNotice />
+        {/* Post-install notices — two parallel sibling sections, no outer wrapper */}
+        <div className="mt-12 space-y-8 text-left">
+          <GatekeeperNotice />
+          <AccessibilityNotice />
+        </div>
       </div>
     </section>
   );
@@ -127,7 +137,32 @@ export function Download() {
 
 const QUARANTINE_CMD = "xattr -rd com.apple.quarantine /Applications/TypeBridge.app";
 
-function InstallNotice() {
+function SectionHeader({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Shield;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-2)]">
+        <Icon size={16} strokeWidth={1.8} className="text-[var(--accent)]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-[var(--text)]">{title}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-[var(--muted)]">
+          {children}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Parallel section #1 — Gatekeeper bypass (unsigned app) */
+function GatekeeperNotice() {
   const [copied, setCopied] = useState(false);
 
   async function copyCmd() {
@@ -135,30 +170,20 @@ function InstallNotice() {
       await navigator.clipboard.writeText(QUARANTINE_CMD);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // ignore — older browsers without clipboard perms
-    }
+    } catch {}
   }
 
   return (
-    <div className="mt-10 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/50 p-5 text-left backdrop-blur-sm md:p-6">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-2)]">
-          <Shield size={16} strokeWidth={1.8} className="text-[var(--accent)]" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">首次安装须知</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-[var(--muted)]">
-            应用当前
-            <strong className="mx-1 text-[var(--text)]">未经 Apple 公证</strong>
-            ，macOS Gatekeeper 可能会阻止首次打开。下面两种方法
-            <strong className="mx-1 text-[var(--text)]">二选一</strong>
-            都可以正常安装使用。
-          </p>
-        </div>
-      </div>
+    <div>
+      <SectionHeader icon={Shield} title="首次安装须知">
+        应用当前
+        <strong className="mx-1 text-[var(--text)]">未经 Apple 公证</strong>
+        ，macOS Gatekeeper 可能会阻止首次打开。下面两种方法
+        <strong className="mx-1 text-[var(--text)]">二选一</strong>
+        都可以正常安装使用。
+      </SectionHeader>
 
-      {/* Two methods */}
+      {/* Two method boxes */}
       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Method A — GUI */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-2)]/50 p-4">
@@ -192,12 +217,16 @@ function InstallNotice() {
             </p>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
-            把 <code className="rounded bg-[var(--surface)] px-1 font-mono text-[11px]">.app</code> 拖入
+            把
+            <code className="mx-1 rounded bg-[var(--surface)] px-1 font-mono text-[11px]">
+              .app
+            </code>
+            拖入
             <strong className="mx-1 text-[var(--text)]">应用程序</strong>
             文件夹后，打开终端粘贴这一行移除 macOS 的"隔离"标记：
           </p>
-          <div className="group/cmd relative mt-3">
-            <div className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2.5 font-mono text-[11.5px] leading-relaxed text-[var(--text)]">
+          <div className="relative mt-3">
+            <div className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2.5 pr-16 font-mono text-[11.5px] leading-relaxed text-[var(--text)]">
               <Terminal
                 size={13}
                 strokeWidth={1.8}
@@ -213,7 +242,11 @@ function InstallNotice() {
             >
               {copied ? (
                 <>
-                  <Check size={12} strokeWidth={2.4} className="text-[var(--accent)]" />
+                  <Check
+                    size={12}
+                    strokeWidth={2.4}
+                    className="text-[var(--accent)]"
+                  />
                   已复制
                 </>
               ) : (
@@ -226,19 +259,25 @@ function InstallNotice() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Runtime permission reminder (separate line) */}
-      <div className="mt-5 flex items-start gap-2 border-t border-[var(--border)] pt-4 text-[12px] leading-relaxed text-[var(--muted)]">
-        <span
-          aria-hidden
-          className="mt-0.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]"
-        />
-        <p>
-          首次使用时，应用会请求
-          <strong className="mx-1 text-[var(--text)]">辅助功能</strong>
-          权限——这是模拟 `Cmd+V` 粘贴和自动提交按键所必需的，不授予无法注入消息。
-        </p>
-      </div>
+/** Parallel section #2 — Accessibility permission runtime requirement */
+function AccessibilityNotice() {
+  return (
+    <div>
+      <SectionHeader icon={KeyRound} title="首次使用须授予「辅助功能」权限">
+        这是 TypeBridge 模拟
+        <code className="mx-1 rounded bg-[var(--surface)] px-1 font-mono text-[12px]">
+          Cmd+V
+        </code>
+        粘贴和自动提交按键所必需的，不授予无法注入消息。应用首次启动时会自动引导你打开
+        <strong className="mx-1 text-[var(--text)]">
+          系统设置 → 隐私与安全性 → 辅助功能
+        </strong>
+        并勾选 TypeBridge。
+      </SectionHeader>
     </div>
   );
 }

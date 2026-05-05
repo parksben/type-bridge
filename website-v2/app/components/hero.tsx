@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, Download, Globe } from "lucide-react";
+import { ArrowDown, Download, Globe, Mic } from "lucide-react";
 import { BrandMark, BrandWordmark } from "./logo";
 
 // ────────────────────────────────────────────
@@ -69,11 +69,11 @@ type ChannelNode = {
 
 const CHANNELS: ChannelNode[] = [
   {
-    label: "WebChat",
+    label: "语音输入法",
     color: "#c084fc",
     delayMs: 0,
     Mark: ({ size = 20 }) => (
-      <Globe size={size} strokeWidth={1.8} style={{ color: "#c084fc" }} />
+      <Mic size={size} strokeWidth={1.8} style={{ color: "#c084fc" }} />
     ),
   },
   {
@@ -164,8 +164,8 @@ function BridgeNode() {
       <div className="animate-breathe-glow relative flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-gradient text-white shadow-[0_8px_32px_-8px_var(--accent-glow)]">
         <BrandMark size={32} className="text-white" />
       </div>
-      {/* 品牌文字 — accent 渐变 + 加粗，与 Hero 顶部 wordmark 呼应 */}
-      <span className="text-accent-gradient whitespace-nowrap text-[14px] font-extrabold uppercase tracking-[0.2em] md:text-[15px]">
+      {/* 品牌文字 — accent 渐变 + 大号粗体（非全大写），与 Hero 顶部 wordmark 风格呼应 */}
+      <span className="text-accent-gradient whitespace-nowrap text-[18px] font-extrabold tracking-tight md:text-[22px]">
         TypeBridge
       </span>
     </div>
@@ -249,21 +249,23 @@ function ConceptBanner() {
           const d = `M ${BADGE_LEFT_PCT} ${y} C ${BRIDGE_X_PCT - 18} ${y}, ${BRIDGE_X_PCT - 8} ${BRIDGE_Y_PCT}, ${BRIDGE_X_PCT - 2} ${BRIDGE_Y_PCT}`;
           return (
             <g key={ch.label}>
+              {/* Soft glow echo */}
               <path
                 d={d}
                 fill="none"
                 stroke="var(--accent)"
                 strokeOpacity="0.1"
-                strokeWidth="1.2"
+                strokeWidth="4"
                 vectorEffect="non-scaling-stroke"
               />
+              {/* Primary flowing dashed line — bolder stroke + bigger dashes for visibility */}
               <path
                 d={d}
                 fill="none"
                 stroke="url(#hero-arc)"
-                strokeWidth="0.6"
+                strokeWidth="1.8"
                 strokeLinecap="round"
-                strokeDasharray="1.2 1.8"
+                strokeDasharray="6 8"
                 vectorEffect="non-scaling-stroke"
                 style={{
                   animation: `arc-flow 3.5s ${i * 0.25}s linear infinite`,
@@ -280,16 +282,16 @@ function ConceptBanner() {
             fill="none"
             stroke="var(--accent)"
             strokeOpacity="0.1"
-            strokeWidth="1.4"
+            strokeWidth="4"
             vectorEffect="non-scaling-stroke"
           />
           <path
             d={`M ${BRIDGE_X_PCT + 2} ${BRIDGE_Y_PCT} L ${DESKTOP_ANCHOR_X_PCT} ${BRIDGE_Y_PCT}`}
             fill="none"
             stroke="url(#hero-arc)"
-            strokeWidth="0.6"
+            strokeWidth="1.8"
             strokeLinecap="round"
-            strokeDasharray="1.2 1.8"
+            strokeDasharray="6 8"
             vectorEffect="non-scaling-stroke"
             markerEnd="url(#hero-arrow)"
             style={{ animation: "arc-flow 3.5s 1.2s linear infinite" }}
