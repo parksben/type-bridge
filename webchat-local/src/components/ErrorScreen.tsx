@@ -1,4 +1,5 @@
 import { AlertCircle, QrCode } from "lucide-react";
+import { t } from "@/i18n";
 
 type Reason =
   | "no-session"
@@ -12,25 +13,25 @@ type Props = {
   detail?: string;
 };
 
-const TITLE: Record<Reason, string> = {
-  "no-session": "请用桌面 App 扫码",
-  "otp-locked": "验证码已锁定",
-  "session-expired": "会话已过期",
-  "server-closed": "桌面已关闭 WebChat",
-  unknown: "出错了",
-};
+function titleOf(r: Reason): string {
+  switch (r) {
+    case "no-session": return t("error.titleNoSession");
+    case "otp-locked": return t("error.titleOtpLocked");
+    case "session-expired": return t("error.titleSessionExpired");
+    case "server-closed": return t("error.titleServerClosed");
+    default: return t("error.titleUnknown");
+  }
+}
 
-const BODY: Record<Reason, string> = {
-  "no-session":
-    "当前链接没有会话信息。请在 Mac 打开 TypeBridge，进入「连接IM应用 → WebChat」，点「启动会话」后用这台手机扫描桌面上的二维码。",
-  "otp-locked":
-    "验证码错误次数过多，会话已锁定。请在桌面 TypeBridge 上点「重启会话」生成新的验证码。",
-  "session-expired":
-    "5 分钟内未完成握手，会话已过期。请在桌面 TypeBridge 上点「重启会话」生成新的二维码。",
-  "server-closed":
-    "桌面 TypeBridge 已关闭 WebChat 或应用已退出。请在桌面重新「启动会话」后再扫码。",
-  unknown: "会话状态异常，请在桌面重新启动 WebChat 会话。",
-};
+function bodyOf(r: Reason): string {
+  switch (r) {
+    case "no-session": return t("error.bodyNoSession");
+    case "otp-locked": return t("error.bodyOtpLocked");
+    case "session-expired": return t("error.bodySessionExpired");
+    case "server-closed": return t("error.bodyServerClosed");
+    default: return t("error.bodyUnknown");
+  }
+}
 
 export default function ErrorScreen({ reason, detail }: Props) {
   return (
@@ -52,10 +53,10 @@ export default function ErrorScreen({ reason, detail }: Props) {
           )}
         </div>
         <h1 className="text-[18px] font-semibold tracking-tight mb-2">
-          {TITLE[reason]}
+          {titleOf(reason)}
         </h1>
         <p className="text-[13.5px] text-[var(--tb-muted)] leading-relaxed">
-          {BODY[reason]}
+          {bodyOf(reason)}
         </p>
         {detail && (
           <p className="text-[12px] text-[var(--tb-subtle)] mt-3 font-mono break-all">

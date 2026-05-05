@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
+import { t } from "@/i18n";
 
 type Props = {
   onSubmit: (otp: string) => Promise<void> | void;
@@ -100,10 +101,10 @@ export default function HandshakeForm({ onSubmit, errorNonce, errorMessage }: Pr
         </div>
 
         <h1 className="text-[20px] font-semibold tracking-tight text-center mb-2">
-          输入验证码
+          {t("handshake.title")}
         </h1>
         <p className="text-[13px] text-[var(--tb-muted)] text-center leading-relaxed mb-7">
-          在桌面 TypeBridge 的 WebChat 面板上查看 6 位数字
+          {t("handshake.desc")}
         </p>
 
         <div
@@ -151,11 +152,11 @@ export default function HandshakeForm({ onSubmit, errorNonce, errorMessage }: Pr
           {submitting ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              验证中
+              {t("handshake.verifying")}
             </>
           ) : (
             <>
-              确认
+              {t("handshake.confirm")}
               <ArrowRight size={16} strokeWidth={2.2} />
             </>
           )}

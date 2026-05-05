@@ -4,6 +4,7 @@ import VoiceButton from "./VoiceButton";
 import ImagePicker from "./ImagePicker";
 import VoiceHintModal from "./VoiceHintModal";
 import type { CompressResult } from "@/lib/image";
+import { t } from "@/i18n";
 
 type StagedImage = { previewUrl: string; compressed: CompressResult };
 
@@ -75,7 +76,7 @@ export default function ComposerBar({
               ref={taRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={staged ? "图片已就绪，点发送" : "输入消息…"}
+              placeholder={staged ? t("composer.placeholderImageReady") : t("composer.placeholder")}
               rows={1}
               disabled={!!staged}
               onKeyDown={(e) => {
@@ -100,7 +101,7 @@ export default function ComposerBar({
             type="button"
             onClick={send}
             disabled={!canSend}
-            aria-label="发送"
+            aria-label={t("composer.sendAria")}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             style={{
               background: canSend ? "var(--tb-accent)" : "var(--tb-bg)",

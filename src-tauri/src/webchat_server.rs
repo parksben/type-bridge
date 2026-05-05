@@ -266,9 +266,14 @@ impl WebChatServer {
         }
     }
 
-    /// 完整 QR 码 URL。
-    pub fn qr_url(&self) -> String {
-        format!("http://{}:{}/?s={}", self.lan_ip, self.port, self.session_id)
+    /// 完整 QR 码 URL。`lang` 来自桌面 Settings.language（`"zh"`/`"en"`/`""`）；
+    /// 为空时不附加 `lang` 参数，让移动端 SPA 走自己的语言检测（localStorage / navigator）。
+    pub fn qr_url(&self, lang: Option<&str>) -> String {
+        let base = format!("http://{}:{}/?s={}", self.lan_ip, self.port, self.session_id);
+        match lang {
+            Some(l) if l == "zh" || l == "en" => format!("{}&lang={}", base, l),
+            _ => base,
+        }
     }
 
     /// 会话是否锁定（OTP 5 次错）。

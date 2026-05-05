@@ -1,4 +1,5 @@
 import { Mic } from "lucide-react";
+import { t } from "@/i18n";
 
 type Props = {
   onClick: () => void;
@@ -10,7 +11,7 @@ export default function VoiceButton({ onClick }: Props) {
     <button
       type="button"
       onClick={onClick}
-      aria-label="用语音输入"
+      aria-label={t("composer.voiceAria")}
       className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors"
       style={{
         background: "var(--tb-bg)",

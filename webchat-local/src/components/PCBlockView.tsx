@@ -1,4 +1,5 @@
 import { QrCode, Smartphone } from "lucide-react";
+import { t } from "@/i18n";
 
 /// PC 浏览器访问时的引导页。WebChat 是手机端输入桥，桌面用 PC 自己给自己发没意义，
 /// 直接挡住让用户改用手机扫码。
@@ -22,12 +23,13 @@ export default function PCBlockView() {
           <QrCode size={36} strokeWidth={1.8} className="text-[var(--tb-accent)]" />
         </div>
 
-        <h1 className="text-[20px] font-semibold tracking-tight mb-3">请用手机扫码</h1>
+        <h1 className="text-[20px] font-semibold tracking-tight mb-3">{t("pcBlock.title")}</h1>
         <p className="text-[14px] leading-relaxed text-[var(--tb-muted)] max-w-sm mx-auto">
-          WebChat 是 <strong className="text-[var(--tb-text)]">手机端输入桥</strong> ——
-          在手机上发消息，桌面端自动注入到焦点输入框。
+          {t("pcBlock.bodyPart1")}
+          <strong className="text-[var(--tb-text)]">{t("pcBlock.bodyBold")}</strong>
+          {t("pcBlock.bodyPart2")}
           <br />
-          用电脑打开本页面没有意义，请用手机扫描桌面 TypeBridge 上的二维码。
+          {t("pcBlock.bodyPart3")}
         </p>
 
         <div
@@ -38,11 +40,11 @@ export default function PCBlockView() {
             color: "var(--tb-muted)",
           }}
         >
-          <p className="font-medium text-[var(--tb-text)] mb-1">怎么扫？</p>
+          <p className="font-medium text-[var(--tb-text)] mb-1">{t("pcBlock.howTitle")}</p>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>在 Mac 打开 TypeBridge，进入「连接IM应用 → WebChat」</li>
-            <li>点「启动会话」生成二维码</li>
-            <li>确保手机和电脑在同一个 WiFi 下，用手机相机扫码</li>
+            <li>{t("pcBlock.howStep1")}</li>
+            <li>{t("pcBlock.howStep2")}</li>
+            <li>{t("pcBlock.howStep3")}</li>
           </ol>
         </div>
       </div>

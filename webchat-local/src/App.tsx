@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { detectDevice } from "@/lib/ua";
 import { WebChatClient, type ClientStatus } from "@/lib/socket";
 import { getOrCreateClientId, clearBinding, saveBinding } from "@/lib/storage";
+import { t } from "@/i18n";
 import PCBlockView from "@/components/PCBlockView";
 import HandshakeForm from "@/components/HandshakeForm";
 import ChatPage from "@/components/ChatPage";
@@ -160,12 +161,12 @@ export default function App() {
 function humanizeReason(reason: string): string {
   switch (reason) {
     case "OTP_INVALID":
-      return "验证码错误，请重试";
+      return t("app.otpInvalid");
     case "OTP_LOCKED":
-      return "验证码已锁定";
+      return t("app.otpLocked");
     case "SESSION_EXPIRED":
-      return "会话已过期";
+      return t("app.sessionExpired");
     default:
-      return reason || "握手失败";
+      return reason || t("app.handshakeFailed");
   }
 }

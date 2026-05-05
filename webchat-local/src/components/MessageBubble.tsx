@@ -1,4 +1,5 @@
 import { AlertCircle, Check, CheckCheck, Loader2 } from "lucide-react";
+import { t } from "@/i18n";
 
 export type MessageStatus = "sending" | "delivered" | "failed";
 
@@ -62,19 +63,19 @@ export default function MessageBubble({ msg }: Props) {
         {msg.status === "sending" && (
           <>
             <Loader2 size={10} className="animate-spin" />
-            发送中
+            {t("bubble.sending")}
           </>
         )}
         {msg.status === "delivered" && (
           <>
             <CheckCheck size={11} strokeWidth={2.4} />
-            已送达
+            {t("bubble.delivered")}
           </>
         )}
         {msg.status === "failed" && (
           <>
             <AlertCircle size={11} strokeWidth={2.4} />
-            {msg.reason ?? "发送失败"}
+            {msg.reason ?? t("bubble.sendFailed")}
           </>
         )}
       </span>
