@@ -109,12 +109,12 @@ def main():
     print("Generating TypeBridge icon assets…\n")
 
     # 1. Bundle PNGs (referenced in tauri.conf.json bundle.icon)
-    print("[1/4] Bundle PNG icons:")
+    print("[1/5] Bundle PNG icons:")
     for name, size in BUNDLE_SIZES.items():
         svg_to_png(appicon_svg, ICONS_DIR / name, size)
 
     # 2. Tray icon (separate file, not overwriting bundle icons)
-    print("\n[2/4] Tray icon (44x44) from logo-tray.svg:")
+    print("\n[2/5] Tray icon (44x44) from logo-tray.svg:")
     if tray_svg.exists():
         svg_to_png(tray_svg, ICONS_DIR / "tray-icon.png", 44)
     else:
@@ -122,12 +122,29 @@ def main():
         svg_to_png(appicon_svg, ICONS_DIR / "tray-icon.png", 44)
 
     # 3. macOS .icns
-    print("\n[3/4] macOS .icns:")
+    print("\n[3/5] macOS .icns:")
     build_icns(appicon_svg, ICONS_DIR / "icon.icns")
 
     # 4. Windows .ico
-    print("\n[4/4] Windows .ico:")
+    print("\n[4/5] Windows .ico:")
     build_ico(appicon_svg, ICONS_DIR / "icon.ico")
+
+    # 5. DMG background (for installation view, via rsvg-convert)
+    dmg_bg_svg = PUBLIC_DIR / "dmg-background.svg"
+    dmg_bg_png = ICONS_DIR / "dmg-background.png"
+    print("\n[5/5] DMG background:")
+    if dmg_bg_svg.exists():
+        result = subprocess.run(
+            ["rsvg-convert", "-w", "660", "-h", "400", str(dmg_bg_svg), "-o", str(dmg_bg_png)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            print("  ✓ dmg-background.png (660×400)")
+        else:
+            print(f"  ✗ rsvg-convert failed: {result.stderr.strip()}")
+    else:
+        print("  (dmg-background.svg not found, skipping)")
 
     print(f"\nDone! All icon assets written to {ICONS_DIR}")
 

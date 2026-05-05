@@ -37,6 +37,23 @@
     ],
     "resources": {
       "../webchat-local/dist": "webchat-local/dist"
+    },
+    "macOS": {
+      "dmg": {
+        "background": "icons/dmg-background.png",
+        "windowSize": {
+          "height": 400,
+          "width": 660
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
     }
   },
   "plugins": {
