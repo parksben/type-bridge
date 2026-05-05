@@ -1,4 +1,5 @@
 import { Hero } from "./components/hero";
+import { Scenes } from "./components/scenes";
 import { TopNav } from "./components/top-nav";
 
 function SectionPlaceholder({
@@ -36,12 +37,7 @@ export default function HomePage() {
       <TopNav />
       <main className="page-bg relative">
         <Hero />
-        <SectionPlaceholder
-          id="scenes"
-          eyebrow="场景"
-          title="每一个场景，都是手机即键盘的一次验证。"
-          subtitle="5 个使用场景轮播 tab 即将就位。"
-        />
+        <Scenes />
         <SectionPlaceholder
           id="flow"
           eyebrow="流程"
