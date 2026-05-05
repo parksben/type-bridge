@@ -24,9 +24,9 @@ type NavItem = { id: string; label: string };
 
 const NAV_ITEMS: NavItem[] = [
   { id: "hero", label: "首页" },
-  { id: "scenes", label: "使用" },
-  { id: "flow", label: "流程" },
-  { id: "download", label: "下载" },
+  { id: "scenes", label: "适用场景" },
+  { id: "flow", label: "使用流程" },
+  { id: "download", label: "下载安装" },
 ];
 
 export function TopNav() {

@@ -1,32 +1,43 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
-type Theme = "dark" | "light";
+type Theme = "system" | "light" | "dark";
 
 const STORAGE_KEY = "tb-theme";
+const ORDER: Theme[] = ["system", "light", "dark"];
 
 function readTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "system";
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "light") return "light";
+    if (v === "light" || v === "dark" || v === "system") return v;
   } catch {}
-  return "dark";
+  return "system";
+}
+
+function systemPrefersLight(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-color-scheme: light)").matches
+  );
 }
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  if (theme === "light") {
-    root.classList.add("light-force");
-  } else {
-    root.classList.remove("light-force");
-  }
+  const light = theme === "light" || (theme === "system" && systemPrefersLight());
+  root.classList.toggle("light-force", light);
 }
 
+const LABEL: Record<Theme, string> = {
+  system: "跟随系统",
+  light: "浅色模式",
+  dark: "深色模式",
+};
+
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("system");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -34,8 +45,17 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  function toggle() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+  // When in "system" mode, react to OS-level changes live.
+  useEffect(() => {
+    if (!mounted || theme !== "system") return;
+    const mql = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => applyTheme("system");
+    mql.addEventListener?.("change", onChange);
+    return () => mql.removeEventListener?.("change", onChange);
+  }, [theme, mounted]);
+
+  function cycle() {
+    const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];
     setTheme(next);
     applyTheme(next);
     try {
@@ -43,21 +63,18 @@ export function ThemeToggle() {
     } catch {}
   }
 
-  // Render a shell pre-mount so layout doesn't jump; icon renders after hydration
+  const Icon = theme === "system" ? Monitor : theme === "light" ? Sun : Moon;
+  const nextLabel = LABEL[ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length]];
+
   return (
     <button
       type="button"
-      aria-label={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
-      onClick={toggle}
+      aria-label={`当前：${LABEL[theme]}，点击切换到${nextLabel}`}
+      title={LABEL[theme]}
+      onClick={cycle}
       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)]/50 text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)] hover:text-[var(--text)]"
     >
-      {mounted ? (
-        theme === "dark" ? (
-          <Sun size={16} strokeWidth={1.8} />
-        ) : (
-          <Moon size={16} strokeWidth={1.8} />
-        )
-      ) : null}
+      {mounted ? <Icon size={16} strokeWidth={1.8} /> : null}
     </button>
   );
 }
