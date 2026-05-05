@@ -1,19 +1,64 @@
+import { TopNav } from "./components/top-nav";
+
+function SectionPlaceholder({
+  id,
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <section
+      id={id}
+      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-24"
+    >
+      <div className="max-w-2xl text-center">
+        <p className="text-xs font-medium uppercase tracking-[0.3em] text-[var(--subtle)]">
+          {eyebrow}
+        </p>
+        <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">
+          {title}
+        </h2>
+        <p className="mt-4 text-[var(--muted)]">{subtitle}</p>
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   return (
-    <main className="page-bg relative min-h-screen">
-      <div className="flex min-h-screen items-center justify-center px-6">
-        <div className="text-center">
-          <p className="text-sm uppercase tracking-[0.3em] text-[var(--muted)]">
-            TypeBridge · website-v2
-          </p>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
-            手机<span className="text-accent-gradient">即键盘</span>。
-          </h1>
-          <p className="mt-4 text-[var(--muted)]">
-            新版落地页开发中 · 脚手架就绪
-          </p>
-        </div>
-      </div>
-    </main>
+    <>
+      <TopNav />
+      <main className="page-bg relative">
+        <SectionPlaceholder
+          id="hero"
+          eyebrow="让手机成为桌面输入设备"
+          title="手机即键盘。"
+          subtitle="Hero 章节正在搭建 — logo、slogan、概念动画即将就位。"
+        />
+        <SectionPlaceholder
+          id="scenes"
+          eyebrow="场景"
+          title="每一个场景，都是手机即键盘的一次验证。"
+          subtitle="5 个使用场景轮播 tab 即将就位。"
+        />
+        <SectionPlaceholder
+          id="flow"
+          eyebrow="流程"
+          title="看手机如何变成你的键盘。"
+          subtitle="下载 → 打开 → 连接 → 注入，流程图即将就位。"
+        />
+        <SectionPlaceholder
+          id="download"
+          eyebrow="下载"
+          title="马上把手机变成你的键盘。"
+          subtitle="下载章节 + footer 即将就位。"
+        />
+      </main>
+    </>
   );
 }
