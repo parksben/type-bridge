@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../lib/i18n";
 import { BrandWordmark } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
@@ -27,13 +27,15 @@ export function TopNav() {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string>("hero");
   const [open, setOpen] = useState(false);
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
-  const NAV_ITEMS = [
+  const NAV_ITEMS = useMemo(() => [
     { id: "hero", label: t("nav.home") },
     { id: "scenes", label: t("nav.scenes") },
     { id: "flow", label: t("nav.flow") },
     { id: "download", label: t("nav.download") },
-  ];
+  ], [t]);
 
   // Scroll state for frosted-blur bg switch
   useEffect(() => {
@@ -43,31 +45,46 @@ export function TopNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Scroll-spy via IntersectionObserver — picks the section whose top is closest
-  // to the nav bottom as the active one.
+  // Scroll-spy: deterministic algorithm based on section positions relative to viewport.
+  // Avoid IntersectionObserver because scroll-snap animations cause flickering thresholds.
   useEffect(() => {
-    const sections = NAV_ITEMS.map((i) =>
-      document.getElementById(i.id)
-    ).filter((el): el is HTMLElement => !!el);
-    if (!sections.length) return;
+    const ids = NAV_ITEMS.map((i) => i.id);
+    const NAV_HEIGHT = 64;
+    let rafId = 0;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (!visible.length) return;
-        const top = visible.reduce((best, e) =>
-          e.boundingClientRect.top < best.boundingClientRect.top ? e : best
-        );
-        setActive(top.target.id);
-      },
-      {
-        rootMargin: "-64px 0px -40% 0px",
-        threshold: [0, 0.15, 0.5],
+    function computeActive() {
+      const viewMiddle = window.innerHeight / 2 + NAV_HEIGHT / 2;
+      let bestId = ids[0];
+      let bestDist = Infinity;
+
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        // Distance from section top to viewport middle (offset by nav)
+        const dist = Math.abs(rect.top - viewMiddle);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestId = id;
+        }
       }
-    );
 
-    sections.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+      if (activeRef.current !== bestId) {
+        setActive(bestId);
+      }
+    }
+
+    function onScroll() {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(computeActive);
+    }
+
+    computeActive();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafId);
+    };
   }, [NAV_ITEMS]);
 
   // Close mobile menu when clicking a link
