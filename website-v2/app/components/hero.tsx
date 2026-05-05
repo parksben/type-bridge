@@ -56,9 +56,8 @@ function WecomMark({ size = 22 }: { size?: number }) {
 }
 
 // ────────────────────────────────────────────
-// Concept banner layout geometry
-// Phone (left, 4 app icons outside-left) → bridge (center) → monitor (right)
-// Two horizontal lines connecting the three nodes.
+// Concept banner — Phone → Bridge → Monitor
+// Flex layout with equal-width line separators for symmetry.
 // ────────────────────────────────────────────
 
 type AppIcon = {
@@ -101,83 +100,60 @@ function makeAppIcons(t: (key: string) => string): AppIcon[] {
   ];
 }
 
-// Phone center X (where the right edge of the phone body meets the line)
-const PHONE_X_PCT = 16;
-// Bridge center
-const BRIDGE_X_PCT = 50;
-const BRIDGE_Y_PCT = 50;
-// Monitor left edge X (where the line meets the monitor)
-const MONITOR_X_PCT = 84;
-
-/** Phone with chatbot screen + 4 app icons stacked outside-left */
+/** Phone with channel badges + user message inside */
 function PhoneNode() {
   const { t } = useT();
   const apps = makeAppIcons(t);
 
   return (
     <div
-      className="absolute flex -translate-y-1/2 items-center gap-3"
-      style={{ top: "50%", left: `${PHONE_X_PCT}%` }}
+      className="relative flex flex-col overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)]/90 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.4)] backdrop-blur-md"
+      style={{ width: "160px", height: "280px" }}
+      aria-hidden
     >
-      {/* App icons outside-left of phone — stacked vertically */}
-      <div className="flex flex-col gap-2.5">
-        {apps.map((app, i) => (
+      {/* Dynamic island */}
+      <div className="flex justify-center pt-2.5">
+        <div className="h-[6px] w-[48px] rounded-full bg-[var(--text)]/15" />
+      </div>
+
+      {/* Status bar */}
+      <div className="flex items-center justify-between px-4 pt-1">
+        <span className="text-[9px] font-semibold text-[var(--muted)]">9:41</span>
+        <div className="flex items-center gap-1">
+          <Globe size={9} strokeWidth={1.5} style={{ color: "var(--muted)" }} />
+          <span className="h-1.5 w-1.5 rounded-full bg-[#28c840]" />
+        </div>
+      </div>
+
+      {/* Channel badges row */}
+      <div className="flex items-center gap-1.5 px-4 pt-2">
+        {apps.map((app) => (
           <div
             key={app.label}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border backdrop-blur-sm"
+            className="flex h-[18px] w-[18px] items-center justify-center rounded-md"
             style={{
-              borderColor: `${app.color}44`,
-              backgroundColor: `${app.color}1a`,
-              boxShadow: `0 0 12px ${app.color}20`,
+              backgroundColor: `${app.color}20`,
+              border: `1px solid ${app.color}35`,
             }}
           >
-            <app.Mark size={18} />
+            <app.Mark size={11} />
           </div>
         ))}
       </div>
 
-      {/* Phone body */}
-      <div
-        className="relative flex flex-col overflow-hidden rounded-[20px] border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.35)] backdrop-blur-sm"
-        style={{ width: "120px", height: "200px" }}
-        aria-hidden
-      >
-        {/* Status bar */}
-        <div className="flex items-center justify-between px-3 pt-2">
-          <span className="text-[8px] font-medium text-[var(--muted)]">9:41</span>
-          <div className="flex items-center gap-1">
-            <Globe size={8} strokeWidth={1.5} style={{ color: "var(--muted)" }} />
-            <span className="h-1.5 w-1.5 rounded-full bg-[#28c840]" />
-          </div>
+      {/* User message bubble — orange accent background */}
+      <div className="flex flex-col items-end px-4 pt-3">
+        <div
+          className="rounded-2xl px-3 py-2 text-[11px] font-medium leading-tight text-white"
+          style={{ backgroundColor: "var(--accent)" }}
+        >
+          {t("hero.phoneUserMsg")}
         </div>
+      </div>
 
-        {/* Chatbot screen */}
-        <div className="flex flex-col gap-2 px-3 pt-3">
-          {/* Bot avatar row */}
-          <div className="flex items-center gap-1.5">
-            <img src="/typebridge.png" width={14} height={14} alt="" aria-hidden style={{ display: "inline-block", objectFit: "contain" }} />
-            <span className="text-[9px] font-semibold text-[var(--text)]">TypeBridge</span>
-          </div>
-          {/* Bot message bubble */}
-          <div
-            className="rounded-lg px-2.5 py-1.5 text-[10px] leading-tight text-[var(--accent-fg)]"
-            style={{ backgroundColor: "var(--accent)", maxWidth: "85%" }}
-          >
-            {t("hero.phoneBotMsg")}
-          </div>
-          {/* User message bubble */}
-          <div
-            className="ml-auto rounded-lg px-2.5 py-1.5 text-[10px] leading-tight text-[var(--text)]"
-            style={{ backgroundColor: "var(--surface-elevated)", maxWidth: "85%" }}
-          >
-            {t("hero.phoneUserMsg")}
-          </div>
-        </div>
-
-        {/* Bottom bar — home indicator */}
-        <div className="mt-auto flex justify-center pb-2">
-          <span className="h-1 w-8 rounded-full bg-[var(--border)]" />
-        </div>
+      {/* Home indicator */}
+      <div className="mt-auto flex justify-center pb-2">
+        <span className="h-[3px] w-[40px] rounded-full bg-[var(--border)]" />
       </div>
     </div>
   );
@@ -186,14 +162,8 @@ function PhoneNode() {
 /** Central TypeBridge node */
 function BridgeNode() {
   return (
-    <div
-      className="absolute flex -translate-x-1/2 flex-col items-center gap-2"
-      style={{
-        left: `${BRIDGE_X_PCT}%`,
-        top: `calc(${BRIDGE_Y_PCT}% - 28px)`,
-      }}
-    >
-      <div className="relative h-14 w-14">
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative">
         <img
           src="/typebridge.png"
           alt=""
@@ -201,7 +171,7 @@ function BridgeNode() {
           aria-hidden
         />
       </div>
-      <span className="whitespace-nowrap text-[16px] font-extrabold tracking-tight text-[var(--text)] md:text-[18px]">
+      <span className="whitespace-nowrap text-[15px] font-extrabold tracking-tight text-[var(--text)]">
         TypeBridge
       </span>
     </div>
@@ -213,31 +183,25 @@ function MonitorNode() {
   const { t } = useT();
 
   return (
-    <div
-      className="absolute flex -translate-y-1/2 flex-col items-center"
-      style={{ top: "50%", left: `${MONITOR_X_PCT}%` }}
-    >
+    <div className="flex flex-col items-center">
       {/* Monitor body */}
       <div
-        className="relative overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4)] backdrop-blur-sm"
-        style={{ width: "140px", height: "110px" }}
+        className="relative overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]/90 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.4)] backdrop-blur-md"
+        style={{ width: "160px", height: "110px" }}
         aria-hidden
       >
-        {/* Window inside monitor */}
-        <div className="flex flex-col h-full">
-          {/* Window title bar */}
-          <div className="flex items-center gap-1.5 border-b border-[var(--border)]/60 px-2.5 py-1.5">
-            <span className="h-[5px] w-[5px] rounded-full bg-[#ff5f57]" />
-            <span className="h-[5px] w-[5px] rounded-full bg-[#febc2e]" />
-            <span className="h-[5px] w-[5px] rounded-full bg-[#28c840]" />
-          </div>
-          {/* Typing content */}
-          <div className="flex items-center px-3 py-2">
-            <span className="font-mono text-[11px] leading-none text-[var(--text)]">
-              {t("hero.desktopText")}
-            </span>
-            <span className="animate-blink-cursor ml-0.5 inline-block h-3 w-[2px] rounded-full bg-[var(--accent)]" />
-          </div>
+        {/* Window title bar */}
+        <div className="flex items-center gap-1.5 border-b border-[var(--border)]/60 px-3 py-1.5">
+          <span className="h-[5px] w-[5px] rounded-full bg-[#ff5f57]" />
+          <span className="h-[5px] w-[5px] rounded-full bg-[#febc2e]" />
+          <span className="h-[5px] w-[5px] rounded-full bg-[#28c840]" />
+        </div>
+        {/* Typing content — nowrap to prevent English wrapping */}
+        <div className="flex items-center overflow-hidden px-3 py-2.5">
+          <span className="whitespace-nowrap font-mono text-[11px] leading-none text-[var(--text)]">
+            {t("hero.desktopText")}
+          </span>
+          <span className="animate-blink-cursor ml-0.5 inline-block h-3 w-[2px] rounded-full bg-[var(--accent)]" />
         </div>
       </div>
       {/* Monitor stand */}
@@ -249,13 +213,13 @@ function MonitorNode() {
   );
 }
 
-/** ConceptBanner — the full diagram: phone → bridge → monitor */
+/** ConceptBanner — phone → bridge → monitor, flex layout for symmetry */
 function ConceptBanner() {
   return (
-    <div className="noise relative mt-10 h-[280px] w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm sm:h-[320px] md:h-[360px]">
+    <div className="noise relative mt-10 h-[340px] w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm sm:h-[360px] md:h-[380px]">
       {/* Grid pattern */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.05]"
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
         style={{
           backgroundImage:
             "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
@@ -263,53 +227,44 @@ function ConceptBanner() {
         }}
       />
 
-      {/* SVG overlay — two straight lines connecting phone→bridge→monitor */}
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
+      {/* Three nodes + equal-width line separators */}
+      <div className="relative flex h-full items-center px-[6%] md:px-[8%]">
+        <PhoneNode />
+
         {/* Line 1: phone → bridge */}
-        <line
-          x1={PHONE_X_PCT + 4}
-          y1={BRIDGE_Y_PCT}
-          x2={BRIDGE_X_PCT - 6}
-          y2={BRIDGE_Y_PCT}
-          stroke="var(--accent)"
-          strokeOpacity="0.35"
-          strokeWidth="1.2"
-          vectorEffect="non-scaling-stroke"
-        />
+        <div className="flex-1 flex items-center px-3">
+          <div
+            className="w-full h-[1px]"
+            style={{
+              background: "linear-gradient(to right, transparent 0%, var(--accent) 18%, var(--accent) 82%, transparent 100%)",
+              opacity: 0.4,
+            }}
+          />
+        </div>
+
+        <BridgeNode />
+
         {/* Line 2: bridge → monitor */}
-        <line
-          x1={BRIDGE_X_PCT + 6}
-          y1={BRIDGE_Y_PCT}
-          x2={MONITOR_X_PCT - 2}
-          y2={BRIDGE_Y_PCT}
-          stroke="var(--accent)"
-          strokeOpacity="0.35"
-          strokeWidth="1.2"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+        <div className="flex-1 flex items-center px-3">
+          <div
+            className="w-full h-[1px]"
+            style={{
+              background: "linear-gradient(to right, transparent 0%, var(--accent) 18%, var(--accent) 82%, transparent 100%)",
+              opacity: 0.4,
+            }}
+          />
+        </div>
 
-      {/* Phone node */}
-      <PhoneNode />
+        <MonitorNode />
+      </div>
 
-      {/* Central bridge node */}
-      <BridgeNode />
-
-      {/* Monitor node */}
-      <MonitorNode />
-
-      {/* Vignette to blend edges */}
+      {/* Vignette */}
       <div
         className="pointer-events-none absolute inset-0 rounded-3xl"
         style={{
           background:
-            "radial-gradient(ellipse at center, transparent 40%, var(--bg) 120%)",
-          opacity: 0.4,
+            "radial-gradient(ellipse at center, transparent 50%, var(--bg) 120%)",
+          opacity: 0.35,
         }}
       />
     </div>
