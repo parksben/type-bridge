@@ -32,13 +32,13 @@ const LINEAR_STEPS: Step[] = [
     label: "01",
     icon: Download,
     title: "下载 App",
-    subtitle: "从官网下载 macOS 安装包",
+    subtitle: "下载 macOS 版，免费安装",
   },
   {
     label: "02",
     icon: Play,
     title: "打开 App",
-    subtitle: "首次启动引导授权辅助功能",
+    subtitle: "按提示开启系统授权",
   },
 ];
 
@@ -54,7 +54,7 @@ const CHOICES: Choice[] = [
   {
     icon: QrCode,
     label: "扫码 WebChat",
-    desc: "同 WiFi 手机扫二维码",
+    desc: "同 WiFi 手机扫码即连",
     bg: "rgba(192, 132, 252, 0.12)",
     accent: "#c084fc",
   },
@@ -70,8 +70,8 @@ const CHOICES: Choice[] = [
 const FINAL_STEP: Step = {
   label: "04",
   icon: Keyboard,
-  title: "桌面自动落字",
-  subtitle: "文本 / 图片 / 图文混合直达当前聚焦输入框",
+  title: "桌面落字",
+  subtitle: "文字、图片、语音转写，直达输入框",
 };
 
 // ────────────────────────────────────────────
@@ -249,11 +249,11 @@ export function Flow() {
         {/* Header — no eyebrow, no trailing period */}
         <div className="mb-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-5xl">
-            如何把<span className="text-accent-gradient">手机</span>
-            变成你桌面的<span className="text-accent-gradient">键盘</span>
+            把<span className="text-accent-gradient">手机</span>
+            变成<span className="text-accent-gradient">键盘</span>，只需四步
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-[var(--muted)]">
-            四步操作，打通手机到电脑的输入连接
+            下载、打开、连接、落字——两分钟搞定
           </p>
         </div>
 
