@@ -101,7 +101,7 @@ const CHANNELS: ChannelNode[] = [
 const BADGE_LEFT_PCT = 9;
 const BRIDGE_X_PCT = 52;
 const BRIDGE_Y_PCT = 50;
-const DESKTOP_ANCHOR_X_PCT = 76;
+const DESKTOP_ANCHOR_X_PCT = 84;
 
 function badgeTopPct(i: number, total: number) {
   // Spread across [20%, 80%]
@@ -158,9 +158,8 @@ function ChannelBadge({
 }
 
 function BridgeNode() {
-  // icon 是 h-16 w-16 = 64px；top 往上偏半个 icon 高度，使 icon 中心
-  // 精确落在 BRIDGE_Y_PCT（= 50% banner 高度，和 SVG 弧线终点一致），
-  // 文字继续挂在 icon 下方。
+  // 直接复用 app 的 typebridge.png（橙渐变方块 + 白 N，与桌面端一致）。
+  // icon 是 64×64；top 上偏 32px，让 icon 中心落在 BRIDGE_Y_PCT。
   return (
     <div
       className="absolute flex -translate-x-1/2 flex-col items-center gap-3"
@@ -169,11 +168,15 @@ function BridgeNode() {
         top: `calc(${BRIDGE_Y_PCT}% - 32px)`,
       }}
     >
-      <div className="animate-breathe-glow relative flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-gradient text-white shadow-[0_8px_32px_-8px_var(--accent-glow)]">
-        <BrandMark size={32} className="text-white" />
+      <div className="animate-breathe-glow relative h-16 w-16">
+        <img
+          src="/typebridge.png"
+          alt=""
+          className="h-16 w-16 rounded-2xl shadow-[0_8px_32px_-8px_var(--accent-glow)]"
+          aria-hidden
+        />
       </div>
-      {/* 品牌文字 — accent 渐变 + 大号粗体（非全大写），与 Hero 顶部 wordmark 风格呼应 */}
-      <span className="text-accent-gradient whitespace-nowrap text-[18px] font-extrabold tracking-tight md:text-[22px]">
+      <span className="whitespace-nowrap text-[18px] font-extrabold tracking-tight text-[var(--text)] md:text-[22px]">
         TypeBridge
       </span>
     </div>
@@ -181,12 +184,11 @@ function BridgeNode() {
 }
 
 function DesktopFrame() {
-  // Chatbot 输入框 — 粘贴 + 提交效果（非打字机）：
-  // 一段时间空白 → 文字「整段瞬间出现」（粘贴）→ 短停 → 「整段瞬间消失」+ 气泡上浮（发送）。
-  // 光标始终紧贴文字尾部（flex 自然布局，无 margin）。
+  // 简化：单一居中输入框，文字「整段瞬间出现 / 整段瞬间消失」循环（粘贴 + 提交）。
+  // 光标紧贴文字尾。无 chat 气泡 / chat 历史 / 多余 mock 内容。
   return (
     <div
-      className="animate-float-soft absolute right-3 top-1/2 w-[200px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 shadow-[0_12px_48px_-12px_var(--accent-glow)] backdrop-blur-sm sm:right-4 sm:w-[230px]"
+      className="animate-float-soft absolute right-3 top-1/2 w-[200px] -translate-y-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]/85 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.4)] backdrop-blur-sm sm:right-4 sm:w-[230px]"
       aria-hidden
     >
       <div className="flex items-center gap-1.5 border-b border-[var(--border)]/60 px-3 py-2">
@@ -198,22 +200,10 @@ function DesktopFrame() {
         </span>
       </div>
 
-      <div className="relative h-[68px] px-3 pt-3">
-        <div
-          className="absolute right-3 top-3"
-          style={{ animation: "hero-bubble-submit 5s ease-out infinite" }}
-        >
-          <div className="rounded-lg rounded-tr-sm bg-accent-gradient px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_12px_-4px_var(--accent-glow)]">
-            手机即键盘
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-[var(--border)]/40 px-3 py-2">
-        <div className="flex h-7 items-center overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-2)]/80 px-2">
-          {/* 文字整段瞬间出现（粘贴） / 整段瞬间清空（发送） */}
+      <div className="flex h-[92px] items-center px-4">
+        <div className="flex h-9 w-full items-center overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-2)]/80 px-3">
           <span
-            className="overflow-hidden whitespace-nowrap font-mono text-[11px] leading-none text-[var(--text)]"
+            className="overflow-hidden whitespace-nowrap font-mono text-[12px] leading-none text-[var(--text)]"
             style={{
               animation: "hero-input-paste 5s steps(1, end) infinite",
               width: 0,
@@ -221,8 +211,7 @@ function DesktopFrame() {
           >
             手机即键盘
           </span>
-          {/* 光标紧贴文字尾，无 margin */}
-          <span className="animate-blink-cursor inline-block h-3 w-[2px] rounded-full bg-[var(--accent)]" />
+          <span className="animate-blink-cursor inline-block h-3.5 w-[2px] rounded-full bg-[var(--accent)]" />
         </div>
       </div>
     </div>
@@ -247,7 +236,7 @@ function ConceptBanner() {
       {/* SVG overlay — arcs from each badge into the bridge, plus bridge→desktop line.
           viewBox 0 0 100 100 + preserveAspectRatio="none" means each unit = 1% of banner box.
           Two-layer pattern per path:
-            (a) thin static "track" stroke (subtle, theme-adaptive)
+            (a) thin static "track" — solid accent at low opacity
             (b) bright "sweep" overlay with strokeDasharray + animated strokeDashoffset
                 creating a single short bright pulse traveling along the path. */}
       <svg
@@ -257,23 +246,6 @@ function ConceptBanner() {
         aria-hidden
       >
         <defs>
-          <linearGradient id="hero-arc" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18" />
-            <stop offset="60%" stopColor="var(--accent)" stopOpacity="0.42" />
-            <stop offset="100%" stopColor="var(--accent-2)" stopOpacity="0.55" />
-          </linearGradient>
-          <marker
-            id="hero-arrow"
-            viewBox="0 0 10 10"
-            refX="10"
-            refY="5"
-            markerWidth="3"
-            markerHeight="3"
-            orient="auto-start-reverse"
-          >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-2)" />
-          </marker>
-
           {CHANNELS.map((ch, i) => {
             const y = badgeTopPct(i, total);
             const d = `M ${BADGE_LEFT_PCT} ${y} C ${BRIDGE_X_PCT - 18} ${y}, ${BRIDGE_X_PCT - 8} ${BRIDGE_Y_PCT}, ${BRIDGE_X_PCT - 2} ${BRIDGE_Y_PCT}`;
@@ -285,12 +257,13 @@ function ConceptBanner() {
           />
         </defs>
 
-        {/* (a) Static thin track lines */}
+        {/* (a) Static thin track lines — solid accent, very low opacity */}
         {CHANNELS.map((_, i) => (
           <use
             key={`track-${i}`}
             href={`#hero-arc-path-${i}`}
-            stroke="url(#hero-arc)"
+            stroke="var(--accent)"
+            strokeOpacity="0.18"
             strokeWidth="1"
             fill="none"
             vectorEffect="non-scaling-stroke"
@@ -298,39 +271,70 @@ function ConceptBanner() {
         ))}
         <use
           href="#hero-output-path"
-          stroke="url(#hero-arc)"
+          stroke="var(--accent)"
+          strokeOpacity="0.22"
           strokeWidth="1"
           fill="none"
           vectorEffect="non-scaling-stroke"
-          markerEnd="url(#hero-arrow)"
         />
 
-        {/* (b) Sweep overlay — short bright dash travels along the same path */}
+        {/* (b) Sweep overlay — short soft pulse traveling along the path.
+            Halo: thicker stroke at low opacity, Core: thinner at moderate opacity.
+            Both share the same animated dashOffset for a glowy "single light pulse" feel. */}
         {CHANNELS.map((_, i) => (
+          <g key={`sweep-${i}`}>
+            <use
+              href={`#hero-arc-path-${i}`}
+              stroke="var(--accent)"
+              strokeOpacity="0.18"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeDasharray="3 75"
+              fill="none"
+              vectorEffect="non-scaling-stroke"
+              style={{
+                animation: `hero-sweep 6s ${i * 0.8}s linear infinite`,
+              }}
+            />
+            <use
+              href={`#hero-arc-path-${i}`}
+              stroke="var(--accent)"
+              strokeOpacity="0.55"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeDasharray="3 75"
+              fill="none"
+              vectorEffect="non-scaling-stroke"
+              style={{
+                animation: `hero-sweep 6s ${i * 0.8}s linear infinite`,
+              }}
+            />
+          </g>
+        ))}
+        <g>
           <use
-            key={`sweep-${i}`}
-            href={`#hero-arc-path-${i}`}
+            href="#hero-output-path"
             stroke="var(--accent)"
-            strokeWidth="1.6"
+            strokeOpacity="0.18"
+            strokeWidth="3.5"
             strokeLinecap="round"
-            strokeDasharray="18 600"
+            strokeDasharray="3 50"
             fill="none"
             vectorEffect="non-scaling-stroke"
-            style={{
-              animation: `hero-sweep 3s ${i * 0.45}s linear infinite`,
-            }}
+            style={{ animation: "hero-sweep-output 5s 2.5s linear infinite" }}
           />
-        ))}
-        <use
-          href="#hero-output-path"
-          stroke="var(--accent-2)"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeDasharray="14 400"
-          fill="none"
-          vectorEffect="non-scaling-stroke"
-          style={{ animation: "hero-sweep-output 2.4s 1.5s linear infinite" }}
-        />
+          <use
+            href="#hero-output-path"
+            stroke="var(--accent)"
+            strokeOpacity="0.55"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeDasharray="3 50"
+            fill="none"
+            vectorEffect="non-scaling-stroke"
+            style={{ animation: "hero-sweep-output 5s 2.5s linear infinite" }}
+          />
+        </g>
       </svg>
 
       {/* Channel badges */}
