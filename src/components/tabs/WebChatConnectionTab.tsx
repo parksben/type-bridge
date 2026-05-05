@@ -7,10 +7,11 @@ import {
   CheckCircle2,
   Info,
   Play,
-  PowerOff,
   RotateCw,
   ScanLine,
+  Square,
   Timer,
+  Unplug,
   Wifi,
 } from "lucide-react";
 import { useAppStore } from "../../store";
@@ -395,7 +396,8 @@ function SessionLiveView({
         手机扫码后输入此 6 位 OTP 完成绑定。验证码每 60 秒自动轮换，已绑定的手机不受影响。
       </p>
 
-      {/* 停止按钮 */}
+      {/* 停止 / 断开会话按钮：isBound（已有手机绑定）→ 断开会话 + Unplug；
+          否则 server 起着但还没人扫码 → 停止（server）+ Square */}
       <button
         onClick={onStop}
         disabled={busy}
@@ -406,8 +408,17 @@ function SessionLiveView({
           color: busy ? "var(--subtle)" : "var(--text)",
         }}
       >
-        <PowerOff size={13} strokeWidth={1.75} />
-        {isBound ? "停止会话" : "停止"}
+        {isBound ? (
+          <>
+            <Unplug size={13} strokeWidth={1.75} />
+            断开会话
+          </>
+        ) : (
+          <>
+            <Square size={13} strokeWidth={1.75} />
+            停止
+          </>
+        )}
       </button>
     </>
   );
@@ -480,10 +491,21 @@ function ErrorView({
 /// OTP 容器底部的装饰性倒计时进度条。高度 3px，吸底 + overflow-hidden 让它
 /// 看起来是容器的一部分。宽度从 100% 平滑缩到 0%，归零时上层自动调
 /// rotate_webchat_otp，expires_at 更新后跳回 100% 重新开始；最后 10s 变红。
+///
+/// 关键：OTP 轮换瞬间 remainingSecs 从 ~0 跳到 SESSION_TTL_SECS。直接用 CSS
+/// transition 会让条子从近 0% 平滑长到 100%，看起来像新一轮"反向加载"。这里
+/// 用 ref 记上一次值，检测到向上跳跃时**这一帧禁掉 transition**，让条子瞬间
+/// 跳满，下一帧再恢复 1s linear 的正常缩短动画。
 function OtpProgressUnderline({ remainingSecs }: { remainingSecs: number }) {
   const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
   const lowTime = remainingSecs <= 10;
   const fillColor = lowTime ? "var(--error)" : "var(--accent)";
+
+  const prevRef = useRef(remainingSecs);
+  const isJumpUp = remainingSecs > prevRef.current;
+  useEffect(() => {
+    prevRef.current = remainingSecs;
+  });
 
   return (
     <div
@@ -495,7 +517,7 @@ function OtpProgressUnderline({ remainingSecs }: { remainingSecs: number }) {
         style={{
           width: `${percent}%`,
           background: fillColor,
-          transition: "width 1s linear, background 200ms",
+          transition: isJumpUp ? "none" : "width 1s linear, background 200ms",
         }}
       />
     </div>

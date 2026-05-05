@@ -4,7 +4,6 @@ import {
   Check,
   Copy,
   ExternalLink,
-  Image as ImageIcon,
   ShieldAlert,
   Trash2,
 } from "lucide-react";
@@ -89,7 +88,7 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
       )}
 
       {imageUrl && (
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2">
           <img
             src={imageUrl}
             alt="attachment"
@@ -99,10 +98,6 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
-          <span className="flex items-center gap-1 text-[11px] text-subtle font-mono">
-            <ImageIcon size={11} strokeWidth={1.75} />
-            image
-          </span>
         </div>
       )}
 
