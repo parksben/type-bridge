@@ -257,7 +257,12 @@ function ClearConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className="tb-btn-primary px-4 py-1.5"
+            className="px-4 py-1.5 text-[13px] rounded-md font-medium"
+            style={{
+              background: "var(--accent)",
+              color: "var(--accent-fg)",
+              border: "1px solid var(--accent)",
+            }}
           >
             {okLabel}
           </button>
