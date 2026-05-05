@@ -61,8 +61,8 @@ export function TopNav() {
         setActive(top.target.id);
       },
       {
-        rootMargin: "-72px 0px -60% 0px",
-        threshold: [0, 0.25, 0.5],
+        rootMargin: "-64px 0px -40% 0px",
+        threshold: [0, 0.15, 0.5],
       }
     );
 

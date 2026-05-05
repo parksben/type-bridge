@@ -247,7 +247,7 @@ export function Flow() {
   };
 
   return (
-    <section id="flow" className="relative px-6 py-24 md:py-32">
+    <section id="flow" className="relative flex min-h-screen flex-col items-center justify-center px-6 py-24 md:py-32">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-14 text-center">

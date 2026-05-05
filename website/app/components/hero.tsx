@@ -245,7 +245,9 @@ function MonitorNode() {
 /** ConceptBanner — phone → bridge → monitor, flex layout for symmetry */
 function ConceptBanner() {
   return (
-    <div className="noise relative mt-10 h-[340px] w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm sm:h-[360px] md:h-[380px]">
+    <div className="noise relative mt-10 w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm"
+      style={{ height: "min(380px, calc(100vh - 420px))", minHeight: "240px" }}
+    >
       {/* Grid pattern */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.04]"
@@ -310,7 +312,7 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-6 pb-20 pt-24 md:pt-32"
+      className="relative flex h-screen flex-col items-center justify-center px-6 pb-4 pt-16 md:pt-20"
     >
       {/* Ambient glow — large orb behind content */}
       <div
@@ -324,19 +326,19 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto max-w-4xl text-center">
         {/* Giant brand mark + wordmark */}
-        <div className="animate-fade-up animate-breathe-glow mx-auto mb-10 inline-flex items-center">
+        <div className="animate-fade-up animate-breathe-glow mx-auto mb-6 inline-flex items-center sm:mb-10">
           <BrandWordmark
             gradient
             gradientId="hero-brand-grad"
-            markSize={72}
-            gapClassName="gap-3 md:gap-4"
-            textClassName="text-[44px] md:text-[60px] font-extrabold tracking-tight"
+            markSize={56}
+            gapClassName="gap-2 md:gap-4"
+            textClassName="text-[36px] md:text-[60px] font-extrabold tracking-tight"
           />
         </div>
 
         {/* Main headline */}
         <h1
-          className="animate-fade-up text-[40px] font-extrabold leading-[1.05] tracking-tight md:text-[72px] lg:text-[84px]"
+          className="animate-fade-up text-[32px] font-extrabold leading-[1.05] tracking-tight sm:text-[40px] md:text-[72px] lg:text-[84px]"
           style={{ animationDelay: "180ms" }}
         >
           {t("hero.headline")}
@@ -344,7 +346,7 @@ export function Hero() {
 
         {/* Subtitle */}
         <p
-          className="animate-fade-up mx-auto mt-6 max-w-2xl text-balance text-base text-[var(--muted)] md:text-lg"
+          className="animate-fade-up mx-auto mt-4 max-w-2xl text-balance text-sm text-[var(--muted)] sm:mt-6 sm:text-base md:text-lg"
           style={{ animationDelay: "260ms" }}
         >
           {renderMarked(t("hero.subtitle"), "hero-sub")}
@@ -352,12 +354,12 @@ export function Hero() {
 
         {/* CTA */}
         <div
-          className="animate-fade-up mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          className="animate-fade-up mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row sm:mt-10 sm:gap-3"
           style={{ animationDelay: "340ms" }}
         >
           <a
             href="#download"
-            className="group inline-flex items-center gap-2 rounded-xl bg-accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_32px_-8px_var(--accent-glow)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            className="group inline-flex items-center gap-2 rounded-xl bg-accent-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_32px_-8px_var(--accent-glow)] transition-transform hover:scale-[1.02] active:scale-[0.98] sm:px-6 sm:py-3"
           >
             <Download size={16} strokeWidth={2.2} />
             {t("hero.ctaDownload")}
@@ -378,7 +380,7 @@ export function Hero() {
 
       {/* Concept banner */}
       <div
-        className="animate-fade-up relative z-10 mx-auto mt-12 w-full max-w-5xl"
+        className="animate-fade-up relative z-10 mx-auto mt-8 w-full max-w-5xl sm:mt-12"
         style={{ animationDelay: "420ms" }}
       >
         <ConceptBanner />

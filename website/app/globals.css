@@ -70,8 +70,8 @@ html.light-force {
    ───────────────────────────────────────────── */
 
 html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 84px;
+  scroll-behavior: auto;
+  scroll-snap-type: y mandatory;
 }
 
 body {
@@ -81,6 +81,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Each full-screen section snaps */
+section[id] {
+  scroll-snap-align: start;
 }
 
 /* Global ambient background — minimal, just two faint warm orbs.
