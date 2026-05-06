@@ -245,7 +245,7 @@ function MonitorNode() {
 /** ConceptBanner — phone → bridge → monitor, flex layout for symmetry */
 function ConceptBanner() {
   return (
-    <div className="noise relative w-full overflow-hidden rounded-3xl bg-[var(--surface)]/40 backdrop-blur-sm"
+    <div className="relative w-full overflow-hidden"
       style={{ height: "min(320px, calc(100vh - 360px))", minHeight: "250px" }}
     >
       {/* Three nodes + equal-width line separators */}
@@ -281,7 +281,7 @@ function ConceptBanner() {
 
       {/* Vignette */}
       <div
-        className="pointer-events-none absolute inset-0 rounded-3xl"
+        className="pointer-events-none absolute inset-0"
         style={{
           background:
             "radial-gradient(ellipse at center, transparent 50%, var(--bg) 120%)",
