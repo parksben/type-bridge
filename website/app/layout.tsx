@@ -20,6 +20,12 @@ export async function generateMetadata(): Promise<Metadata> {
       ? "Turn your phone into a wireless keyboard for your Mac. Speak, type, or send an image — your phone message appears right where your cursor is. A macOS menu bar app."
       : "把手机变成电脑的无线键盘。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
     metadataBase: new URL("https://typebridge.parksben.xyz"),
+    icons: {
+      icon: "/favicon.ico",
+      shortcut: "/favicon.ico",
+      apple: "/apple-touch-icon.png",
+      other: [{ rel: "icon", url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" }],
+    },
     openGraph: {
       title: en ? "TypeBridge — Phone as Keyboard" : "TypeBridge — 手机即键盘",
       description: en
@@ -58,6 +64,8 @@ export default async function RootLayout({
   return (
     <html lang={en ? "en" : "zh-CN"} suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href="https://fonts.bunny.net" />
         <link
           href="https://fonts.bunny.net/css?family=geist:400,500,600,700,800|geist-mono:400,500&display=swap"
