@@ -43,7 +43,6 @@ export async function GET() {
           ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
           : {}),
       },
-      next: { revalidate: 300 }, // 5 分钟缓存避免 rate limit
     });
 
     if (!releaseRes.ok) {

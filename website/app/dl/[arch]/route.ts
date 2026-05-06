@@ -35,7 +35,6 @@ export async function GET(
           ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
           : {}),
       },
-      next: { revalidate: 300 },
     });
 
     if (!releaseRes.ok) {
