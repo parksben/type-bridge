@@ -73,7 +73,6 @@ export async function GET(
         "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="${asset.name}"`,
         "Content-Length": String(asset.size),
-        "Cache-Control": "public, max-age=86400, immutable",
       },
     });
   } catch (error) {
