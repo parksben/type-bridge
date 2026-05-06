@@ -97,22 +97,6 @@ section[id] {
     var(--bg);
 }
 
-/* Fine dotted noise overlay — performance-cheap */
-.noise::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.02;
-  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
-  background-size: 3px 3px;
-  z-index: 0;
-}
-
-html.light-force .noise::before {
-  opacity: 0.025;
-}
-
 /* ─────────────────────────────────────────────
    Keyframes
    ───────────────────────────────────────────── */
