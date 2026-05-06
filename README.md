@@ -121,9 +121,6 @@ type-bridge/
 ├── wecom-bridge/            企业微信 Go sidecar（WSS + AES 图片解密）
 ├── website/                 官网（Next.js，单页落地页）
 ├── webchat-local/           WebChat 手机端 SPA（Vite + React + TS）
-└── docs/
-    ├── REQUIREMENTS.md      产品规格（做什么 & 为什么）
-    └── TECH_DESIGN.md       架构与技术决策（怎么做）
 ```
 
 ### 开发时注意
@@ -131,7 +128,6 @@ type-bridge/
 - **Go sidecar 需手动重新编译** — `tauri dev` 不会自动编译 Go。修改 `.go` 文件后需手动 `go build` 对应 bridge，然后重启 `tauri dev`。
 - **前端 HMR** 对 `src/` 的修改自动生效。
 - **Rust 修改** 会被 `tauri dev` 自动检测（cargo 增量编译）。
-- 完整的开发流程、架构细节和跨进程事件约定见 [CLAUDE.md](CLAUDE.md)。
 
 ### 构建与打包
 
@@ -147,7 +143,7 @@ npm run tauri build -- --target aarch64-apple-darwin
 
 ### CI/CD
 
-推送 `v*` 标签或通过 GitHub Actions 手动触发 `Release` workflow。详见 [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) 和 [docs/TECH_DESIGN.md](docs/TECH_DESIGN.md)。
+推送 `v*` 标签或通过 GitHub Actions 手动触发 `Release` workflow。
 
 ## 📄 许可证
 

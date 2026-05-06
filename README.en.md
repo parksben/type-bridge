@@ -121,9 +121,6 @@ type-bridge/
 ├── wecom-bridge/            WeCom Go sidecar (WSS + AES image decrypt)
 ├── website/                 Product site (Next.js, single-page landing)
 ├── webchat-local/           WebChat mobile SPA (Vite + React + TS)
-└── docs/
-    ├── REQUIREMENTS.md      Product spec (what & why)
-    └── TECH_DESIGN.md       Architecture & technical decisions (how)
 ```
 
 ### Development notes
@@ -131,7 +128,6 @@ type-bridge/
 - **Go sidecars require manual rebuild** — `tauri dev` does not recompile Go. After editing `.go` files, run `go build` for the affected bridge, then restart `tauri dev`.
 - **Frontend HMR** works automatically for `src/` changes.
 - **Rust changes** are picked up automatically by `tauri dev` (cargo rebuild).
-- For full development workflow, architecture details, and inter-process event contracts, see [CLAUDE.md](CLAUDE.md).
 
 ### Build & Package
 
@@ -147,7 +143,7 @@ Output: `src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
 
 ### CI/CD
 
-Push a `v*` tag or trigger the `Release` workflow manually via GitHub Actions. See [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) and [docs/TECH_DESIGN.md](docs/TECH_DESIGN.md).
+Push a `v*` tag or trigger the `Release` workflow manually via GitHub Actions.
 
 ## 📄 License
 
