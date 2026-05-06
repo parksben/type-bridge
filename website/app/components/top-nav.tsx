@@ -109,7 +109,7 @@ export function TopNav() {
           className="group inline-flex items-center"
           aria-label={t("nav.brandAria")}
         >
-          <BrandWordmark markSize={20} gradient />
+          <BrandWordmark markSize={26} gradient />
           <span className="ml-3 hidden text-xs font-medium text-[var(--subtle)] transition-colors group-hover:text-[var(--muted)] md:inline">
             {t("nav.tagline")}
           </span>
