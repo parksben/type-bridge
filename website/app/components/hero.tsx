@@ -235,8 +235,8 @@ function MonitorNode() {
       </div>
       {/* Monitor stand */}
       <div className="flex flex-col items-center">
-        <div className="h-3 w-6 rounded-b-none border-x border-b border-[var(--border)]/60 bg-[var(--surface)]/70" />
-        <div className="h-1.5 w-10 rounded-b-sm border border-[var(--border)]/60 bg-[var(--surface)]/70" />
+        <div className="h-3 w-6 rounded-b-none border-x border-b border-[var(--border)] bg-[var(--surface)]" />
+        <div className="h-1.5 w-10 rounded-b-sm border border-[var(--border)] bg-[var(--surface)]" />
       </div>
     </div>
   );
@@ -245,19 +245,9 @@ function MonitorNode() {
 /** ConceptBanner — phone → bridge → monitor, flex layout for symmetry */
 function ConceptBanner() {
   return (
-    <div className="noise relative w-full overflow-hidden rounded-3xl border border-[var(--border)] bg-[var(--surface)]/40 backdrop-blur-sm"
+    <div className="noise relative w-full overflow-hidden rounded-3xl bg-[var(--surface)]/40 backdrop-blur-sm"
       style={{ height: "min(320px, calc(100vh - 360px))", minHeight: "250px" }}
     >
-      {/* Grid pattern */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-
       {/* Three nodes + equal-width line separators */}
       <div className="relative flex h-full items-center px-[6%] md:px-[8%]">
         <PhoneNode />
