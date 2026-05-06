@@ -1,9 +1,8 @@
-<p align="center">
+<div align="center">
   <img src="src/assets/icons/typebridge.png" alt="TypeBridge Logo" width="96" height="96" />
-</p>
-
-<h1 align="center">TypeBridge</h1>
-<p align="center"><strong>Speak on your phone. Type on your Mac.</strong></p>
+<h1>TypeBridge</h1>
+<p><strong>Speak on your phone. Type on your Mac.</strong></p>
+</div>
 
 <p align="center">
   <a href="https://typebridge.parksben.xyz"><strong>Website</strong></a>
@@ -45,12 +44,17 @@ TypeBridge keeps the handoff small: **speak or type on your phone, and the text 
 ## 🔄 How it works
 
 ```mermaid
-flowchart LR
-  phone["Phone<br/>IM / WebChat / voice-to-text"] --> bridge["TypeBridge<br/>single queue"]
-  bridge --> paste["Clipboard + Cmd+V<br/>text and images"]
-  paste --> target["Mac<br/>focused input field"]
-  target -. "optional Enter" .-> done["send / run"]
-  bridge -. "status feedback" .-> phone
+sequenceDiagram
+    participant Phone
+    participant TB as TypeBridge
+    participant Mac as Mac App
+    Phone->>TB: Send message
+    TB->>TB: Enqueue (FIFO)
+    TB->>Mac: Clipboard + Cmd+V
+    Mac-->>TB: Status feedback
+    opt Auto-submit
+        TB->>Mac: Enter / custom key
+    end
 ```
 
 1. Connect a channel: WebChat, Feishu, DingTalk, or WeCom.
