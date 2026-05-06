@@ -41,37 +41,37 @@
           font-size="11" font-weight="500" fill="#8d6754" letter-spacing="1.8">手机即键盘</text>
   </g>
 
-  <text x="380" y="146" text-anchor="middle"
+  <text x="380" y="106" text-anchor="middle"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
         font-size="24" font-weight="700" fill="#2d170e">
     拖拽安装 TypeBridge
   </text>
-  <text x="380" y="176" text-anchor="middle"
+  <text x="380" y="136" text-anchor="middle"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
         font-size="13" font-weight="500" fill="#8a6350">
     将左侧应用拖到右侧 Applications 文件夹，即可完成安装
   </text>
 
   <g filter="url(#softShadow)">
-    <rect x="94" y="204" width="224" height="188" rx="32" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.88"/>
-    <rect x="442" y="204" width="224" height="188" rx="32" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.88"/>
+    <rect x="94" y="164" width="224" height="188" rx="32" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.88"/>
+    <rect x="442" y="164" width="224" height="188" rx="32" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.88"/>
   </g>
 
-  <circle cx="206" cy="278" r="72" fill="#ffffff" fill-opacity="0.38" stroke="#f2682b" stroke-opacity="0.09"/>
-  <circle cx="554" cy="278" r="72" fill="#ffffff" fill-opacity="0.38" stroke="#f2682b" stroke-opacity="0.09"/>
+  <circle cx="206" cy="238" r="72" fill="#ffffff" fill-opacity="0.38" stroke="#f2682b" stroke-opacity="0.09"/>
+  <circle cx="554" cy="238" r="72" fill="#ffffff" fill-opacity="0.38" stroke="#f2682b" stroke-opacity="0.09"/>
 
   <g>
-    <path d="M 344 278 L 404 278" stroke="#d9480f" stroke-width="3" stroke-linecap="round"/>
-    <path d="M 392 267 L 407 278 L 392 289" stroke="#d9480f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <circle cx="374" cy="278" r="26" fill="#f2682b" fill-opacity="0.08"/>
+    <path d="M 344 238 L 404 238" stroke="#d9480f" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 392 227 L 407 238 L 392 249" stroke="#d9480f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="374" cy="238" r="26" fill="#f2682b" fill-opacity="0.08"/>
   </g>
 
-  <text x="380" y="424" text-anchor="middle"
+  <text x="380" y="384" text-anchor="middle"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
         font-size="10.5" font-weight="600" fill="#8f5a43">
     本应用目前未经过 Apple 公证，首次启动前请进入系统设置 &gt; 隐私与安全性
   </text>
-  <text x="380" y="443" text-anchor="middle"
+  <text x="380" y="403" text-anchor="middle"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
         font-size="10.5" font-weight="600" fill="#8f5a43">
     找到被拦截的 TypeBridge，点击「仍要打开」

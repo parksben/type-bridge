@@ -92,6 +92,21 @@ jobs:
       - name: Build Tauri (x86_64)
         run: npm run tauri build -- --target x86_64-apple-darwin
 
+      - name: Inject DMG resources (.DS_Store)
+        run: |
+          set -euxo pipefail
+          DSSTORE="src-tauri/icons/dmg-dsstore"
+          for arch in aarch64 x86_64; do
+            DMG_DIR="src-tauri/target/${arch}-apple-darwin/release/bundle/dmg"
+            DMG=$(ls "$DMG_DIR"/*.dmg | head -1)
+            echo "Injecting .DS_Store into $DMG..."
+            hdiutil attach -nobrowse -readwrite "$DMG" -mountpoint /tmp/dmg-mnt
+            cp "$DSSTORE" /tmp/dmg-mnt/.DS_Store
+            sync
+            hdiutil detach /tmp/dmg-mnt
+            echo "Done: $DMG"
+          done
+
       - name: Collect artifacts
         run: |
           mkdir -p release-artifacts
