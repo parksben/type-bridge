@@ -111,7 +111,7 @@ jobs:
 
             cp "$DSSTORE" "$STAGING/.DS_Store"
 
-            hdiutil create -srcfolder "$STAGING" -format UDZO -imagekey zlib-level=9 \
+            hdiutil create -srcfolder "$STAGING" -format UDZO -fs HFS+ -imagekey zlib-level=9 \
               -volname TypeBridge -o /tmp/dmg-out.dmg
             mv /tmp/dmg-out.dmg "$DMG"
             rm -rf "$STAGING"

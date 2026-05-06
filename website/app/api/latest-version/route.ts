@@ -75,6 +75,9 @@ export async function GET() {
 
     return NextResponse.json(payload, {
       status: 200,
+      headers: {
+        "Cache-Control": "no-store, must-revalidate",
+      },
     });
   } catch (e) {
     return NextResponse.json(
