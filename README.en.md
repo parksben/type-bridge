@@ -13,65 +13,66 @@
   <a href="README.md">中文</a>
 </p>
 
-<p align="center">
-  <img src="public/readme-hero-concept.png" alt="TypeBridge phone-to-desktop input concept graphic" width="760" />
-</p>
+<p align="center"><strong>Type on your phone. Paste on your Mac. TypeBridge is the bridge in between.</strong></p>
+
+```mermaid
+flowchart LR
+  phone["Phone<br/>IM / WebChat / voice-to-text"] --> bridge["TypeBridge<br/>single queue"]
+  bridge --> paste["Clipboard + Cmd+V<br/>text and images"]
+  paste --> target["Mac<br/>focused input field"]
+  target -. "optional Enter" .-> done["send / run"]
+  bridge -. "status feedback" .-> phone
+```
 
 ---
 
-## What is TypeBridge?
+## 👋 What is TypeBridge?
 
-TypeBridge is a lightweight macOS menu bar app that bridges your phone and your Mac. Send a message from any supported IM app on your phone — TypeBridge instantly types it into whatever input field is focused on your Mac.
+TypeBridge is a macOS menu bar app that sends text from your phone to the place where your Mac cursor is already waiting.
 
-## Why?
+You can send a message through a Feishu, DingTalk, or WeCom bot, or use the built-in WebChat page on your local network. TypeBridge receives it, puts it into one local queue, then pastes it into the focused app with the system clipboard and `Cmd+V`.
 
-Typing on a phone keyboard is slow. Voice dictation on a phone is fast, but transferring dictated text to your desktop is a hassle — copy, paste, email yourself… it breaks your flow.
+## 🧩 Why does this exist?
 
-TypeBridge eliminates that friction. Dictate on your phone. Text appears on your Mac. One seamless motion.
+Phones are often better input devices than we admit. Voice-to-text is fast, and short notes are easy to capture. The annoying part is moving that text back to your desktop without breaking focus.
 
-## Key Features
+TypeBridge keeps the handoff small: **speak or type on your phone, and the text lands where you are working on your Mac.**
+
+## ✨ Highlights
 
 | Feature | |
 |---|---|
-| **4 channels, 1 queue** | Feishu, DingTalk, WeCom & built-in WebChat — all feed into a single FIFO queue. Use whichever is most convenient. |
-| **Universal paste** | Uses system clipboard + simulated `Cmd+V`. Works in *any* macOS app: VS Code, Terminal, Chrome, Obsidian, Slack… |
-| **Auto-submit** | Optionally presses `Enter` (or any custom key) right after pasting — one-shot send into chat apps, terminals, AI assistants. |
-| **Image support** | Images sent from IM are also injected as clipboard images. |
-| **Offline WebChat** | No IM account? No cloud dependency. Built-in local WiFi server — scan a QR, enter OTP, start chatting. Works fully offline. |
-| **Privacy-first** | WebChat runs entirely on your LAN. No messages ever leave your local network. |
+| **Four inputs, one queue** | Feishu, DingTalk, WeCom, and WebChat all feed into the same FIFO queue, so messages are handled one at a time. |
+| **Works by pasting** | TypeBridge writes to the clipboard and simulates `Cmd+V`, which keeps it compatible with common macOS apps such as VS Code, Terminal, browsers, Obsidian, and Slack. |
+| **Optional auto-submit** | After pasting, TypeBridge can press `Enter` or a custom key. Handy for chat windows, terminals, and AI assistants. |
+| **Image support** | Images from IM channels are injected through the clipboard as well. |
+| **Built-in WebChat** | No bot setup needed. Start a local WebChat session, scan the QR code, enter the OTP, and type from your phone. |
+| **Local-first when possible** | WebChat traffic stays on your LAN and does not depend on a cloud relay. |
 
-## How It Works
+## 🔄 How it works
 
-```
-Phone (IM / Browser)          Mac (TypeBridge)            Target App
-    │                              │                          │
-    ├─ Send message ──→  Bot / Socket.IO ──→ Queue ──→  Cmd+V ──→  Focused input
-    │                              │                          │
-    └── ◀── Status feedback ──────┘              ←── (optional Enter)
-```
+1. Connect a channel: WebChat, Feishu, DingTalk, or WeCom.
+2. Send text, voice-to-text, or an image from your phone.
+3. TypeBridge receives the message and appends it to the local queue.
+4. When the message is next, TypeBridge writes it to the clipboard and sends `Cmd+V`.
+5. If auto-submit is enabled, it sends `Enter` or your configured key afterwards.
 
-1. **Connect** a channel: fill in bot credentials for Feishu / DingTalk / WeCom, or start a local WebChat session.
-2. **Send** text (or voice→text) from your phone to that bot.
-3. TypeBridge **receives** the message and queues it.
-4. It **pastes** the content into your Mac's currently focused input field.
-5. **Done.** No copy-paste. No context switch.
-
-## Supported Channels
+## 📡 Supported channels
 
 | Channel | What you need | Best for |
 |---|---|---|
-| **WebChat** | Nothing. Just start session, scan QR. | Quick start, no accounts, offline use |
+| **WebChat** | No account. Start a session and scan the QR code. | Personal use, quick trials, offline workflows |
 | **Feishu** | Self-built app (App ID + Secret) | Teams already using Feishu |
 | **DingTalk** | Internal app (Client ID + Secret, Stream Mode) | Teams already using DingTalk |
 | **WeCom** | Smart Bot (Bot ID + Secret) | Teams already using WeCom |
 
-## System Requirements
+## 🖥️ System requirements
 
 macOS 13+ (Apple Silicon or Intel)
 
-First launch will prompt for **Accessibility** permission — this is required for the simulated paste to work. TypeBridge does not read or monitor your screen content.
+On first launch, TypeBridge asks for **Accessibility** permission. It is used to send `Cmd+V` and optional submit keys to the frontmost app; TypeBridge does not read or monitor your screen.
 
-## For Developers
+## 🛠️ Development
 
 ### Prerequisites
 
@@ -119,7 +120,7 @@ type-bridge/
     └── TECH_DESIGN.md       Architecture & technical decisions (how)
 ```
 
-### Development Notes
+### Development notes
 
 - **Go sidecars require manual rebuild** — `tauri dev` does not recompile Go. After editing `.go` files, run `go build` for the affected bridge, then restart `tauri dev`.
 - **Frontend HMR** works automatically for `src/` changes.
@@ -142,6 +143,6 @@ Output: `src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
 
 Push a `v*` tag or trigger the `Release` workflow manually via GitHub Actions. See [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) and [docs/TECH_DESIGN.md](docs/TECH_DESIGN.md).
 
-## License
+## 📄 License
 
 [MIT](LICENSE)
