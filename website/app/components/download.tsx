@@ -28,7 +28,7 @@ function DownloadCard({
   return (
     <a
       href={`/download/${arch}`}
-      className="group relative flex min-w-0 flex-1 items-center justify-between gap-4 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]/60 p-5 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-[var(--accent)]/40 hover:shadow-[0_16px_40px_-16px_var(--accent-glow)]"
+      className="group relative flex flex-1 items-center justify-between gap-3 overflow-hidden rounded-2xl border-2 border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_12px_32px_-8px_var(--accent-glow)]"
     >
       <span
         aria-hidden
@@ -40,18 +40,18 @@ function DownloadCard({
         }}
       />
       <div className="relative flex items-center gap-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-2)]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-2)]">
           <Mark size={22} />
         </div>
-        <div className="min-w-0">
-          <div className="text-[15px] font-semibold tracking-tight">
+        <div>
+          <div className="text-[15px] font-semibold tracking-tight whitespace-nowrap">
             {label}
           </div>
-          <div className="text-xs text-[var(--muted)]">{chip}</div>
+          <div className="text-xs text-[var(--muted)] whitespace-nowrap">{chip}</div>
         </div>
       </div>
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-gradient text-white transition-transform group-hover:translate-y-0.5">
-        <DownloadIcon size={16} strokeWidth={2.4} />
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-gradient text-white shadow-[0_4px_12px_-2px_var(--accent-glow)] transition-all group-hover:shadow-[0_6px_20px_-2px_var(--accent-glow)] group-hover:scale-110">
+        <DownloadIcon size={18} strokeWidth={2.4} />
       </div>
     </a>
   );
