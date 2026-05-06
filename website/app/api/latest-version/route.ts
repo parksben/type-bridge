@@ -75,9 +75,6 @@ export async function GET() {
 
     return NextResponse.json(payload, {
       status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=300",
-      },
     });
   } catch (e) {
     return NextResponse.json(
