@@ -129,18 +129,24 @@ def main():
     print("\n[4/5] Windows .ico:")
     build_ico(appicon_svg, ICONS_DIR / "icon.ico")
 
-    # 5. DMG background (for installation view, via rsvg-convert)
+    # 5. Retina DMG background (760×480 pt rendered at 2x)
     dmg_bg_svg = PUBLIC_DIR / "dmg-background.svg"
     dmg_bg_png = ICONS_DIR / "dmg-background.png"
     print("\n[5/5] DMG background:")
     if dmg_bg_svg.exists():
         result = subprocess.run(
-            ["rsvg-convert", "-w", "660", "-h", "400", str(dmg_bg_svg), "-o", str(dmg_bg_png)],
+            ["rsvg-convert", "-w", "1520", "-h", "960", str(dmg_bg_svg), "-o", str(dmg_bg_png)],
             capture_output=True,
             text=True,
         )
         if result.returncode == 0:
-            print("  ✓ dmg-background.png (660×400)")
+            subprocess.run(
+                ["sips", "-s", "dpiWidth", "144", "-s", "dpiHeight", "144", str(dmg_bg_png)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            print("  ✓ dmg-background.png (1520×960 @2x for 760×480 pt)")
         else:
             print(f"  ✗ rsvg-convert failed: {result.stderr.strip()}")
     else:

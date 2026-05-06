@@ -1,78 +1,80 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480" fill="none">
   <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1a1a20"/>
-      <stop offset="100%" stop-color="#121216"/>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fffaf5"/>
+      <stop offset="48%" stop-color="#f7efe7"/>
+      <stop offset="100%" stop-color="#efe2d7"/>
     </linearGradient>
-    <linearGradient id="accentLine" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.06"/>
-      <stop offset="50%" stop-color="#f2682b" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#f2682b" stop-opacity="0.06"/>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f2682b"/>
+      <stop offset="100%" stop-color="#d9480f"/>
     </linearGradient>
-    <linearGradient id="arrowGrad" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.4"/>
-      <stop offset="50%" stop-color="#f2682b" stop-opacity="0.65"/>
-      <stop offset="100%" stop-color="#f2682b" stop-opacity="0.4"/>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.58"/>
     </linearGradient>
-    <radialGradient id="glowLeft" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.08"/>
+    <radialGradient id="warmGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.20"/>
       <stop offset="100%" stop-color="#f2682b" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="glowRight" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stop-color="#f2682b" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#f2682b" stop-opacity="0"/>
-    </radialGradient>
+    <filter id="softShadow" x="-20%" y="-25%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#6f2f14" flood-opacity="0.12"/>
+    </filter>
   </defs>
 
-  <!-- Dark background -->
-  <rect width="660" height="400" fill="url(#bgGrad)"/>
+  <rect width="760" height="480" fill="url(#bgGrad)"/>
+  <circle cx="94" cy="74" r="190" fill="url(#warmGlow)"/>
+  <circle cx="714" cy="410" r="210" fill="#ffffff" fill-opacity="0.38"/>
 
-  <!-- Subtle grid pattern -->
-  <g opacity="0.03">
-    <line x1="0" y1="100" x2="660" y2="100" stroke="#ffffff" stroke-width="0.5"/>
-    <line x1="0" y1="200" x2="660" y2="200" stroke="#ffffff" stroke-width="0.5"/>
-    <line x1="0" y1="300" x2="660" y2="300" stroke="#ffffff" stroke-width="0.5"/>
-    <line x1="165" y1="0" x2="165" y2="400" stroke="#ffffff" stroke-width="0.5"/>
-    <line x1="330" y1="0" x2="330" y2="400" stroke="#ffffff" stroke-width="0.5"/>
-    <line x1="495" y1="0" x2="495" y2="400" stroke="#ffffff" stroke-width="0.5"/>
+  <path d="M 52 122 C 150 84 224 88 302 124 C 382 161 466 162 582 102 C 628 78 678 70 724 84"
+        stroke="#d9480f" stroke-opacity="0.10" stroke-width="18" stroke-linecap="round"/>
+  <path d="M 34 376 C 142 332 236 334 334 376 C 430 418 536 423 708 354"
+        stroke="#f2682b" stroke-opacity="0.07" stroke-width="24" stroke-linecap="round"/>
+
+  <g transform="translate(54 54)">
+    <rect x="0" y="0" width="42" height="42" rx="12" fill="url(#brandGrad)"/>
+    <path d="M 11 30 L 11 15 A 10 10 0 0 1 31 15 L 31 30"
+          stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <text x="58" y="16" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
+          font-size="17" font-weight="700" fill="#27140c">TypeBridge</text>
+    <text x="58" y="38" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
+          font-size="11" font-weight="500" fill="#8d6754" letter-spacing="1.8">手机即键盘</text>
   </g>
 
-  <!-- Top decorative accent line -->
-  <rect x="0" y="0" width="660" height="1" fill="url(#accentLine)"/>
+  <text x="380" y="146" text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
+        font-size="24" font-weight="700" fill="#2d170e">
+    拖拽安装 TypeBridge
+  </text>
+  <text x="380" y="176" text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
+        font-size="13" font-weight="500" fill="#8a6350">
+    将左侧应用拖到右侧 Applications 文件夹，即可完成安装
+  </text>
 
-  <!-- Left placement glow (app icon ~180,170 → visual center ~244,234) -->
-  <circle cx="244" cy="234" r="100" fill="url(#glowLeft)"/>
-
-  <!-- Right placement glow (Applications folder ~480,170 → visual center ~544,234) -->
-  <circle cx="544" cy="234" r="100" fill="url(#glowRight)"/>
-
-  <!-- Subtle curved path behind the arrow -->
-  <path d="M 360 234 Q 420 190 480 234 Q 530 270 580 234"
-        stroke="#f2682b" stroke-opacity="0.08" stroke-width="1.5"
-        stroke-dasharray="6 4" fill="none"/>
-
-  <!-- Arrow from left to right -->
-  <g opacity="0.55">
-    <line x1="370" y1="234" x2="500" y2="234" stroke="url(#arrowGrad)" stroke-width="2.5" stroke-linecap="round"/>
-    <polygon points="510,234 500,229 500,239" fill="#f2682b" fill-opacity="0.6"/>
+  <g filter="url(#softShadow)">
+    <rect x="94" y="204" width="224" height="188" rx="32" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.88"/>
+    <rect x="442" y="204" width="224" height="188" rx="32" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.88"/>
   </g>
 
-  <!-- Accent dots -->
-  <circle cx="400" cy="228" r="1.2" fill="#f2682b" fill-opacity="0.18"/>
-  <circle cx="440" cy="242" r="0.8" fill="#f2682b" fill-opacity="0.12"/>
-  <circle cx="470" cy="228" r="1.2" fill="#f2682b" fill-opacity="0.18"/>
+  <circle cx="206" cy="278" r="72" fill="#ffffff" fill-opacity="0.38" stroke="#f2682b" stroke-opacity="0.09"/>
+  <circle cx="554" cy="278" r="72" fill="#ffffff" fill-opacity="0.38" stroke="#f2682b" stroke-opacity="0.09"/>
 
-  <!-- Drop shadows for icon placements -->
-  <ellipse cx="244" cy="320" rx="70" ry="8" fill="#000000" fill-opacity="0.16"/>
-  <ellipse cx="544" cy="320" rx="70" ry="8" fill="#000000" fill-opacity="0.16"/>
+  <g>
+    <path d="M 344 278 L 404 278" stroke="#d9480f" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 392 267 L 407 278 L 392 289" stroke="#d9480f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="374" cy="278" r="26" fill="#f2682b" fill-opacity="0.08"/>
+  </g>
 
-  <!-- Subtle brand watermark -->
-  <text x="330" y="388" text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        font-size="9" font-weight="400"
-        fill="#ffffff" fill-opacity="0.06"
-        letter-spacing="3">
-    TYPEBRIDGE
+  <text x="380" y="424" text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
+        font-size="10.5" font-weight="600" fill="#8f5a43">
+    本应用目前未经过 Apple 公证，首次启动前请进入系统设置 &gt; 隐私与安全性
+  </text>
+  <text x="380" y="443" text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"
+        font-size="10.5" font-weight="600" fill="#8f5a43">
+    找到被拦截的 TypeBridge，点击「仍要打开」
   </text>
 </svg>
 
