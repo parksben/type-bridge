@@ -28,6 +28,11 @@ src-tauri/binaries/wecom-bridge-*-apple-darwin
 
 # Editor directories and files
 .vscode/*
+
+# 敏感文件 / 目录（不对普通用户公开）
+.claude/
+docs/
+CLAUDE.md
 !.vscode/extensions.json
 .venv/
 .venv-*/
