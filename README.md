@@ -13,16 +13,9 @@
   <a href="README.en.md">English</a>
 </p>
 
-<p align="center"><strong>手机输入，Mac 落字。中间只需要一座桥。</strong></p>
-
-```mermaid
-flowchart LR
-  phone["手机端<br/>IM / WebChat / 语音转文字"] --> bridge["TypeBridge<br/>统一队列"]
-  bridge --> paste["剪贴板 + Cmd+V<br/>文本和图片都可注入"]
-  paste --> target["Mac 当前应用<br/>聚焦的输入框"]
-  target -. "可选自动 Enter" .-> done["发送 / 执行"]
-  bridge -. "状态反馈" .-> phone
-```
+<p align="center">
+  <img src="public/readme-hero-concept.png" alt="TypeBridge 手机到桌面输入概念图" width="760" />
+</p>
 
 ---
 
@@ -50,6 +43,15 @@ TypeBridge 做的事很简单：**手机上说完或打完，Mac 上的光标位
 | **局域网优先** | WebChat 不走云端，消息只在同一局域网内流转。 |
 
 ## 🔄 工作流程
+
+```mermaid
+flowchart LR
+  phone["手机端<br/>IM / WebChat / 语音转文字"] --> bridge["TypeBridge<br/>统一队列"]
+  bridge --> paste["剪贴板 + Cmd+V<br/>文本和图片都可注入"]
+  paste --> target["Mac 当前应用<br/>聚焦的输入框"]
+  target -. "可选自动 Enter" .-> done["发送 / 执行"]
+  bridge -. "状态反馈" .-> phone
+```
 
 1. 在桌面端连接一个渠道：WebChat、飞书、钉钉或企业微信。
 2. 在手机上发文字、语音转文字，或发送图片。

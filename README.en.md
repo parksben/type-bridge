@@ -13,16 +13,9 @@
   <a href="README.md">中文</a>
 </p>
 
-<p align="center"><strong>Type on your phone. Paste on your Mac. TypeBridge is the bridge in between.</strong></p>
-
-```mermaid
-flowchart LR
-  phone["Phone<br/>IM / WebChat / voice-to-text"] --> bridge["TypeBridge<br/>single queue"]
-  bridge --> paste["Clipboard + Cmd+V<br/>text and images"]
-  paste --> target["Mac<br/>focused input field"]
-  target -. "optional Enter" .-> done["send / run"]
-  bridge -. "status feedback" .-> phone
-```
+<p align="center">
+  <img src="public/readme-hero-concept.png" alt="TypeBridge phone-to-desktop input concept graphic" width="760" />
+</p>
 
 ---
 
@@ -50,6 +43,15 @@ TypeBridge keeps the handoff small: **speak or type on your phone, and the text 
 | **Local-first when possible** | WebChat traffic stays on your LAN and does not depend on a cloud relay. |
 
 ## 🔄 How it works
+
+```mermaid
+flowchart LR
+  phone["Phone<br/>IM / WebChat / voice-to-text"] --> bridge["TypeBridge<br/>single queue"]
+  bridge --> paste["Clipboard + Cmd+V<br/>text and images"]
+  paste --> target["Mac<br/>focused input field"]
+  target -. "optional Enter" .-> done["send / run"]
+  bridge -. "status feedback" .-> phone
+```
 
 1. Connect a channel: WebChat, Feishu, DingTalk, or WeCom.
 2. Send text, voice-to-text, or an image from your phone.
