@@ -45,24 +45,24 @@ export function TopNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Scroll-spy: deterministic algorithm based on section positions relative to viewport.
-  // Avoid IntersectionObserver because scroll-snap animations cause flickering thresholds.
+  // Scroll-spy: find the section whose top is closest to the nav bottom.
+  // Uses scroll event + rAF throttle; IntersectionObserver is unreliable with scroll-snap.
   useEffect(() => {
     const ids = NAV_ITEMS.map((i) => i.id);
     const NAV_HEIGHT = 64;
     let rafId = 0;
 
     function computeActive() {
-      const viewMiddle = window.innerHeight / 2 + NAV_HEIGHT / 2;
       let bestId = ids[0];
       let bestDist = Infinity;
 
       for (const id of ids) {
         const el = document.getElementById(id);
         if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        // Distance from section top to viewport middle (offset by nav)
-        const dist = Math.abs(rect.top - viewMiddle);
+        const top = el.getBoundingClientRect().top;
+        // How far is this section's top from the nav bottom line?
+        // Prefer the section whose top is just crossing (or nearest to) the nav boundary.
+        const dist = Math.abs(top - NAV_HEIGHT);
         if (dist < bestDist) {
           bestDist = dist;
           bestId = id;
@@ -87,8 +87,9 @@ export function TopNav() {
     };
   }, [NAV_ITEMS]);
 
-  // Close mobile menu when clicking a link
-  function handleNavClick() {
+  // Click nav item — immediately update active (don't wait for scroll event)
+  function handleNavClick(id: string) {
+    setActive(id);
     setOpen(false);
   }
 
@@ -104,6 +105,7 @@ export function TopNav() {
         {/* Brand — click returns to hero */}
         <a
           href="#hero"
+          onClick={() => handleNavClick("hero")}
           className="group inline-flex items-center"
           aria-label={t("nav.brandAria")}
         >
@@ -121,6 +123,7 @@ export function TopNav() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
+                onClick={() => handleNavClick(item.id)}
                 className="relative rounded-md px-3 py-2 text-sm font-medium transition-colors"
               >
                 <span
@@ -174,7 +177,7 @@ export function TopNav() {
                 <a
                   key={item.id}
                   href={`#${item.id}`}
-                  onClick={handleNavClick}
+                  onClick={() => handleNavClick(item.id)}
                   className={`rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-[var(--surface)] text-[var(--text)]"
