@@ -28,7 +28,7 @@ function DownloadCard({
   return (
     <a
       href={`/download/${arch}`}
-      className="group relative flex flex-1 items-center gap-3 overflow-hidden rounded-2xl border-2 border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_12px_32px_-8px_var(--accent-glow)]"
+      className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border-2 border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_12px_32px_-8px_var(--accent-glow)]"
     >
       <span
         aria-hidden
@@ -81,7 +81,7 @@ export function Download() {
           {t("download.heading")}
         </h2>
 
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+        <div className="mt-10 inline-grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DownloadCard
             arch="arm64"
             label={t("download.appleSilicon")}
