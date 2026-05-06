@@ -27,7 +27,7 @@ function DownloadCard({
 }) {
   return (
     <a
-      href={`/download/${arch}`}
+      href={`/dl/${arch}`}
       className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border-2 border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_12px_32px_-8px_var(--accent-glow)]"
     >
       <span
