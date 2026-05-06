@@ -188,9 +188,9 @@ const DICT = {
 
   // ── Download ───────────────────────────────
   "download.heading": { zh: "下载 & 安装", en: "Download & Install" },
-  "download.appleSilicon": { zh: "Apple Silicon", en: "Apple Silicon" },
+  "download.appleSilicon": { zh: "苹果芯片", en: "Apple Silicon" },
   "download.appleSiliconChip": { zh: "M1 / M2 / M3 / M4", en: "M1 / M2 / M3 / M4" },
-  "download.intel": { zh: "Intel", en: "Intel" },
+  "download.intel": { zh: "英特尔芯片", en: "Intel" },
   "download.intelChip": { zh: "x86_64", en: "x86_64" },
   "download.gatekeeperTitle": { zh: "首次安装须知", en: "First-Time Install Note" },
   "download.gatekeeperDesc": {
