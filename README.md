@@ -1,9 +1,8 @@
-<p align="center">
+<div align="center">
   <img src="src/assets/icons/typebridge.png" alt="TypeBridge Logo" width="96" height="96" />
-</p>
-
-<h1 align="center">TypeBridge</h1>
-<p align="center"><strong>手机上说话 · 电脑上输入</strong></p>
+<h1>TypeBridge</h1>
+<p><strong>手机上说话 · 电脑上输入</strong></p>
+</div>
 
 <p align="center">
   <a href="https://typebridge.parksben.xyz"><strong>官网</strong></a>
@@ -45,12 +44,17 @@ TypeBridge 做的事很简单：**手机上说完或打完，Mac 上的光标位
 ## 🔄 工作流程
 
 ```mermaid
-flowchart LR
-  phone["手机端<br/>IM / WebChat / 语音转文字"] --> bridge["TypeBridge<br/>统一队列"]
-  bridge --> paste["剪贴板 + Cmd+V<br/>文本和图片都可注入"]
-  paste --> target["Mac 当前应用<br/>聚焦的输入框"]
-  target -. "可选自动 Enter" .-> done["发送 / 执行"]
-  bridge -. "状态反馈" .-> phone
+sequenceDiagram
+    participant Phone as 手机
+    participant TB as TypeBridge
+    participant Mac as Mac 应用
+    Phone->>TB: 发送消息
+    TB->>TB: 写入 FIFO 队列
+    TB->>Mac: 剪贴板 + Cmd+V
+    Mac-->>TB: 状态反馈
+    opt 自动提交
+        TB->>Mac: Enter / 自定义按键
+    end
 ```
 
 1. 在桌面端连接一个渠道：WebChat、飞书、钉钉或企业微信。
