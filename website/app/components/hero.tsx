@@ -320,7 +320,7 @@ export function Hero() {
           <BrandWordmark
             gradient
             gradientId="hero-brand-grad"
-            markSize={44}
+            markClassName="w-[28px] h-[28px] sm:w-[36px] sm:h-[36px] md:w-[60px] md:h-[60px]"
             gapClassName="gap-2 md:gap-4"
             textClassName="text-[28px] sm:text-[36px] md:text-[60px] font-extrabold tracking-tight"
           />

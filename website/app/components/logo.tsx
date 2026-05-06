@@ -34,12 +34,14 @@ export function BrandWordmark({
   className = "",
   showMark = true,
   markSize = 22,
+  markClassName = "",
   textClassName = "text-[17px] font-bold tracking-tight",
   gapClassName = "gap-2",
 }: {
   className?: string;
   showMark?: boolean;
   markSize?: number;
+  markClassName?: string;
   textClassName?: string;
   gapClassName?: string;
   // Legacy props kept for API compat — no-ops now.
@@ -50,7 +52,16 @@ export function BrandWordmark({
     <span
       className={`inline-flex items-center ${gapClassName} select-none ${className}`}
     >
-      {showMark && <BrandMark size={markSize} />}
+      {showMark && (markClassName ? (
+        <img
+          src="/typebridge.png"
+          alt=""
+          className={`${markClassName} object-contain inline-block`}
+          aria-hidden
+        />
+      ) : (
+        <BrandMark size={markSize} />
+      ))}
       <span className={`${textClassName} text-[var(--text)]`}>TypeBridge</span>
     </span>
   );
