@@ -28,7 +28,7 @@ function DownloadCard({
   return (
     <a
       href={`/download/${arch}`}
-      className="group relative flex flex-1 items-center justify-between gap-3 overflow-hidden rounded-2xl border-2 border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_12px_32px_-8px_var(--accent-glow)]"
+      className="group relative flex flex-1 items-center gap-3 overflow-hidden rounded-2xl border-2 border-[var(--border-strong)] bg-[var(--surface)] p-5 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.12)] transition-all hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_12px_32px_-8px_var(--accent-glow)]"
     >
       <span
         aria-hidden
@@ -39,7 +39,7 @@ function DownloadCard({
           filter: "blur(8px)",
         }}
       />
-      <div className="relative flex items-center gap-4">
+      <div className="relative flex flex-1 items-center gap-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-2)]">
           <Mark size={22} />
         </div>
