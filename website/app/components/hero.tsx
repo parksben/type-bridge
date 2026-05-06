@@ -344,19 +344,19 @@ export function Hero() {
 
         {/* CTA */}
         <div
-          className="animate-fade-up mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row sm:mt-8 sm:gap-3"
+          className="animate-fade-up mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row sm:mt-8 sm:gap-3"
           style={{ animationDelay: "340ms" }}
         >
           <a
             href="#download"
-            className="group inline-flex items-center gap-2 rounded-xl bg-accent-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_32px_-8px_var(--accent-glow)] transition-transform hover:scale-[1.02] active:scale-[0.98] sm:px-6 sm:py-3"
+            className="group inline-flex w-44 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-accent-gradient px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_var(--accent-glow)] transition-all hover:shadow-[0_12px_32px_-4px_var(--accent-glow)] hover:scale-[1.02] active:scale-[0.98]"
           >
             <Download size={16} strokeWidth={2.2} />
             {t("hero.ctaDownload")}
           </a>
           <a
             href="#flow"
-            className="group inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/60 px-6 py-3 text-sm font-medium text-[var(--text)] backdrop-blur-sm transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface)]"
+            className="group inline-flex w-44 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-5 py-3 text-sm font-medium text-[var(--text)] shadow-sm transition-all hover:border-[var(--accent)] hover:text-[var(--accent)] hover:shadow-md active:scale-[0.98]"
           >
             {t("hero.ctaHowto")}
             <ArrowDown
