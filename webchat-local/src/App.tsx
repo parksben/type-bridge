@@ -150,7 +150,7 @@ export default function App() {
   if (state.kind === "chat") {
     // 保险起见 clientRef 必然存在
     if (!clientRef.current) {
-      return <ErrorScreen reason="unknown" detail="client not initialized" />;
+      return <ErrorScreen reason="unknown" detail={t("app.socketNotReady")} />;
     }
     return <ChatPage client={clientRef.current} />;
   }

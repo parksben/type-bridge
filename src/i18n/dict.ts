@@ -58,7 +58,7 @@ export const ZH = {
 
   feishu: {
     bannerConnectedTitle: "飞书机器人已就绪。",
-    bannerConnectedBody: "打开飞书 App 找到你配置的机器人，发消息即自动注入到桌面当前焦点输入框。",
+    bannerConnectedBody: "打开飞书 App 找到你配置的机器人，发消息即自动写入桌面当前焦点输入框。",
     voiceHintPrefix: "TypeBridge 不接收语音消息。想用语音输入，请使用",
     voiceHintApp: "飞书",
     voiceHintSuffix: "的「语音转文字」功能或手机输入法的「语音输入」功能。",
@@ -83,7 +83,7 @@ export const ZH = {
 
   dingtalk: {
     bannerConnectedTitle: "钉钉机器人已就绪。",
-    bannerConnectedBody: "打开钉钉 App 找到你配置的机器人，发消息即自动注入到桌面当前焦点输入框。",
+    bannerConnectedBody: "打开钉钉 App 找到你配置的机器人，发消息即自动写入桌面当前焦点输入框。",
     voiceHintPrefix: "TypeBridge 不接收语音消息。想用语音输入，请使用",
     voiceHintApp: "钉钉",
     voiceHintSuffix: "的「语音转文字」功能或手机输入法的「语音输入」功能。",
@@ -106,7 +106,7 @@ export const ZH = {
 
   wecom: {
     bannerConnectedTitle: "企微机器人已就绪。",
-    bannerConnectedBody: "打开企业微信 App 找到你配置的机器人，发消息即自动注入到桌面当前焦点输入框。",
+    bannerConnectedBody: "打开企业微信 App 找到你配置的机器人，发消息即自动写入桌面当前焦点输入框。",
     voiceHintPrefix: "TypeBridge 不接收语音消息。想用语音输入，请使用",
     voiceHintApp: "企业微信",
     voiceHintSuffix: "的「语音转文字」功能或手机输入法的「语音输入」功能。",
@@ -376,7 +376,7 @@ export const EN: Dict = {
 
   feishu: {
     bannerConnectedTitle: "Feishu bot is ready.",
-    bannerConnectedBody: "Open Feishu, find the bot you configured, and any message you send will be auto-injected into the focused input on your desktop.",
+    bannerConnectedBody: "Open Feishu, find the bot you configured, and any message you send will be auto-typed into the focused input on your desktop.",
     voiceHintPrefix: "TypeBridge does not accept voice messages. To use voice input, use ",
     voiceHintApp: "Feishu",
     voiceHintSuffix: "'s built-in speech-to-text, or your phone keyboard's voice input.",
@@ -401,7 +401,7 @@ export const EN: Dict = {
 
   dingtalk: {
     bannerConnectedTitle: "DingTalk bot is ready.",
-    bannerConnectedBody: "Open DingTalk, find the bot you configured, and any message you send will be auto-injected into the focused input on your desktop.",
+    bannerConnectedBody: "Open DingTalk, find the bot you configured, and any message you send will be auto-typed into the focused input on your desktop.",
     voiceHintPrefix: "TypeBridge does not accept voice messages. To use voice input, use ",
     voiceHintApp: "DingTalk",
     voiceHintSuffix: "'s built-in speech-to-text, or your phone keyboard's voice input.",
@@ -424,7 +424,7 @@ export const EN: Dict = {
 
   wecom: {
     bannerConnectedTitle: "WeCom bot is ready.",
-    bannerConnectedBody: "Open WeCom, find the bot you configured, and any message you send will be auto-injected into the focused input on your desktop.",
+    bannerConnectedBody: "Open WeCom, find the bot you configured, and any message you send will be auto-typed into the focused input on your desktop.",
     voiceHintPrefix: "TypeBridge does not accept voice messages. To use voice input, use ",
     voiceHintApp: "WeCom",
     voiceHintSuffix: "'s built-in speech-to-text, or your phone keyboard's voice input.",
