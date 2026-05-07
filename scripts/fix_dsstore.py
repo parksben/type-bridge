@@ -64,8 +64,12 @@ def generate(mount: str, template: str | None = None) -> None:
         print(f'ERROR: missing background image: {background_image}')
         sys.exit(1)
 
+    # Resolve /tmp symlink to /private/tmp first; otherwise Alias.for_file can
+    # encode odd '../../../tmp/...' paths that Finder may not tolerate.
+    background_real = background_image.resolve()
+
     bwsp = build_bwsp_blob()
-    icvp = build_icvp_blob(Alias.for_file(str(background_image)).to_bytes())
+    icvp = build_icvp_blob(Alias.for_file(str(background_real)).to_bytes())
 
     open_mode = 'r+'
     old_size = 0
