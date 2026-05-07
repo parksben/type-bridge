@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""fix_dsstore.py — Patch DMG .DS_Store with view metadata and icon positions.
+"""fix_dsstore.py — Patch DMG .DS_Store with stable icon positions.
 
 Usage: python3 fix_dsstore.py <mount_point> [template_dsstore]
 
-The previous implementation copied raw plist blobs from a template .DS_Store.
-That template carried a stale background alias pointing at an old temporary DMG,
-so Finder would keep the icon layout but fail to resolve the background image.
+By default this script only writes Iloc entries to maximize Finder stability.
 
-This version generates fresh binary plists and a live Alias record for the
-current mounted background image on every run.
+If TYPEBRIDGE_DMG_ENABLE_BACKGROUND=1 is set, it also writes bwsp/icvp
+background metadata (experimental on newer Finder versions).
 """
 
+import os
 import plistlib
 import sys
 from pathlib import Path
@@ -59,17 +58,7 @@ def build_icvp_blob(background_alias: bytes) -> bytes:
 def generate(mount: str, template: str | None = None) -> None:
     mnt = Path(mount)
     ds_path = mnt / '.DS_Store'
-    background_image = mnt / '.background' / 'dmg-background.png'
-    if not background_image.exists():
-        print(f'ERROR: missing background image: {background_image}')
-        sys.exit(1)
-
-    # Resolve /tmp symlink to /private/tmp first; otherwise Alias.for_file can
-    # encode odd '../../../tmp/...' paths that Finder may not tolerate.
-    background_real = background_image.resolve()
-
-    bwsp = build_bwsp_blob()
-    icvp = build_icvp_blob(Alias.for_file(str(background_real)).to_bytes())
+    enable_background = os.getenv('TYPEBRIDGE_DMG_ENABLE_BACKGROUND') == '1'
 
     open_mode = 'r+'
     old_size = 0
@@ -81,8 +70,20 @@ def generate(mount: str, template: str | None = None) -> None:
         open_mode = 'w+'
 
     with DSStore.open(str(ds_path), open_mode) as ds:
-        ds['.']['bwsp'] = bwsp
-        ds['.']['icvp'] = icvp
+        if enable_background:
+            background_image = mnt / '.background' / 'dmg-background.png'
+            if background_image.exists():
+                # Resolve /tmp symlink to /private/tmp first; otherwise
+                # Alias.for_file can encode odd '../../../tmp/...' paths.
+                background_real = background_image.resolve()
+                bwsp = build_bwsp_blob()
+                icvp = build_icvp_blob(
+                    Alias.for_file(str(background_real)).to_bytes()
+                )
+                ds['.']['bwsp'] = bwsp
+                ds['.']['icvp'] = icvp
+            else:
+                print(f'WARN: background image missing, skip bwsp/icvp: {background_image}')
         ds['TypeBridge.app']['Iloc'] = (206, 238)
         ds['Applications']['Iloc'] = (554, 238)
 
