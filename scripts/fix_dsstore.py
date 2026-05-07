@@ -5,8 +5,10 @@ Usage: python3 fix_dsstore.py <mount_point> [template_dsstore]
 
 By default this script only writes Iloc entries to maximize Finder stability.
 
-If TYPEBRIDGE_DMG_ENABLE_BACKGROUND=1 is set, it also writes bwsp/icvp
-background metadata (experimental on newer Finder versions).
+Set TYPEBRIDGE_DMG_VIEW_MODE to control style:
+- iloc: only icon positions (default, safest)
+- lite: icon view/window styling without background alias
+- background: full styling with background alias (experimental)
 """
 
 import os
@@ -32,33 +34,33 @@ def build_bwsp_blob() -> bytes:
     )
 
 
-def build_icvp_blob(background_alias: bytes) -> bytes:
-    return plistlib.dumps(
-        {
-            'arrangeBy': 'none',
-            'backgroundColorBlue': 1.0,
-            'backgroundColorGreen': 1.0,
-            'backgroundColorRed': 1.0,
-            'backgroundImageAlias': background_alias,
-            'backgroundType': 2,
-            'gridOffsetX': 0.0,
-            'gridOffsetY': 0.0,
-            'gridSpacing': 100.0,
-            'iconSize': 128.0,
-            'labelOnBottom': True,
-            'showIconPreview': True,
-            'showItemInfo': False,
-            'textSize': 16.0,
-            'viewOptionsVersion': 1,
-        },
-        fmt=plistlib.FMT_BINARY,
-    )
+def build_icvp_blob(background_alias: bytes | None = None) -> bytes:
+    data = {
+        'arrangeBy': 'none',
+        'backgroundColorBlue': 1.0,
+        'backgroundColorGreen': 1.0,
+        'backgroundColorRed': 1.0,
+        'backgroundType': 0,
+        'gridOffsetX': 0.0,
+        'gridOffsetY': 0.0,
+        'gridSpacing': 116.0,
+        'iconSize': 136.0,
+        'labelOnBottom': True,
+        'showIconPreview': True,
+        'showItemInfo': False,
+        'textSize': 15.0,
+        'viewOptionsVersion': 1,
+    }
+    if background_alias is not None:
+        data['backgroundType'] = 2
+        data['backgroundImageAlias'] = background_alias
+    return plistlib.dumps(data, fmt=plistlib.FMT_BINARY)
 
 
 def generate(mount: str, template: str | None = None) -> None:
     mnt = Path(mount)
     ds_path = mnt / '.DS_Store'
-    enable_background = os.getenv('TYPEBRIDGE_DMG_ENABLE_BACKGROUND') == '1'
+    view_mode = os.getenv('TYPEBRIDGE_DMG_VIEW_MODE', 'iloc').strip().lower()
 
     open_mode = 'r+'
     old_size = 0
@@ -70,17 +72,21 @@ def generate(mount: str, template: str | None = None) -> None:
         open_mode = 'w+'
 
     with DSStore.open(str(ds_path), open_mode) as ds:
-        if enable_background:
+        if view_mode in ('lite', 'background'):
+            bwsp = build_bwsp_blob()
+            icvp = build_icvp_blob()
+            ds['.']['bwsp'] = bwsp
+            ds['.']['icvp'] = icvp
+
+        if view_mode == 'background':
             background_image = mnt / '.background' / 'dmg-background.png'
             if background_image.exists():
                 # Resolve /tmp symlink to /private/tmp first; otherwise
                 # Alias.for_file can encode odd '../../../tmp/...' paths.
                 background_real = background_image.resolve()
-                bwsp = build_bwsp_blob()
                 icvp = build_icvp_blob(
                     Alias.for_file(str(background_real)).to_bytes()
                 )
-                ds['.']['bwsp'] = bwsp
                 ds['.']['icvp'] = icvp
             else:
                 print(f'WARN: background image missing, skip bwsp/icvp: {background_image}')
