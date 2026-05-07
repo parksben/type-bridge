@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@netlify/blobs";
 
-// 下载 Route Handler：代理转发 GitHub Release asset 到客户端。
+// 下载 Route Handler：读取 Netlify Blobs 中的发布元数据 → 302 重定向到 GitHub CDN。
 //
-// v0.9+ 优化：不再每次调 GitHub Releases API 查 asset URL。
-// 改为从 Netlify Blobs 读取 `latest-release` → 拿到对应架构的
-// browser_download_url + size → fetch GitHub CDN 流式透传，
-// 响应头带 Content-Length（浏览器可显示下载进度条）。
-// Blobs 读取极快，函数冷启动到开始传输的延迟大幅降低。
+// 为什么用重定向而非流式代理：
+// 流式代理（ReadableStream body）会触发 chunked transfer encoding，
+// 导致 Content-Length 被 HTTP 层丢弃，浏览器无法显示总文件大小/进度条。
+// 重定向后浏览器直接连 GitHub CDN，Content-Length 由 GitHub 正常返回。
 
 const BLOB_KEY = "latest-release";
 
@@ -49,11 +48,6 @@ export async function GET(
         ? data.download_urls.aarch64
         : data.download_urls.x64;
 
-    const size =
-      arch === "arm64"
-        ? data.download_urls.aarch64_size
-        : data.download_urls.x64_size;
-
     if (!url) {
       return new NextResponse(
         `No ${arch} .dmg found (tag: ${data.tag_name ?? "unknown"})`,
@@ -61,35 +55,11 @@ export async function GET(
       );
     }
 
-    // ── 从 GitHub CDN 流式拉取 ──
-    const assetRes = await fetch(url, {
-      headers: { Accept: "application/octet-stream" },
-    });
-
-    if (!assetRes.ok || !assetRes.body) {
-      return new NextResponse("Failed to fetch download asset", {
-        status: 502,
-      });
-    }
-
-    const filename = url.split("/").pop() ?? `TypeBridge_${arch}.dmg`;
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store, must-revalidate",
-    };
-
-    if (size) {
-      headers["Content-Length"] = String(size);
-    } else if (assetRes.headers.get("content-length")) {
-      headers["Content-Length"] = assetRes.headers.get("content-length")!;
-    }
-
-    return new NextResponse(assetRes.body, {
-      status: 200,
-      headers,
-    });
+    // ── 302 重定向到 GitHub CDN，让浏览器直接下载 ──
+    // 原因：流式代理（ReadableStream body）会触发 chunked transfer encoding，
+    // 导致 Content-Length 在传输层被丢弃，浏览器无法显示总文件大小/进度条。
+    // 重定向后浏览器直接连 GitHub CDN，Content-Length 由 GitHub 正常返回。
+    return NextResponse.redirect(url, { status: 302 });
   } catch (error) {
     console.error("Download proxy error:", error);
     return new NextResponse("Internal server error", { status: 500 });
