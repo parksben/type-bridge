@@ -6,13 +6,12 @@ import {
   FileText,
   Mic,
   Sparkles,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useT, renderMarked } from "../lib/i18n";
 
-type SceneId = "voiceToText" | "aiCoding" | "docProduction" | "crossDevice" | "teamCollab";
+type SceneId = "voiceToText" | "aiCoding" | "docProduction" | "crossDevice";
 
 type SceneDef = {
   id: SceneId;
@@ -75,18 +74,6 @@ const SCENE_DEFS: SceneDef[] = [
     detailsKey: "scenes.crossDevice.details",
     tipKey: "scenes.crossDevice.tip",
     themeKey: "scenes.crossDevice.theme",
-  },
-  {
-    id: "teamCollab",
-    icon: Users,
-    tint: "rgba(16, 185, 129, 0.18)",
-    tabLabelKey: "scenes.teamCollab.title",
-    titleKey: "scenes.teamCollab.title",
-    subtitleKey: "scenes.teamCollab.subtitle",
-    descriptionKey: "scenes.teamCollab.description",
-    detailsKey: "scenes.teamCollab.details",
-    tipKey: "scenes.teamCollab.tip",
-    themeKey: "scenes.teamCollab.theme",
   },
 ];
 
