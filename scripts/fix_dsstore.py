@@ -1,52 +1,71 @@
 #!/usr/bin/env python3
-"""fix_dsstore.py — Patch DMG .DS_Store with safe view blobs and icon positions.
+"""fix_dsstore.py — Patch DMG .DS_Store with view metadata and icon positions.
 
-Usage: python3 fix_dsstore.py <mount_point> <template_dsstore>
+Usage: python3 fix_dsstore.py <mount_point> [template_dsstore]
 
-This script only injects three safe pieces of metadata:
-- bwsp: window/view state blob
-- icvp: icon view/background blob
-- Iloc: icon positions
+The previous implementation copied raw plist blobs from a template .DS_Store.
+That template carried a stale background alias pointing at an old temporary DMG,
+so Finder would keep the icon layout but fail to resolve the background image.
 
-It avoids copying any malformed bookmark-based records from the template.
+This version generates fresh binary plists and a live Alias record for the
+current mounted background image on every run.
 """
 
-import struct
+import plistlib
 import sys
 from pathlib import Path
 
 from ds_store import DSStore
+from mac_alias import Alias
 
 
-def find_bplist_blob(data: bytes, struct_type: bytes) -> bytes | None:
-    dlen = len(data)
-    pos = 0
-    while pos < dlen - 8:
-        if data[pos:pos + 4] == struct_type:
-            after = pos + 4
-            if after + 12 > dlen:
-                pos += 1
-                continue
-            if data[after:after + 4] == b'blob':
-                blob_len = struct.unpack('>I', data[after + 4:after + 8])[0]
-                blob_start = after + 8
-                if blob_start + blob_len <= dlen:
-                    blob = data[blob_start:blob_start + blob_len]
-                    if blob[:6] == b'bplist':
-                        return blob
-        pos += 1
-    return None
+def build_bwsp_blob() -> bytes:
+    return plistlib.dumps(
+        {
+            'ContainerShowSidebar': False,
+            'ShowSidebar': False,
+            'ShowStatusBar': False,
+            'ShowTabView': False,
+            'ShowToolbar': False,
+            'WindowBounds': '{{10, 360}, {760, 480}}',
+        },
+        fmt=plistlib.FMT_BINARY,
+    )
 
 
-def generate(mount: str, template: str) -> None:
+def build_icvp_blob(background_alias: bytes) -> bytes:
+    return plistlib.dumps(
+        {
+            'arrangeBy': 'none',
+            'backgroundColorBlue': 1.0,
+            'backgroundColorGreen': 1.0,
+            'backgroundColorRed': 1.0,
+            'backgroundImageAlias': background_alias,
+            'backgroundType': 2,
+            'gridOffsetX': 0.0,
+            'gridOffsetY': 0.0,
+            'gridSpacing': 100.0,
+            'iconSize': 128.0,
+            'labelOnBottom': True,
+            'showIconPreview': True,
+            'showItemInfo': False,
+            'textSize': 16.0,
+            'viewOptionsVersion': 1,
+        },
+        fmt=plistlib.FMT_BINARY,
+    )
+
+
+def generate(mount: str, template: str | None = None) -> None:
     mnt = Path(mount)
     ds_path = mnt / '.DS_Store'
-    template_data = Path(template).read_bytes()
-    bwsp = find_bplist_blob(template_data, b'bwsp')
-    icvp = find_bplist_blob(template_data, b'icvp')
-    if not bwsp or not icvp:
-        print('ERROR: failed to extract bwsp/icvp from template')
+    background_image = mnt / '.background' / 'dmg-background.png'
+    if not background_image.exists():
+        print(f'ERROR: missing background image: {background_image}')
         sys.exit(1)
+
+    bwsp = build_bwsp_blob()
+    icvp = build_icvp_blob(Alias.for_file(str(background_image)).to_bytes())
 
     open_mode = 'r+'
     old_size = 0
@@ -57,7 +76,6 @@ def generate(mount: str, template: str) -> None:
         # Create a minimal file so Iloc entries can be written deterministically.
         open_mode = 'w+'
 
-    # Only inject safe view blobs and icon positions.
     with DSStore.open(str(ds_path), open_mode) as ds:
         ds['.']['bwsp'] = bwsp
         ds['.']['icvp'] = icvp
@@ -69,7 +87,7 @@ def generate(mount: str, template: str) -> None:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <mount> <template>", file=sys.stderr)
+    if len(sys.argv) not in (2, 3):
+        print(f"Usage: {sys.argv[0]} <mount> [template]", file=sys.stderr)
         sys.exit(1)
-    generate(sys.argv[1], sys.argv[2])
+    generate(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)
