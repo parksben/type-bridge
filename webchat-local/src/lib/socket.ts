@@ -9,6 +9,7 @@
 
 import { io, Socket } from "socket.io-client";
 import { simplifyDeviceLabel } from "./ua";
+import { t } from "@/i18n";
 
 export type HelloAck =
   | { ok: true; userToken: string; sessionId: string }
@@ -73,7 +74,7 @@ export class WebChatClient {
         .timeout(8000)
         .emit("hello", payload, (err: unknown, ack: HelloAck) => {
           if (err) {
-            resolve({ ok: false, reason: "握手超时，请检查 WiFi 是否仍在同一网络" });
+            resolve({ ok: false, reason: t("socket.helloTimeout") });
             return;
           }
           if (ack && ack.ok) {
@@ -87,7 +88,7 @@ export class WebChatClient {
   /** 发文本消息。需要已完成 hello */
   async sendText(clientMessageId: string, text: string): Promise<MessageAck> {
     if (!this.userToken) {
-      return { success: false, reason: "尚未完成握手" };
+      return { success: false, reason: t("socket.notHandshaked") };
     }
     return new Promise((resolve) => {
       this.socket
@@ -101,10 +102,10 @@ export class WebChatClient {
           },
           (err: unknown, ack: MessageAck) => {
             if (err) {
-              resolve({ success: false, reason: "网络超时" });
+              resolve({ success: false, reason: t("socket.timeout") });
               return;
             }
-            resolve(ack ?? { success: false, reason: "server 无响应" });
+            resolve(ack ?? { success: false, reason: t("socket.serverNoResponse") });
           },
         );
     });
@@ -117,7 +118,7 @@ export class WebChatClient {
     mime: string,
   ): Promise<MessageAck> {
     if (!this.userToken) {
-      return { success: false, reason: "尚未完成握手" };
+      return { success: false, reason: t("socket.notHandshaked") };
     }
     return new Promise((resolve) => {
       this.socket
@@ -132,10 +133,10 @@ export class WebChatClient {
           },
           (err: unknown, ack: MessageAck) => {
             if (err) {
-              resolve({ success: false, reason: "网络超时" });
+              resolve({ success: false, reason: t("socket.timeout") });
               return;
             }
-            resolve(ack ?? { success: false, reason: "server 无响应" });
+            resolve(ack ?? { success: false, reason: t("socket.serverNoResponse") });
           },
         );
     });
@@ -159,7 +160,7 @@ export class WebChatClient {
    */
   async sendKey(clientMessageId: string, code: string): Promise<MessageAck> {
     if (!this.userToken) {
-      return { success: false, reason: "尚未完成握手" };
+      return { success: false, reason: t("socket.notHandshaked") };
     }
     return new Promise((resolve) => {
       this.socket
@@ -173,10 +174,10 @@ export class WebChatClient {
           },
           (err: unknown, ack: MessageAck) => {
             if (err) {
-              resolve({ success: false, reason: "网络超时" });
+              resolve({ success: false, reason: t("socket.timeout") });
               return;
             }
-            resolve(ack ?? { success: false, reason: "server 无响应" });
+            resolve(ack ?? { success: false, reason: t("socket.serverNoResponse") });
           },
         );
     });
