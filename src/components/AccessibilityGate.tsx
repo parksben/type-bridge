@@ -1,50 +1,100 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { ShieldAlert, ExternalLink } from "lucide-react";
+import { ShieldAlert, Loader2 } from "lucide-react";
 import { useI18n } from "../i18n";
 
 /// 辅助功能权限启动模态（blocking gate）
 ///
-/// 未授予时覆盖整个主窗口，用户无法操作其他 tab。
-/// 授予后自动消失（3s 轮询 + Rust 启动广播事件）。
-/// macOS 限制：没有任何 API 能应用自己给自己授权，也没有"同意即开"的
-/// 系统确认框。能做的最短路径就是一键深链到"系统设置 → 隐私与安全性
-/// → 辅助功能"，配合启动时已调过 AXIsProcessTrusted 把 TypeBridge
-/// 自动登记到列表里，用户到了设置页直接勾开关即可。
+/// 首次启动未授权时覆盖主窗口，阻止操作。
+/// • "已授权"按钮：用户手动勾选后点击，主动校验权限，通过即消失
+/// • "跳过"按钮：临时关闭弹层；若后续注入因权限失败，弹层会再次出现
+/// • hint 文案中嵌入"前往系统设置"内联链接，保留一键直达系统设置入口
 export default function AccessibilityGate() {
   const [granted, setGranted] = useState<boolean | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { t } = useI18n();
 
+  // ── 挂载：初始查询 + 事件订阅 ──
   useEffect(() => {
     invoke<boolean>("check_accessibility")
       .then(setGranted)
       .catch(() => setGranted(false));
 
-    const un = listen<{ granted: boolean }>("typebridge://accessibility", (e) => {
+    const un1 = listen<{ granted: boolean }>("typebridge://accessibility", (e) => {
       setGranted(e.payload.granted);
     });
 
+    // 注入失败且原因明确为"辅助功能权限未授予"时，重新弹出 gate
+    const un2 = listen<{ success: boolean; reason?: string }>(
+      "typebridge://inject-result",
+      (e) => {
+        if (!e.payload.success && e.payload.reason?.includes("辅助功能权限未授予")) {
+          setGranted(false);
+          setDismissed(false);
+          setError(null);
+        }
+      },
+    );
+
     return () => {
-      un.then((f) => f());
+      un1.then((f) => f());
+      un2.then((f) => f());
     };
   }, []);
 
+  // ── 3 秒轮询：后台静默检测，授权后自动消失 ──
   useEffect(() => {
     if (granted === true) return;
     const id = setInterval(() => {
       invoke<boolean>("check_accessibility")
-        .then(setGranted)
+        .then((ok) => {
+          setGranted(ok);
+          if (ok) {
+            setError(null);
+            setDismissed(false);
+          }
+        })
         .catch(() => {});
     }, 3000);
     return () => clearInterval(id);
   }, [granted]);
 
-  if (granted !== false) return null;
+  // ── 操作回调 ──
+  const handleGrantedCheck = useCallback(async () => {
+    setChecking(true);
+    setError(null);
+    try {
+      const ok = await invoke<boolean>("check_accessibility");
+      if (ok) {
+        setGranted(true);
+        setDismissed(false);
+      } else {
+        setError(t("accessibility.notGranted"));
+        setGranted(false);
+      }
+    } catch {
+      setError(t("accessibility.notGranted"));
+      setGranted(false);
+    } finally {
+      setChecking(false);
+    }
+  }, [t]);
 
-  async function openPrefs() {
+  const openPrefs = useCallback(async () => {
     await invoke("request_accessibility").catch(() => {});
-  }
+  }, []);
+
+  const handleSkip = useCallback(() => {
+    setDismissed(true);
+    setError(null);
+  }, []);
+
+  // ── 显示判断 ──
+  if (granted === true) return null;
+  if (dismissed) return null;
 
   return (
     <div
@@ -86,20 +136,45 @@ export default function AccessibilityGate() {
             color: "var(--muted)",
           }}
         >
-          {t("accessibility.hintBefore")}
-          <span className="text-text font-medium">{t("accessibility.hintToggle")}</span>{t("accessibility.hintAfter")}
+          {t("accessibility.hint")}
+          <button
+            onClick={openPrefs}
+            className="tb-btn-link-inline mx-0.5"
+          >
+            {t("accessibility.hintLink")}
+          </button>
+          {t("accessibility.hintSuffix")}
         </div>
 
-        <button
-          onClick={openPrefs}
-          className="tb-btn-primary inline-flex items-center justify-center gap-1.5"
-        >
-          {t("accessibility.cta")}
-          <ExternalLink size={14} strokeWidth={2} />
-        </button>
+        {/* 错误反馈 */}
+        {error && (
+          <div
+            className="rounded-md px-3 py-2 text-[12px] leading-relaxed mb-4"
+            style={{
+              background: "rgba(220, 38, 38, 0.08)",
+              color: "var(--error)",
+            }}
+          >
+            {error}
+          </div>
+        )}
 
-        <div className="text-[11px] text-muted text-center mt-3">
-          {t("accessibility.autoDetect")}
+        {/* 按钮行："已授权"（primary）+ "跳过"（ghost） */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleGrantedCheck}
+            disabled={checking}
+            className="tb-btn-primary flex-1 inline-flex items-center justify-center gap-1.5"
+          >
+            {checking && <Loader2 size={14} strokeWidth={2} className="animate-spin" />}
+            {checking ? t("accessibility.checking") : t("accessibility.granted")}
+          </button>
+          <button
+            onClick={handleSkip}
+            className="tb-btn-ghost shrink-0 px-3 py-2.5"
+          >
+            {t("accessibility.skip")}
+          </button>
         </div>
       </div>
     </div>

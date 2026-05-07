@@ -210,6 +210,24 @@ button.tb-btn-ghost:hover {
   background: var(--accent-soft);
 }
 
+button.tb-btn-link-inline {
+  display: inline;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 120ms ease;
+}
+button.tb-btn-link-inline:hover {
+  color: var(--accent-hover);
+}
+
 /* ─── Toggle ─── */
 button.tb-toggle {
   position: relative;
