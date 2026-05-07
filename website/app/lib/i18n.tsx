@@ -22,20 +22,20 @@ const DICT = {
   "nav.scenes": { zh: "适用场景", en: "Use Cases" },
   "nav.flow": { zh: "使用流程", en: "How It Works" },
   "nav.download": { zh: "下载安装", en: "Download" },
-  "nav.tagline": { zh: "手机即键盘", en: "Phone as Keyboard" },
-  "nav.brandAria": { zh: "TypeBridge — 手机即键盘", en: "TypeBridge — Phone as Keyboard" },
+  "nav.tagline": { zh: "聊天即打字", en: "Chat to Type" },
+  "nav.brandAria": { zh: "TypeBridge — 聊天即打字", en: "TypeBridge — Chat to Type" },
   "nav.githubAria": { zh: "查看 TypeBridge GitHub 仓库", en: "View TypeBridge on GitHub" },
 
   // ── Hero ───────────────────────────────────
-  "hero.headline": { zh: "手机即键盘", en: "Phone as Keyboard" },
+  "hero.headline": { zh: "聊天即打字", en: "Chat to Type" },
   "hero.subtitle": {
     zh: "把你的**手机**变成电脑的**无线键盘**。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。",
     en: "Turn your **phone** into a **wireless keyboard** for your Mac. Speak, type, or send an image — your phone message appears right where your cursor is.",
   },
   "hero.ctaDownload": { zh: "免费下载", en: "Download Free" },
   "hero.ctaHowto": { zh: "如何使用", en: "How It Works" },
-  "hero.desktopText": { zh: "手机即键盘", en: "Phone as Keyboard" },
-  "hero.phoneUserMsg": { zh: "手机即键盘", en: "Phone as Keyboard" },
+  "hero.desktopText": { zh: "聊天即打字", en: "Chat to Type" },
+  "hero.phoneUserMsg": { zh: "聊天即打字", en: "Chat to Type" },
   "hero.phoneInputPlaceholder": { zh: "输入消息…", en: "Type a message…" },
 
   // ── Concept banner channel labels ──────────
@@ -46,8 +46,8 @@ const DICT = {
 
   // ── Scenes ─────────────────────────────────
   "scenes.heading": {
-    zh: "每一个场景，都在验证**手机即键盘**",
-    en: "Every use case proves: **Phone as Keyboard**",
+    zh: "每一个场景，都在验证**聊天即打字**",
+    en: "Every use case proves: **Chat to Type**",
   },
   "scenes.subheading": { zh: "5 个典型用法，找到你的那个", en: "Five ways to use it. Pick yours." },
   "scenes.tipLabel": { zh: "提示：", en: "Tip: " },
@@ -216,7 +216,7 @@ const DICT = {
   },
 
   // ── Footer ─────────────────────────────────
-  "footer.tagline": { zh: "手机即键盘", en: "Phone as Keyboard" },
+  "footer.tagline": { zh: "聊天即打字", en: "Chat to Type" },
 } as const;
 
 // ────────────────────────────────────────────
@@ -225,8 +225,8 @@ const DICT = {
 
 const META = {
   title: {
-    zh: "TypeBridge — 手机即键盘",
-    en: "TypeBridge — Phone as Keyboard",
+    zh: "TypeBridge — 聊天即打字",
+    en: "TypeBridge — Chat to Type",
   },
   description: {
     zh: "把手机变成电脑的无线键盘。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
