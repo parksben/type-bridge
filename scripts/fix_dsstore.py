@@ -16,14 +16,17 @@ from ds_store import DSStore
 def generate(mount: str) -> None:
     mnt = Path(mount)
     ds_path = mnt / '.DS_Store'
-    if not ds_path.exists():
-        print(f"ERROR: missing {ds_path}")
-        sys.exit(1)
-
-    old_size = ds_path.stat().st_size
+    open_mode = 'r+'
+    old_size = 0
+    if ds_path.exists():
+        old_size = ds_path.stat().st_size
+    else:
+        # Some DMGs do not contain .DS_Store until Finder opens the window.
+        # Create a minimal file so Iloc entries can be written deterministically.
+        open_mode = 'w+'
 
     # Only patch icon positions to avoid corrupting Finder view metadata.
-    with DSStore.open(str(ds_path), 'r+') as ds:
+    with DSStore.open(str(ds_path), open_mode) as ds:
         ds['TypeBridge.app']['Iloc'] = (206, 238)
         ds['Applications']['Iloc'] = (554, 238)
 
