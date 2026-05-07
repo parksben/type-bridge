@@ -29,7 +29,7 @@ const DICT = {
   // ── Hero ───────────────────────────────────
   "hero.headline": { zh: "聊天即打字", en: "Chat to Type" },
   "hero.subtitle": {
-    zh: "说话、打字、发图片——手机发一条消息，电脑输入框直接落字。",
+    zh: "说话、打字、发图片——手机发一条消息，电脑输入框直接落字",
     en: "Speak, type, or send an image — your phone message appears right where your cursor is.",
   },
   "hero.ctaDownload": { zh: "免费下载", en: "Download Free" },
@@ -49,7 +49,7 @@ const DICT = {
     zh: "每一个场景，都在验证**聊天即打字**",
     en: "Every use case proves: **Chat to Type**",
   },
-  "scenes.subheading": { zh: "5 个典型用法，找到你的那个", en: "Five ways to use it. Pick yours." },
+  "scenes.subheading": { zh: "4 个典型用法，找到你的那个", en: "Four ways to use it. Pick yours." },
   "scenes.tipLabel": { zh: "提示：", en: "Tip: " },
   "scenes.voiceToText.title": { zh: "语音输入，桌面直达", en: "Speak, and It Appears on Your Mac" },
   "scenes.voiceToText.subtitle": { zh: "说一句话，就出现在电脑上", en: "Say it on your phone. See it on your desktop." },
@@ -126,24 +126,24 @@ const DICT = {
   "scenes.crossDevice.title": { zh: "跨设备粘贴，一步到位", en: "Cross-Device Paste, One Step" },
   "scenes.crossDevice.subtitle": { zh: "手机上看到什么，电脑上就有什么", en: "See it on your phone. Have it on your Mac." },
   "scenes.crossDevice.description": {
-    zh: "手机上看到一个网址、一段代码、一个地址——发给 IM 机器人，电脑输入框里直接出现。不用「复制→发给自己→再复制→粘贴」那套老流程。",
-    en: "See a URL, code snippet, or address on your phone — send it to the bot, and it lands right in your Mac's input field. Skip the old \"copy → send to self → copy again → paste\" routine.",
+    zh: "任何 App 里的内容——笔记、消息、表单——发给机器人，直接注入电脑当前输入框。不用登录微信 / QQ，不依赖第三方同步服务。",
+    en: "Content from any app — notes, messages, forms — send it to the bot, and it lands right in your Mac's active input field. No WeChat/QQ login needed. No third-party sync required.",
   },
   "scenes.crossDevice.details": {
     zh: [
-      "手机浏览器看到网址 → 复制发给机器人 → 电脑地址栏直接出现",
-      "手机收到一段 SQL → 转发给机器人 → 终端 / 编辑器里直接到位",
-      "截图发给机器人 → 自动存到电脑剪贴板 → 一键粘贴",
+      "手机上记的会议备忘 → 发给机器人 → 电脑 Notion / 文档里直接落字",
+      "手机表单填写了一半 → 发给机器人 → 电脑浏览器表单栏自动填入",
+      "手机验证码收到 → 发给机器人 → 电脑验证码输入框自动出现",
     ],
     en: [
-      "See a URL in your phone browser → send to bot → appears in your Mac's address bar",
-      "Receive a SQL snippet on your phone → forward to bot → lands in your terminal or editor",
-      "Send a screenshot to the bot → auto-saved to Mac clipboard → paste anywhere",
+      "Meeting notes jotted on your phone → send to bot → lands in Notion or your doc on Mac",
+      "Half-filled form on your phone → send to bot → auto-fills the same form in your Mac browser",
+      "Verification code arrives on your phone → send to bot → appears in the code field on your Mac",
     ],
   },
   "scenes.crossDevice.tip": {
-    zh: "比 Airdrop 快，比微信文件传输更方便。",
-    en: "Faster than AirDrop. Simpler than messaging yourself.",
+    zh: "不依赖任何云同步——只要 IM 机器人能收到，电脑就能落字。",
+    en: "No cloud sync needed — as long as the bot receives it, it lands on your Mac.",
   },
   "scenes.crossDevice.theme": { zh: "手机就是电脑的剪贴板。", en: "Your phone is your Mac's clipboard." },
 
