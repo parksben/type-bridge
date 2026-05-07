@@ -1,5 +1,5 @@
 #!/bin/bash
-# Inject DMG layout (background + icon positions) with sanity checks and automatic rollback
+# Inject DMG icon positions with sanity checks and automatic rollback
 
 set -euxo pipefail
 
@@ -16,7 +16,7 @@ for arch in aarch64 x86_64; do
 
   if hdiutil convert "$DMG" -format UDRW -o /tmp/dmg-rw.dmg \
     && hdiutil attach -nobrowse -readwrite /tmp/dmg-rw.dmg -mountpoint /tmp/dmg-mnt \
-    && /tmp/dsstore-venv/bin/python scripts/fix_dsstore.py /tmp/dmg-mnt src-tauri/icons/dmg-dsstore \
+    && /tmp/dsstore-venv/bin/python scripts/fix_dsstore.py /tmp/dmg-mnt \
     && hdiutil detach /tmp/dmg-mnt -force \
     && hdiutil convert /tmp/dmg-rw.dmg -format UDZO -imagekey zlib-level=9 -o /tmp/dmg-out.dmg; then
     mv /tmp/dmg-out.dmg "$DMG"
