@@ -246,7 +246,7 @@ function ClearConfirmDialog({
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="px-4 py-1.5 text-[13px] rounded-md border"
+            className="flex-1 px-4 py-1.5 text-[13px] rounded-md border text-center"
             style={{
               borderColor: "var(--border-strong)",
               color: "var(--text)",
@@ -257,7 +257,7 @@ function ClearConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-1.5 text-[13px] rounded-md font-medium"
+            className="flex-1 px-4 py-1.5 text-[13px] rounded-md font-medium text-center"
             style={{
               background: "var(--accent)",
               color: "var(--accent-fg)",
