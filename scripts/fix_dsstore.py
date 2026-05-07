@@ -7,12 +7,13 @@ Usage: python3 fix_dsstore.py <mount_point> <template_dsstore>
 import struct
 import sys
 from pathlib import Path
+from typing import Optional
 
 from ds_store import DSStore
 from mac_alias import Bookmark
 
 
-def find_bplist_blob(data: bytes, struct_type: bytes) -> bytes | None:
+def find_bplist_blob(data: bytes, struct_type: bytes) -> Optional[bytes]:
     """Binary-extract a bplist blob for the given 4-char structure type."""
     dlen = len(data)
     pos = 0
