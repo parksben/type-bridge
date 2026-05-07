@@ -95,20 +95,23 @@ jobs:
       - name: Inject DMG resources (.DS_Store)
         run: |
           set -euxo pipefail
+          pip3 install ds_store mac_alias
 
           for arch in aarch64 x86_64; do
             DMG_DIR="src-tauri/target/${arch}-apple-darwin/release/bundle/dmg"
             DMG=$(ls "$DMG_DIR"/*.dmg | head -1)
             echo "Injecting .DS_Store into $DMG..."
 
-            # Convert UDZO -> UDRW, mount readwrite, hide dot-files, copy template, convert back
+            # Convert UDZO → UDRW, mount readwrite, fix DS_Store, convert back
             hdiutil convert "$DMG" -format UDRW -o /tmp/dmg-rw.dmg
             hdiutil attach -nobrowse -readwrite /tmp/dmg-rw.dmg -mountpoint /tmp/dmg-mnt
 
-            # Mark dot-files invisible at filesystem level (survives CNID mismatch with template)
+            # Hide dot-files at filesystem level (survives CNID changes)
             SetFile -a V /tmp/dmg-mnt/.background
             SetFile -a V /tmp/dmg-mnt/.VolumeIcon.icns
-            cp src-tauri/icons/dmg-dsstore /tmp/dmg-mnt/.DS_Store
+
+            # Generate fresh .DS_Store with correct bookmarks for this filesystem
+            python3 scripts/fix_dsstore.py /tmp/dmg-mnt src-tauri/icons/dmg-dsstore
 
             hdiutil detach /tmp/dmg-mnt -force
             hdiutil convert /tmp/dmg-rw.dmg -format UDZO -imagekey zlib-level=9 -o /tmp/dmg-out.dmg
