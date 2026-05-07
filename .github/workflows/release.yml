@@ -95,7 +95,9 @@ jobs:
       - name: Inject DMG resources (.DS_Store)
         run: |
           set -euxo pipefail
-          pip3 install ds_store mac_alias
+          python3 -m venv /tmp/dsstore-venv
+          /tmp/dsstore-venv/bin/python -m pip install --upgrade pip
+          /tmp/dsstore-venv/bin/pip install ds_store mac_alias
 
           for arch in aarch64 x86_64; do
             DMG_DIR="src-tauri/target/${arch}-apple-darwin/release/bundle/dmg"
@@ -111,7 +113,7 @@ jobs:
             SetFile -a V /tmp/dmg-mnt/.VolumeIcon.icns
 
             # Generate fresh .DS_Store with correct bookmarks for this filesystem
-            python3 scripts/fix_dsstore.py /tmp/dmg-mnt src-tauri/icons/dmg-dsstore
+            /tmp/dsstore-venv/bin/python scripts/fix_dsstore.py /tmp/dmg-mnt src-tauri/icons/dmg-dsstore
 
             hdiutil detach /tmp/dmg-mnt -force
             hdiutil convert /tmp/dmg-rw.dmg -format UDZO -imagekey zlib-level=9 -o /tmp/dmg-out.dmg
