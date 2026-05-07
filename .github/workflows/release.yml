@@ -119,3 +119,69 @@ jobs:
             | Intel | `TypeBridge_${{ steps.version.outputs.VERSION }}_x64.dmg` |
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish metadata to website
+        if: ${{ !contains(steps.version.outputs.VERSION, '-') }}
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          TAG="v${VERSION}"
+
+          # 从 release-artifacts 目录中读文件名
+          AARCH64_DMG=$(ls release-artifacts/*_aarch64.dmg 2>/dev/null | head -1)
+          X64_DMG=$(ls release-artifacts/*_x64.dmg 2>/dev/null | head -1)
+
+          AARCH64_SIZE=""
+          X64_SIZE=""
+          if [ -n "$AARCH64_DMG" ]; then
+            AARCH64_SIZE=$(stat -f%z "$AARCH64_DMG" 2>/dev/null || wc -c < "$AARCH64_DMG" | tr -d ' ')
+            AARCH64_NAME=$(basename "$AARCH64_DMG")
+            AARCH64_URL="https://github.com/parksben/type-bridge/releases/download/${TAG}/${AARCH64_NAME}"
+          fi
+
+          if [ -n "$X64_DMG" ]; then
+            X64_SIZE=$(stat -f%z "$X64_DMG" 2>/dev/null || wc -c < "$X64_DMG" | tr -d ' ')
+            X64_NAME=$(basename "$X64_DMG")
+            X64_URL="https://github.com/parksben/type-bridge/releases/download/${TAG}/${X64_NAME}"
+          fi
+
+          echo "Publishing v${VERSION} to website..."
+          echo "  aarch64: ${AARCH64_URL:-N/A} (${AARCH64_SIZE:-N/A} bytes)"
+          echo "  x64:     ${X64_URL:-N/A} (${X64_SIZE:-N/A} bytes)"
+
+          PAYLOAD=$(jq -n \
+            --arg version "$VERSION" \
+            --arg tag_name "$TAG" \
+            --arg name "TypeBridge ${TAG}" \
+            --arg notes "" \
+            --arg published_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg aarch64 "${AARCH64_URL:-}" \
+            --arg aarch64_size "${AARCH64_SIZE:-}" \
+            --arg x64 "${X64_URL:-}" \
+            --arg x64_size "${X64_SIZE:-}" \
+            '{
+              version: $version,
+              tag_name: $tag_name,
+              name: $name,
+              notes: $notes,
+              published_at: $published_at,
+              download_urls: {
+                aarch64: (if $aarch64 != "" then $aarch64 else null end),
+                x64: (if $x64 != "" then $x64 else null end),
+                aarch64_size: (if $aarch64_size != "" then ($aarch64_size | tonumber) else null end),
+                x64_size: (if $x64_size != "" then ($x64_size | tonumber) else null end)
+              }
+            }')
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "https://typebridge.parksben.xyz/api/publish" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.UPLOAD_SECRET }}" \
+            -d "$PAYLOAD")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Publish OK (HTTP $HTTP_CODE)"
+          else
+            echo "Publish failed (HTTP $HTTP_CODE) — continuing (non-blocking)"
+          fi
+        env:
+          UPLOAD_SECRET: ${{ secrets.UPLOAD_SECRET }}

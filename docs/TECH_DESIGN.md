@@ -1628,6 +1628,9 @@ workflow_dispatch(version) / push tag v*
 │11. 收集 .dmg 产物                   │
 │12. 创建/更新 GitHub Release         │
 │13. 上传 .dmg assets 到 Release      │
+│14. POST /api/publish 同步元数据     │
+│    (仅 x.y.z 正式版，含 `-` 的      │
+│     预发布版跳过)                   │
 └─────────────────────────────────────┘
 ```
 
@@ -1705,9 +1708,17 @@ AboutTab (前端)
 - `apply_update`：下载到 `~/Downloads/{filename}.dmg` → `Command::new("open")` 挂载并显示 Finder 卷 → `app.exit(0)`。用户拖入「应用程序」覆盖旧版后手动重新启动
 
 **官网 API** ([website/app/api/latest-version/route.ts](../website/app/api/latest-version/route.ts))：
-- 透传 GitHub `releases/latest` API，5 分钟 ISR 缓存避免触发 GitHub rate limit
-- 在 assets 里按文件名后缀 `_aarch64.dmg` / `_x64.dmg` 找出对应架构的直链
+- **v0.9+ 优化**：不再每次调 GitHub API。CI 完成 Release 后通过 `POST /api/publish`（带 `UPLOAD_SECRET` 鉴权）把 `{version, tag_name, name, notes, published_at, download_urls}` 写到 Netlify Blobs（key: `latest-release`）。`GET /api/latest-version` 直接从 Blobs 读，响应时间从 ~300ms 降到 ~50ms，且不受 GitHub rate limit 限制
+- **publish 安全控制**：`UPLOAD_SECRET` 仅存在 Netlify 环境变量和 GitHub Secrets 中，CI workflow 末步用 `Authorization: Bearer $UPLOAD_SECRET` 调用；外部请求若不带正确 secret 返回 401
+- **测试版本过滤**：版本号非 `x.y.z` 纯 semver（如 `0.2.0-test`、`0.2.0-alpha.1` 等带 `-` 后缀的预发布版本）时，**CI 跳过 publish 步骤**，不推送到官网。仅正式版（`v0.2.0` tag、或 manual dispatch 输入 `0.2.0`）才触发 publish
+- **文件管理**：每次 publish 会覆盖 Blobs 中的 `latest-release`，不保留历史版本（只维护一份最新元数据，旧版 .dmg 本体仍由 GitHub Release 保留）
 - 响应 schema 与 `LatestVersionResp` 严格对齐
+
+**官网下载优化**（[website/app/dl/[arch]/route.ts](../website/app/dl/[arch]/route.ts)）：
+- 仍然代理转发 GitHub Release asset（保留代理是为了国内用户访问 GitHub CDN 的带宽稳定性），但**不再每次调 GitHub API 查 asset URL**
+- 改为从 Blobs 读 `latest-release` → 拿到对应架构的 `browser_download_url` + `size` → `fetch` 流式透传时带上 `Content-Length` 头（浏览器可显示下载进度）
+- Blobs 读取极快，函数冷启动到开始传输的延迟大幅降低
+
 
 **为什么不用 tauri-plugin-updater**：完整 auto-update（download → swap .app → relaunch）需要 ed25519 签名 + CI 集成 + Apple 公证，工作量 ~1-2 天。当前阶段优先打通链路，签名基建放后续版本。
 
@@ -1845,12 +1856,26 @@ TopNav 导航项：
 
 ### 25.5 下载流量转发机制
 
-（保持现有设计）
-- `GET /dl/[arch]` Route Handler → fetch GitHub Release 最新资产 → 流式透传
-- `Cache-Control: no-store, must-revalidate` 确保始终返回最新 .dmg
-- Route Handler 每次请求动态查询 GitHub Releases API
+**v0.9+ 优化**：
+- `GET /dl/[arch]` Route Handler **不再每次调 GitHub Releases API**。改为从 Netlify Blobs 读 `latest-release` → 拿到该架构的 `browser_download_url` + `size` → `fetch` GitHub CDN 流式透传，响应头带 `Content-Length`（浏览器可显示下载进度条）
+- `Cache-Control: no-store, must-revalidate` 保持不变
+- **为什么保留代理而非 302 重定向**：国内用户直接访问 GitHub CDN 可能带宽受限；通过 Netlify 函数作为中转节点，利用 Netlify global edge 网络改善连接质量
+- **为什么仍需调 GitHub**：`.dmg` 本体仍存 GitHub Release（免费、无存储成本），仅把"查 URL"这一步从 GitHub API 换到 Blobs（快 ~10x）
 
-### 25.6 Netlify 配置（netlify.toml）
+### 25.6 Netlify Blobs 配置
+
+- 在 Netlify UI 中启用 Blobs 存储（Site settings → Blobs）
+- Blobs key 设计：
+  - `latest-release`：JSON 元数据，每次 CI publish 覆盖
+- 无需额外配置；`@netlify/blobs` npm 包在函数运行环境自动可用（zero-config）
+
+### 25.7 Netlify 环境变量
+
+| 变量 | 用途 |
+|------|------|
+| `UPLOAD_SECRET` | 保护 `POST /api/publish`；仅 CI 和 Netlify dashboard 持有 |
+
+### 25.8 Netlify 配置（netlify.toml）
 
 ```toml
 [build]
