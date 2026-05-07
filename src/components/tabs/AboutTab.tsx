@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
-import { CheckCircle2, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, RefreshCw, PackageOpen } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import logoUrl from "../../assets/icons/typebridge.png";
 import { useI18n, t as ti18n } from "../../i18n";
 import { localizeRuntime } from "../../i18n/runtime";
+import LanguageSwitcher from "../LanguageSwitcher";
 
 // 与 src-tauri/src/about.rs 的 UpdateCheckResult 对齐
 interface UpdateCheckResult {
@@ -22,17 +24,33 @@ type CheckStatus =
   | { kind: "has-update"; current: string; latest: string; downloadUrl: string }
   | { kind: "error"; message: string };
 
+type DownloadState =
+  | { phase: "idle" }
+  | { phase: "downloading"; downloaded: number; total: number | null; percent: number | null }
+  | { phase: "opening" };
+
+interface DownloadProgressEvent {
+  downloaded: number;
+  total: number | null;
+  percent: number | null;
+}
+
 export default function AboutTab() {
   const [version, setVersion] = useState<string>("…");
   const [status, setStatus] = useState<CheckStatus>({ kind: "idle" });
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [installing, setInstalling] = useState(false);
+  const [downloadState, setDownloadState] = useState<DownloadState>({ phase: "idle" });
+  const unlistenRef = useRef<UnlistenFn | null>(null);
   const { t } = useI18n();
 
   useEffect(() => {
     invoke<string>("get_app_version")
       .then(setVersion)
       .catch(() => setVersion(t("about.versionUnknown")));
+
+    return () => {
+      unlistenRef.current?.();
+    };
   }, []);
 
   async function handleCheck() {
@@ -64,12 +82,30 @@ export default function AboutTab() {
 
   async function handleConfirmInstall() {
     if (status.kind !== "has-update") return;
-    setInstalling(true);
+
+    // 订阅进度事件
+    const unlisten = await listen<DownloadProgressEvent>(
+      "typebridge://download-progress",
+      (event) => {
+        const { downloaded, total, percent } = event.payload;
+        if (percent !== null && percent >= 100) {
+          setDownloadState({ phase: "opening" });
+        } else {
+          setDownloadState({ phase: "downloading", downloaded, total, percent });
+        }
+      },
+    );
+    unlistenRef.current = unlisten;
+
+    setDownloadState({ phase: "downloading", downloaded: 0, total: null, percent: null });
+
     try {
       await invoke("apply_update", { downloadUrl: status.downloadUrl });
-      // app 会在 apply_update 末尾 exit(0)，这里不太可能跑到
+      // apply_update 末尾 app.exit(0)，正常不会执行到此
     } catch (e) {
-      setInstalling(false);
+      unlistenRef.current?.();
+      unlistenRef.current = null;
+      setDownloadState({ phase: "idle" });
       setConfirmOpen(false);
       setStatus({ kind: "error", message: String(e) });
     }
@@ -96,7 +132,7 @@ export default function AboutTab() {
 
         <button
           onClick={handleCheck}
-          disabled={status.kind === "checking" || installing}
+          disabled={status.kind === "checking" || downloadState.phase !== "idle"}
           className="flex items-center justify-center gap-1.5 text-[12px] rounded-md px-3.5 py-1.5 transition-colors disabled:cursor-not-allowed"
           style={{
             background: "var(--surface-2)",
@@ -117,6 +153,11 @@ export default function AboutTab() {
           )}
         </button>
 
+        {/* 语言切换 — 弱化，紧跟检查更新按钮 */}
+        <div className="w-36">
+          <LanguageSwitcher />
+        </div>
+
         <CheckResultLine status={status} onShowConfirm={openConfirm} />
       </div>
 
@@ -124,8 +165,11 @@ export default function AboutTab() {
         <ConfirmInstallDialog
           current={status.current}
           latest={status.latest}
-          installing={installing}
-          onCancel={() => !installing && setConfirmOpen(false)}
+          downloadState={downloadState}
+          onCancel={() => {
+            if (downloadState.phase !== "idle") return;
+            setConfirmOpen(false);
+          }}
           onConfirm={handleConfirmInstall}
         />
       )}
@@ -175,22 +219,26 @@ function CheckResultLine({
 function ConfirmInstallDialog({
   current,
   latest,
-  installing,
+  downloadState,
   onCancel,
   onConfirm,
 }: {
   current: string;
   latest: string;
-  installing: boolean;
+  downloadState: DownloadState;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const isDownloading = downloadState.phase === "downloading";
+  const isOpening = downloadState.phase === "opening";
+  const isBusy = isDownloading || isOpening;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && !installing) onCancel();
+        if (e.target === e.currentTarget && !isBusy) onCancel();
       }}
     >
       <div
@@ -201,51 +249,130 @@ function ConfirmInstallDialog({
           boxShadow: "0 20px 60px rgba(0,0,0,0.30)",
         }}
       >
-        <h2 className="text-[15px] font-semibold text-text mb-2">{ti18n("about.confirmTitle")}</h2>
-        <p className="text-[13px] text-muted leading-relaxed mb-4">
-          {ti18n("about.confirmDetectedPrefix")}<span className="font-mono text-text">v{latest}</span>{ti18n("about.confirmCurrentPrefix")}
-          <span className="font-mono text-text">v{current}</span>{ti18n("about.confirmCurrentSuffix")}
-          <br />
-          {ti18n("about.confirmStepsHead")}
-          <br />
-          1. {ti18n("about.confirmStep1")}<span className="text-text font-medium">{ti18n("about.confirmStep1Bold")}</span>
-          <br />
-          2. {ti18n("about.confirmStep2")}
-          <br />
-          3. {ti18n("about.confirmStep3")}
-          <br />
-          {ti18n("about.confirmFooter")}
-        </p>
-
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            disabled={installing}
-            className="flex-1 px-4 py-1.5 text-[13px] rounded-md border disabled:cursor-not-allowed text-center"
-            style={{
-              borderColor: "var(--border-strong)",
-              color: "var(--text)",
-              background: "var(--surface-2)",
-            }}
-          >
-            {ti18n("about.cancel")}
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={installing}
-            className="flex-1 tb-btn-primary px-4 py-1.5 flex items-center justify-center gap-1.5"
-          >
-            {installing ? (
-              <>
-                <RefreshCw size={13} strokeWidth={1.75} className="animate-spin" />
+        {/* ── 正在打开安装包 ── */}
+        {isOpening ? (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <PackageOpen size={28} strokeWidth={1.5} className="text-accent" />
+            <p className="text-[13px] text-muted">{ti18n("about.downloadOpening")}</p>
+          </div>
+        ) : isDownloading ? (
+          /* ── 下载进度 ── */
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2 className="text-[15px] font-semibold text-text mb-0.5">
                 {ti18n("about.downloading")}
-              </>
-            ) : (
-              ti18n("about.confirm")
-            )}
-          </button>
-        </div>
+              </h2>
+              <p className="text-[12px] text-subtle font-mono">
+                TypeBridge v{latest}
+              </p>
+            </div>
+
+            <DownloadProgressBar
+              downloaded={downloadState.downloaded}
+              total={downloadState.total}
+              percent={downloadState.percent}
+            />
+          </div>
+        ) : (
+          /* ── 确认对话框 ── */
+          <>
+            <h2 className="text-[15px] font-semibold text-text mb-2">{ti18n("about.confirmTitle")}</h2>
+            <p className="text-[13px] text-muted leading-relaxed mb-4">
+              {ti18n("about.confirmDetectedPrefix")}<span className="font-mono text-text">v{latest}</span>{ti18n("about.confirmCurrentPrefix")}
+              <span className="font-mono text-text">v{current}</span>{ti18n("about.confirmCurrentSuffix")}
+              <br />
+              {ti18n("about.confirmStepsHead")}
+              <br />
+              1. {ti18n("about.confirmStep1")}<span className="text-text font-medium">{ti18n("about.confirmStep1Bold")}</span>
+              <br />
+              2. {ti18n("about.confirmStep2")}
+              <br />
+              3. {ti18n("about.confirmStep3")}
+              <br />
+              {ti18n("about.confirmFooter")}
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={onCancel}
+                className="flex-1 px-4 py-1.5 text-[13px] rounded-md border text-center"
+                style={{
+                  borderColor: "var(--border-strong)",
+                  color: "var(--text)",
+                  background: "var(--surface-2)",
+                }}
+              >
+                {ti18n("about.cancel")}
+              </button>
+              <button
+                onClick={onConfirm}
+                className="flex-1 tb-btn-primary px-4 py-1.5 flex items-center justify-center gap-1.5"
+              >
+                {ti18n("about.confirm")}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+function DownloadProgressBar({
+  downloaded,
+  total,
+  percent,
+}: {
+  downloaded: number;
+  total: number | null;
+  percent: number | null;
+}) {
+  const pct = percent !== null ? Math.min(100, Math.round(percent)) : null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* 进度条轨道 */}
+      <div
+        className="w-full h-[6px] rounded-full overflow-hidden"
+        style={{ background: "var(--border-strong)" }}
+      >
+        {pct !== null ? (
+          <div
+            className="h-full rounded-full transition-[width] duration-200 ease-out"
+            style={{
+              width: `${pct}%`,
+              background: "linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff 30%))",
+            }}
+          />
+        ) : (
+          /* 不确定态：滑动光条 */
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: "35%",
+              background: "var(--accent)",
+              animation: "progress-slide 1.4s ease-in-out infinite",
+            }}
+          />
+        )}
+      </div>
+
+      {/* 百分比 + 文件大小 */}
+      <div className="flex items-center justify-between text-[11px] font-mono">
+        <span style={{ color: "var(--muted)" }}>
+          {formatBytes(downloaded)}
+          {total !== null ? ` / ${formatBytes(total)}` : ""}
+        </span>
+        <span style={{ color: "var(--text)" }}>
+          {pct !== null ? `${pct}%` : "—"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

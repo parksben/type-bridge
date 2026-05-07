@@ -21,7 +21,7 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 const LATEST_VERSION_API: &str = "https://typebridge.parksben.xyz/api/latest-version";
 const NETWORK_TIMEOUT_SECS: u64 = 15;
@@ -158,6 +158,15 @@ fn parse_semver(s: &str) -> (u32, u32, u32) {
 // 命令：apply_update
 // ──────────────────────────────────────────────────────────────
 
+/// `typebridge://download-progress` 事件载荷。与 AboutTab.tsx 的
+/// `DownloadProgressEvent` 接口严格对齐。
+#[derive(Clone, Serialize)]
+struct DownloadProgressPayload {
+    downloaded: u64,
+    total: Option<u64>,
+    percent: Option<f32>,
+}
+
 #[tauri::command]
 pub async fn apply_update(app: AppHandle, download_url: String) -> Result<(), String> {
     if cfg!(debug_assertions) {
@@ -173,7 +182,7 @@ pub async fn apply_update(app: AppHandle, download_url: String) -> Result<(), St
     let filename = filename_from_url(&download_url);
     let target_path: PathBuf = downloads_dir.join(filename);
 
-    download_to_file(&download_url, &target_path).await?;
+    download_to_file(&app, &download_url, &target_path).await?;
 
     // 2. 用系统 `open` 挂载 .dmg 并显示 Finder 卷
     std::process::Command::new("open")
@@ -197,7 +206,7 @@ fn filename_from_url(url: &str) -> String {
         .to_string()
 }
 
-async fn download_to_file(url: &str, target: &PathBuf) -> Result<(), String> {
+async fn download_to_file(app: &AppHandle, url: &str, target: &PathBuf) -> Result<(), String> {
     use futures_util::StreamExt;
     use std::io::Write;
 
@@ -216,15 +225,42 @@ async fn download_to_file(url: &str, target: &PathBuf) -> Result<(), String> {
         return Err(format!("下载失败：HTTP {}", resp.status()));
     }
 
+    let total = resp.content_length();
+
     let mut file = std::fs::File::create(target)
         .map_err(|e| format!("创建下载文件失败：{}", e))?;
 
     let mut stream = resp.bytes_stream();
+    let mut downloaded: u64 = 0;
+
     while let Some(chunk) = stream.next().await {
         let bytes = chunk.map_err(|e| format!("下载流中断：{}", e))?;
+        downloaded += bytes.len() as u64;
         file.write_all(&bytes)
             .map_err(|e| format!("写入下载文件失败：{}", e))?;
+
+        let percent = total.map(|t| {
+            if t == 0 {
+                100.0f32
+            } else {
+                (downloaded as f32 / t as f32 * 100.0).min(99.9)
+            }
+        });
+        let _ = app.emit(
+            "typebridge://download-progress",
+            DownloadProgressPayload { downloaded, total, percent },
+        );
     }
+
+    // 下载流结束 → 发送终态事件（percent=100），前端据此切换「正在打开安装包…」状态
+    let _ = app.emit(
+        "typebridge://download-progress",
+        DownloadProgressPayload {
+            downloaded,
+            total: total.or(Some(downloaded)),
+            percent: Some(100.0),
+        },
+    );
 
     Ok(())
 }
