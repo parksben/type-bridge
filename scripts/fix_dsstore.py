@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Optional
 
 from ds_store import DSStore
-from mac_alias import Bookmark
 
 
 def find_bplist_blob(data: bytes, struct_type: bytes) -> Optional[bytes]:
@@ -47,15 +46,10 @@ def generate(mount: str, template: str) -> None:
         sys.exit(1)
     print(f"✓ bwsp: {len(bwsp)}B, icvp: {len(icvp)}B")
 
-    # 2. Fresh bookmarks from live filesystem
-    app = Bookmark.for_file(str(mnt / 'TypeBridge.app')).to_bytes()
-    apps = Bookmark.for_file(str(mnt / 'Applications')).to_bytes()
-    bg = Bookmark.for_file(str(mnt / '.background')).to_bytes()
-    print(f"✓ bookmarks: app={len(app)}B  apps={len(apps)}B  bg={len(bg)}B")
-
-    # 3. Write via dict-style API
-    def iloc(x: float, y: float, bm: bytes) -> bytes:
-        return struct.pack('>ff', x, y) + bm
+    # 2. Write via dict-style API
+    # Iloc format: uint16 x, uint16 y, 12 bytes padding (0xFF * 6 + 0x00 * 6)
+    def iloc(x: int, y: int) -> bytes:
+        return struct.pack('>HH', x, y) + b'\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00'
 
     ds_path = mnt / '.DS_Store'
     if ds_path.exists():
@@ -64,9 +58,9 @@ def generate(mount: str, template: str) -> None:
     with DSStore.open(str(ds_path), 'w+') as ds:
         ds[b'.']['bwsp'] = bwsp
         ds[b'.']['icvp'] = icvp
-        ds['TypeBridge.app']['Iloc'] = iloc(206.0, 238.0, app)
-        ds['Applications']['Iloc'] = iloc(554.0, 238.0, apps)
-        ds['.background']['Iloc'] = iloc(0.0, 0.0, bg)
+        ds['TypeBridge.app']['Iloc'] = iloc(206, 238)
+        ds['Applications']['Iloc'] = iloc(554, 238)
+        ds['.background']['Iloc'] = iloc(0, 0)
 
     print(f"✓ wrote {ds_path} ({ds_path.stat().st_size}B)")
 
