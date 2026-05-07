@@ -147,30 +147,6 @@ const DICT = {
   },
   "scenes.crossDevice.theme": { zh: "手机就是电脑的剪贴板。", en: "Your phone is your Mac's clipboard." },
 
-  "scenes.teamCollab.title": { zh: "团队共享键盘", en: "A Shared Keyboard for Your Team" },
-  "scenes.teamCollab.subtitle": { zh: "群聊发一条，全队电脑同时落字", en: "One message in the group chat. Every team member's Mac gets it." },
-  "scenes.teamCollab.description": {
-    zh: "团队群聊里 @ 机器人发指令或数据——IP 地址、配置参数、部署命令——所有在线成员的电脑输入框同步收到。运维、开发、测试，一个群搞定。",
-    en: "In a team chat, @ the bot with a command or data — an IP address, config value, deploy command — and every online team member's Mac receives it simultaneously. Ops, dev, QA — one group chat rules them all.",
-  },
-  "scenes.teamCollab.details": {
-    zh: [
-      "运维发「ssh deploy@10.0.1.5」→ 同事终端直接出现",
-      "群里贴一段 JSON 配置 → 开发者编辑器里同步到位",
-      "发布前发「确认上线」→ 全队电脑同时弹出提示",
-    ],
-    en: [
-      "Ops sends \"ssh deploy@10.0.1.5\" → appears in a teammate's terminal",
-      "Post a JSON config in the group → lands in developers' editors simultaneously",
-      "Before a release, send \"Confirm deploy\" → everyone's Mac shows it at once",
-    ],
-  },
-  "scenes.teamCollab.tip": {
-    zh: "群聊消息是广播模式——一条消息，全队同步。",
-    en: "Group messages broadcast to everyone — one message, your whole team in sync.",
-  },
-  "scenes.teamCollab.theme": { zh: "一条消息，全队同步。", en: "One message. Whole team in sync." },
-
   // ── Flow ───────────────────────────────────
   "flow.heading": { zh: "把**聊天**变成**输入**，只需四步", en: "Turn **chat** into **input** in four steps" },
   "flow.subheading": { zh: "下载、打开、连接、落字——两分钟搞定", en: "Download, launch, connect, type — done in two minutes" },
