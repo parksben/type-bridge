@@ -159,7 +159,7 @@ export default function AccessibilityGate() {
           </div>
         )}
 
-        {/* 按钮行："已授权"（primary）+ "跳过"（ghost） */}
+        {/* 按钮行："已授权"（primary）+ "跳过"（secondary），等宽 */}
         <div className="flex items-center gap-2">
           <button
             onClick={handleGrantedCheck}
@@ -171,7 +171,7 @@ export default function AccessibilityGate() {
           </button>
           <button
             onClick={handleSkip}
-            className="tb-btn-ghost shrink-0 px-3 py-2.5"
+            className="tb-btn-secondary flex-1"
           >
             {t("accessibility.skip")}
           </button>
