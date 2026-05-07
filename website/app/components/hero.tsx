@@ -279,15 +279,6 @@ function ConceptBanner() {
         <MonitorNode />
       </div>
 
-      {/* Vignette */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, transparent 50%, var(--bg) 120%)",
-          opacity: 0.35,
-        }}
-      />
     </div>
   );
 }
