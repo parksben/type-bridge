@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""fix_dsstore.py — Generate .DS_Store with fresh bookmarks for mounted DMG.
+"""fix_dsstore.py — Write .DS_Store into mounted DMG to set background and icon positions.
 
 Usage: python3 fix_dsstore.py <mount_point> <template_dsstore>
+
+The template_dsstore is only used to extract bwsp (window bounds/toolbar state)
+and icvp (icon view options incl. background image path) blobs.
+Iloc (icon positions) are written directly using the ds_store library's tuple API.
 """
 
 import struct
@@ -13,7 +17,6 @@ from ds_store import DSStore
 
 
 def find_bplist_blob(data: bytes, struct_type: bytes) -> Optional[bytes]:
-    """Binary-extract a bplist blob for the given 4-char structure type."""
     dlen = len(data)
     pos = 0
     while pos < dlen - 8:
@@ -36,7 +39,7 @@ def find_bplist_blob(data: bytes, struct_type: bytes) -> Optional[bytes]:
 def generate(mount: str, template: str) -> None:
     mnt = Path(mount)
 
-    # 1. Extract bwsp & icvp from template (no CNID, pure layout)
+    # Extract bwsp (window layout) & icvp (icon view / background) from template
     tmpl = Path(template).read_bytes()
     bwsp = find_bplist_blob(tmpl, b'bwsp')
     icvp = find_bplist_blob(tmpl, b'icvp')
@@ -46,21 +49,16 @@ def generate(mount: str, template: str) -> None:
         sys.exit(1)
     print(f"✓ bwsp: {len(bwsp)}B, icvp: {len(icvp)}B")
 
-    # 2. Write via dict-style API
-    # Iloc format: uint16 x, uint16 y, 12 bytes padding (0xFF * 6 + 0x00 * 6)
-    def iloc(x: int, y: int) -> bytes:
-        return struct.pack('>HH', x, y) + b'\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00'
-
     ds_path = mnt / '.DS_Store'
     if ds_path.exists():
         ds_path.unlink()
 
+    # Iloc values must be (x, y) tuples — ds_store library encodes as uint32 big-endian pairs
     with DSStore.open(str(ds_path), 'w+') as ds:
-        ds[b'.']['bwsp'] = bwsp
-        ds[b'.']['icvp'] = icvp
-        ds['TypeBridge.app']['Iloc'] = iloc(206, 238)
-        ds['Applications']['Iloc'] = iloc(554, 238)
-        ds['.background']['Iloc'] = iloc(0, 0)
+        ds['.']['bwsp'] = bwsp
+        ds['.']['icvp'] = icvp
+        ds['TypeBridge.app']['Iloc'] = (206, 238)
+        ds['Applications']['Iloc'] = (554, 238)
 
     print(f"✓ wrote {ds_path} ({ds_path.stat().st_size}B)")
 
