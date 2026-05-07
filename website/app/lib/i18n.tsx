@@ -59,14 +59,14 @@ const DICT = {
   },
   "scenes.voiceToText.details": {
     zh: [
-      "微信回消息 → 手机说一句 → 电脑聊天框直接出现文字",
+      "填 Jira / OA 表单 → 手机口述 → 输入框直接落字，双手不离键盘",
       "VSCode 写注释 → 手机口述 → 编辑器里实时落字",
-      "Slack / Teams 回复 → 不想切窗口打字 → 手机一句话搞定",
+      "站会时想快速记录 → 手机说一句 → Notion / 飞书文档实时落字",
     ],
     en: [
-      "Reply on WeChat → speak once → text lands in the chat box on your Mac",
+      "Fill a Jira / OA form → dictate on your phone → field fills itself, hands stay on keyboard",
       "Write a comment in VSCode → dictate on your phone → appears inline in the editor",
-      "Answer in Slack / Teams → no need to switch windows → one spoken sentence does it",
+      "In a standup, want to jot a note → speak into your phone → Notion / docs update in real time",
     ],
   },
   "scenes.voiceToText.tip": {
