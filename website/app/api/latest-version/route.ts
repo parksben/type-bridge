@@ -1,23 +1,25 @@
 import { NextResponse } from "next/server";
+import { getStore } from "@netlify/blobs";
 
 // 桌面 App「关于 TypeBridge」tab 的检查更新接口。
-// 透传 GitHub Releases 的 latest tag 信息，附上对应架构的 .dmg 直链。
+// v0.9+ 优化：不再每次调 GitHub API，改为从 Netlify Blobs 读取 CI publish 的元数据。
+// 响应时间从 ~300ms 降到 ~50ms，且不受 GitHub rate limit 限制。
 // 与 src-tauri/src/about.rs 的 LatestVersionResp 协议对齐。
 
-const GITHUB_REPO = "parksben/type-bridge";
-const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+const BLOB_KEY = "latest-release";
 
-interface GitHubAsset {
-  name: string;
-  browser_download_url: string;
-}
-
-interface GitHubRelease {
+interface BlobReleaseData {
+  version: string;
   tag_name: string;
   name: string;
-  body?: string;
-  published_at?: string;
-  assets: GitHubAsset[];
+  notes: string | null;
+  published_at: string | null;
+  download_urls: {
+    aarch64: string | null;
+    x64: string | null;
+    aarch64_size?: number | null;
+    x64_size?: number | null;
+  };
 }
 
 interface DownloadUrls {
@@ -36,40 +38,28 @@ interface ResponsePayload {
 
 export async function GET() {
   try {
-    const releaseRes = await fetch(GITHUB_API, {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-        ...(process.env.GITHUB_TOKEN
-          ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
-          : {}),
-      },
+    const store = getStore("releases");
+    const data: BlobReleaseData | null = await store.get(BLOB_KEY, {
+      type: "json",
     });
 
-    if (!releaseRes.ok) {
+    if (!data) {
       return NextResponse.json(
-        { error: `GitHub API ${releaseRes.status}` },
-        { status: 502 }
+        { error: "no release published yet" },
+        { status: 404 },
       );
     }
 
-    const release: GitHubRelease = await releaseRes.json();
-
-    // 把 v0.2.0 这类前缀的 v 去掉，得到纯 semver
-    const version = release.tag_name.replace(/^v/, "");
-
-    // 在 assets 中按文件名后缀分别找 arm64 和 x64
-    const downloadUrls: DownloadUrls = {
-      aarch64: pickAssetUrl(release.assets, /_aarch64\.dmg$/),
-      x64: pickAssetUrl(release.assets, /_x64\.dmg$/),
-    };
-
     const payload: ResponsePayload = {
-      version,
-      tag_name: release.tag_name,
-      name: release.name,
-      notes: release.body ?? null,
-      published_at: release.published_at ?? null,
-      download_urls: downloadUrls,
+      version: data.version,
+      tag_name: data.tag_name,
+      name: data.name,
+      notes: data.notes ?? null,
+      published_at: data.published_at ?? null,
+      download_urls: {
+        aarch64: data.download_urls.aarch64 ?? null,
+        x64: data.download_urls.x64 ?? null,
+      },
     };
 
     return NextResponse.json(payload, {
@@ -81,12 +71,7 @@ export async function GET() {
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "internal error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-}
-
-function pickAssetUrl(assets: GitHubAsset[], pattern: RegExp): string | null {
-  const asset = assets.find((a) => pattern.test(a.name));
-  return asset?.browser_download_url ?? null;
 }

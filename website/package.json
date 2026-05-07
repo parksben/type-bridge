@@ -9,10 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.4",
+    "lucide-react": "^1.14.0",
     "next": "^15.2.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "lucide-react": "^1.14.0"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.8.0",
