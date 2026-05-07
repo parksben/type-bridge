@@ -221,7 +221,7 @@ function ConfirmInstallDialog({
           <button
             onClick={onCancel}
             disabled={installing}
-            className="w-[96px] px-4 py-1.5 text-[13px] rounded-md border disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-1.5 text-[13px] rounded-md border disabled:cursor-not-allowed text-center"
             style={{
               borderColor: "var(--border-strong)",
               color: "var(--text)",
@@ -233,7 +233,7 @@ function ConfirmInstallDialog({
           <button
             onClick={onConfirm}
             disabled={installing}
-            className="w-[96px] tb-btn-primary px-4 py-1.5 flex items-center justify-center gap-1.5"
+            className="flex-1 tb-btn-primary px-4 py-1.5 flex items-center justify-center gap-1.5"
           >
             {installing ? (
               <>
