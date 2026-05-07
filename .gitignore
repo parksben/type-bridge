@@ -31,8 +31,6 @@ src-tauri/binaries/wecom-bridge-*-apple-darwin
 
 # Private files
 .claude/
-docs/
-CLAUDE.md
 !.vscode/extensions.json
 .venv/
 .venv-*/
