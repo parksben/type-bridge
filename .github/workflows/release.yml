@@ -112,6 +112,10 @@ jobs:
             SetFile -a V /tmp/dmg-mnt/.background
             SetFile -a V /tmp/dmg-mnt/.VolumeIcon.icns
 
+            # Re-sign app in mounted DMG to avoid broken ad-hoc signature state
+            codesign --force --deep --sign - /tmp/dmg-mnt/TypeBridge.app
+            codesign --verify --deep --strict --verbose=2 /tmp/dmg-mnt/TypeBridge.app
+
             # Generate fresh .DS_Store with correct bookmarks for this filesystem
             /tmp/dsstore-venv/bin/python scripts/fix_dsstore.py /tmp/dmg-mnt src-tauri/icons/dmg-dsstore
 
