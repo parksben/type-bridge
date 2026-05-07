@@ -1665,21 +1665,21 @@ CI 环境无 Finder GUI session，Tauri 的 AppleScript 无法生成有效的 `.
 
 核心挑战：`.DS_Store` 内部含 HFS+ CNID（Catalog Node ID）书签，模板中的 CNID 与 CI 构建的文件系统不匹配 → 书签失效 → `.background` 和 `.VolumeIcon.icns` 在 Finder 中显示为可见文件、Applications 图标渲染异常。
 
-最终方案——**SetFile 隐藏 + 模板拷贝**：
+最终方案——**SetFile 隐藏 + fix_dsstore.py 写新鲜书签**：
 
 ```
 hdiutil convert "$DMG" -format UDRW -o /tmp/dmg-rw.dmg
 hdiutil attach -nobrowse -readwrite /tmp/dmg-rw.dmg -mountpoint /tmp/dmg-mnt
 SetFile -a V /tmp/dmg-mnt/.background         # filesystem-level hidden
 SetFile -a V /tmp/dmg-mnt/.VolumeIcon.icns    # filesystem-level hidden
-cp src-tauri/icons/dmg-dsstore /tmp/dmg-mnt/.DS_Store
+python3 scripts/fix_dsstore.py /tmp/dmg-mnt src-tauri/icons/dmg-dsstore
 hdiutil detach /tmp/dmg-mnt -force
 hdiutil convert /tmp/dmg-rw.dmg -format UDZO -imagekey zlib-level=9 -o /tmp/dmg-out.dmg
 ```
 
-- `SetFile -a V` 在文件系统层面标记隐藏属性（不依赖 `.DS_Store` 书签），CNID 变化不影响
-- 模板 `.DS_Store` 中的 bwsp/icvp 布局属性（窗口大小、图标位置、背景图设置）不依赖 CNID，可直接复用
-- 无需 `ds_store`/`mac_alias` Python 库，仅依赖 Xcode CLI 自带的 `SetFile`
+- `SetFile -a V` 在文件系统层面标记隐藏属性 — CNID 变化不影响，分布式 DMG 中 dot-files 始终不可见
+- `fix_dsstore.py` 从模板中二进制提取 bwsp/icvp（纯布局数据，无 CNID），然后用 `mac_alias.Bookmark.for_file()` 在挂载卷上生成包含正确 CNID 的新鲜书签，最后用 `ds_store` 的 `w+` dict 风格 API 写入全新 `.DS_Store`
+- 需要 `pip3 install ds_store mac_alias`（两个纯 Python 库，无系统依赖）
 - 本地更新模板：构建一次 DMG，`cp /Volumes/TypeBridge/.DS_Store src-tauri/icons/dmg-dsstore`
 
 ### 24.4 注意事项
