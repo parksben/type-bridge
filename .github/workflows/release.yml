@@ -92,8 +92,8 @@ jobs:
       - name: Build Tauri (x86_64)
         run: npm run tauri build -- --target x86_64-apple-darwin
 
-      - name: Skip custom DMG injection (use Tauri native layout)
-        run: echo "Using Tauri native DMG layout for stability"
+      - name: Inject DMG icon layout (safe fallback)
+        run: bash scripts/inject-dmg-layout.sh
 
       - name: Collect artifacts
         run: |
