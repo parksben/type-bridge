@@ -94,6 +94,8 @@ jobs:
 
       - name: Inject DMG icon layout (safe fallback)
         run: bash scripts/inject-dmg-layout.sh
+        env:
+          TYPEBRIDGE_DMG_VIEW_MODE: ${{ contains(github.ref_name, 'bgtest') && 'lite' || 'iloc' }}
 
       - name: Collect artifacts
         run: |
