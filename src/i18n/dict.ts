@@ -308,6 +308,8 @@ export const ZH = {
     confirmFooter: "请按 macOS 标准方式将新版拖入「应用程序」文件夹覆盖旧版，再手动重新启动 TypeBridge。",
     cancel: "取消",
     downloading: "下载中…",
+    downloadProgress: "下载进度",
+    downloadOpening: "正在打开安装包…",
     confirm: "确认更新",
   },
 
@@ -626,6 +628,8 @@ export const EN: Dict = {
     confirmFooter: "Drag the new app into your Applications folder as usual to overwrite the old version, then relaunch TypeBridge manually.",
     cancel: "Cancel",
     downloading: "Downloading…",
+    downloadProgress: "Download progress",
+    downloadOpening: "Opening installer…",
     confirm: "Confirm update",
   },
 
