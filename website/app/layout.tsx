@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: en ? "TypeBridge — Chat to Type" : "TypeBridge — 聊天即打字",
     description: en
-      ? "Chat on your phone, type on your Mac. Speak, text, or send an image — your message lands right where your cursor is. A macOS menu bar app."
+      ? "Chat to Type: Speak, text, or send an image — your message lands right where your cursor is. A macOS menu bar app."
       : "聊天即打字：说话、发文字、发图片——手机聊一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
     metadataBase: new URL("https://typebridge.parksben.xyz"),
     icons: {

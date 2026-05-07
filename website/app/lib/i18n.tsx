@@ -29,8 +29,8 @@ const DICT = {
   // ── Hero ───────────────────────────────────
   "hero.headline": { zh: "聊天即打字", en: "Chat to Type" },
   "hero.subtitle": {
-    zh: "把你的**手机**变成电脑的**无线键盘**。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。",
-    en: "Turn your **phone** into a **wireless keyboard** for your Mac. Speak, type, or send an image — your phone message appears right where your cursor is.",
+    zh: "说话、打字、发图片——手机发一条消息，电脑输入框直接落字。",
+    en: "Speak, type, or send an image — your phone message appears right where your cursor is.",
   },
   "hero.ctaDownload": { zh: "免费下载", en: "Download Free" },
   "hero.ctaHowto": { zh: "如何使用", en: "How It Works" },
@@ -172,7 +172,7 @@ const DICT = {
   "scenes.teamCollab.theme": { zh: "一条消息，全队同步。", en: "One message. Whole team in sync." },
 
   // ── Flow ───────────────────────────────────
-  "flow.heading": { zh: "把**手机**变成**键盘**，只需四步", en: "Turn your **phone** into a **keyboard** in four steps" },
+  "flow.heading": { zh: "把**聊天**变成**输入**，只需四步", en: "Turn **chat** into **input** in four steps" },
   "flow.subheading": { zh: "下载、打开、连接、落字——两分钟搞定", en: "Download, launch, connect, type — done in two minutes" },
   "flow.step01.title": { zh: "下载 App", en: "Download" },
   "flow.step01.subtitle": { zh: "下载 macOS 版，免费安装", en: "Download the macOS app — free" },
@@ -229,8 +229,8 @@ const META = {
     en: "TypeBridge — Chat to Type",
   },
   description: {
-    zh: "把手机变成电脑的无线键盘。说话、打字、发图片——手机发一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
-    en: "Turn your phone into a wireless keyboard for your Mac. Speak, type, or send an image — your phone message appears right where your cursor is. A macOS menu bar app.",
+    zh: "聊天即打字：说话、发文字、发图片——手机聊一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
+    en: "Chat to Type: Speak, text, or send an image — your message lands right where your cursor is. A macOS menu bar app.",
   },
 } as const;
 
