@@ -106,9 +106,13 @@ TopNav 导航项与锚点：
 ### 25.6 下载流量转发机制（v0.9+）
 
 - `GET /dl/[arch]` Route Handler **不再每次调 GitHub Releases API**
-- 改为从 Netlify Blobs 读 `latest-release` → 拿到该架构的 `browser_download_url` + `size` → `fetch` GitHub CDN 流式透传，响应头带 `Content-Length`（浏览器可显示下载进度条）
+- 改为从 Netlify Blobs 读 `latest-release` → 拿到该架构的 `browser_download_url` → `fetch` GitHub CDN 流式透传
 - `Cache-Control: no-store, must-revalidate` 保持不变
-- **为什么保留代理而非 302 重定向**：国内用户直接访问 GitHub CDN 可能带宽受限；通过 Netlify 函数作为中转节点，利用 Netlify global edge 网络改善连接质量
+
+**⚠️ 禁止改为 302 重定向**：GitHub CDN（`objects.githubusercontent.com`）在中国大陆访问受限，302 后用户会直连 GitHub，下载失败或极慢。必须保持 Netlify 函数作代理中转。
+
+**已知限制：浏览器看不到文件总大小**
+Netlify 函数以 `ReadableStream` 返回 body 时，运行时强制使用 `Transfer-Encoding: chunked`，HTTP/1.1 规定 chunked 与 `Content-Length` 互斥，浏览器因此无法显示总大小/进度百分比，只能显示已下载字节数。这是 serverless streaming 的固有限制，无法在当前架构下修复，**不要为此改用 302**。
 
 ### 25.7 Netlify Blobs 与环境变量
 

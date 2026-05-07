@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStore } from "@netlify/blobs";
 
-// 下载 Route Handler：读取 Netlify Blobs 中的发布元数据 → 302 重定向到 GitHub CDN。
+// 下载 Route Handler：代理转发 GitHub Release asset 到客户端。
 //
-// 为什么用重定向而非流式代理：
-// 流式代理（ReadableStream body）会触发 chunked transfer encoding，
-// 导致 Content-Length 被 HTTP 层丢弃，浏览器无法显示总文件大小/进度条。
-// 重定向后浏览器直接连 GitHub CDN，Content-Length 由 GitHub 正常返回。
+// ⚠️ 禁止改为 302 重定向：GitHub CDN 在中国大陆访问受限，302 后用户直连 GitHub
+// 会导致下载失败或极慢。必须保持 Netlify 函数作代理中转。
+//
+// 已知限制：浏览器看不到文件总大小。
+// Netlify serverless 函数流式返回时强制 chunked transfer encoding，
+// HTTP/1.1 规定其与 Content-Length 互斥，浏览器只能看到已下载量。
+// 这是 serverless streaming 的固有限制，不要为此改用 302。
 
 const BLOB_KEY = "latest-release";
 
@@ -48,6 +51,11 @@ export async function GET(
         ? data.download_urls.aarch64
         : data.download_urls.x64;
 
+    const size =
+      arch === "arm64"
+        ? data.download_urls.aarch64_size
+        : data.download_urls.x64_size;
+
     if (!url) {
       return new NextResponse(
         `No ${arch} .dmg found (tag: ${data.tag_name ?? "unknown"})`,
@@ -55,11 +63,35 @@ export async function GET(
       );
     }
 
-    // ── 302 重定向到 GitHub CDN，让浏览器直接下载 ──
-    // 原因：流式代理（ReadableStream body）会触发 chunked transfer encoding，
-    // 导致 Content-Length 在传输层被丢弃，浏览器无法显示总文件大小/进度条。
-    // 重定向后浏览器直接连 GitHub CDN，Content-Length 由 GitHub 正常返回。
-    return NextResponse.redirect(url, { status: 302 });
+    // ── 从 GitHub CDN 流式拉取 ──
+    const assetRes = await fetch(url, {
+      headers: { Accept: "application/octet-stream" },
+    });
+
+    if (!assetRes.ok || !assetRes.body) {
+      return new NextResponse("Failed to fetch download asset", {
+        status: 502,
+      });
+    }
+
+    const filename = url.split("/").pop() ?? `TypeBridge_${arch}.dmg`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/octet-stream",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "no-store, must-revalidate",
+    };
+
+    if (size) {
+      headers["Content-Length"] = String(size);
+    } else if (assetRes.headers.get("content-length")) {
+      headers["Content-Length"] = assetRes.headers.get("content-length")!;
+    }
+
+    return new NextResponse(assetRes.body, {
+      status: 200,
+      headers,
+    });
   } catch (error) {
     console.error("Download proxy error:", error);
     return new NextResponse("Internal server error", { status: 500 });
