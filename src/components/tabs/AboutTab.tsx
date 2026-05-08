@@ -162,7 +162,7 @@ export default function AboutTab() {
         <div className="w-28">
           <LanguageSwitcher />
         </div>
-        <div className="w-24">
+        <div className="w-32">
           <ThemeSwitcher />
         </div>
       </div>
