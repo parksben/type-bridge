@@ -89,6 +89,8 @@ src-tauri/src/
 
 - active tab：3px accent 色左竖条 + `surface-2` 背景
 - 侧边栏底部：关于 TypeBridge 入口 + 语言切换控件
+- 「关于」页右下角同时显示语言切换（左）+ 主题切换（右），均为下拉菜单风格
+- 主题切换支持三种模式：跟随系统 / 浅色 / 深色；偏好持久化到 localStorage（`tb_theme`）
 
 #### Tab 1: 连接 TypeBridge
 
