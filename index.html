@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- CSS 加载前立即设好背景色，并将内容区隐藏，等 React 挂载完再渐显 -->
+    <script>
+      (function () {
+        var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.style.background = dark ? "#0e0e10" : "#faf9f6";
+        document.documentElement.style.opacity = "0";
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.bunny.net" />
     <link
       href="https://fonts.bunny.net/css?family=geist:400,500,600|geist-mono:400,500|instrument-serif:400i&display=swap"
