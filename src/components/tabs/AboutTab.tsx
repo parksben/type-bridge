@@ -159,7 +159,7 @@ export default function AboutTab() {
 
       {/* 语言切换 + 主题切换 — 页面右下角并排 */}
       <div className="absolute bottom-4 right-4 flex items-center gap-1.5">
-        <div className="w-28">
+        <div className="w-32">
           <LanguageSwitcher />
         </div>
         <div className="w-32">
