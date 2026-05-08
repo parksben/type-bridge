@@ -62,7 +62,7 @@ export default function HistoryCard({ message, imagesBaseDir, onDelete }: Props)
     <div
       className="relative rounded-[10px] px-4 py-3"
       style={{
-        background: "var(--surface-2)",
+        background: "var(--surface)",
         border: "1px solid var(--border)",
       }}
     >
