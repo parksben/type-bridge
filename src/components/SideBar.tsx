@@ -25,7 +25,7 @@ export default function SideBar() {
 
   return (
     <div
-      className="w-[150px] shrink-0 flex flex-col h-full"
+      className="w-[172px] shrink-0 flex flex-col h-full"
       style={{
         borderRight: "1px solid var(--border)",
         background: "var(--surface)",
