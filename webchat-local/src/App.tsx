@@ -68,7 +68,14 @@ export default function App() {
     clientRef.current = client;
     client.connect();
 
+    // 页面关闭/跳转时主动断连，让桌面端立即感知（不等心跳超时）
+    const handleUnload = () => client.disconnect();
+    window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
+
     return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
       client.disconnect();
     };
   }, []);

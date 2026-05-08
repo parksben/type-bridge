@@ -164,8 +164,17 @@ impl WebChatBridge {
         // - dev 模式：直接指向 <project-root>/webchat-local/dist，开发者需事先构建一次
         let spa_dir = resolve_spa_dir(app);
 
+        // 绑定变更回调：当手机端 disconnect 时通知桌面前端刷新状态快照
+        let app_handle = app.clone();
+        let ctx_for_cb = ctx.clone();
+        let on_bind_change: Arc<dyn Fn() + Send + Sync + 'static> = Arc::new(move || {
+            let lang = current_lang(&app_handle);
+            let snap = ctx_for_cb.webchat.snapshot(lang.as_deref());
+            let _ = app_handle.emit("typebridge://webchat-session-update", &snap);
+        });
+
         // 启新的
-        match WebChatServer::start(ctx, spa_dir).await {
+        match WebChatServer::start(ctx, spa_dir, on_bind_change).await {
             Ok(server) => {
                 *self.server.lock().unwrap() = Some(Arc::new(server));
                 Ok(())

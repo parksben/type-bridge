@@ -77,9 +77,15 @@ pub struct WebChatServer {
 
 impl WebChatServer {
     /// 启动一个新 server。
+    /// `notify_bind_change`：binding 数量变化（新设备接入 / 断开）时同步回调，
+    /// 上层 bridge 在此回调里 emit typebridge://webchat-session-update 事件。
     /// `spa_dir` 指向 webchat-local 的构建产物目录（含 index.html），由外部 resolve
     /// tauri resource 后传进来。若目录不存在，server 也能起来，但静态资源路由会 404。
-    pub async fn start(ctx: Arc<AppContext>, spa_dir: PathBuf) -> Result<Self, String> {
+    pub async fn start(
+        ctx: Arc<AppContext>,
+        spa_dir: PathBuf,
+        notify_bind_change: Arc<dyn Fn() + Send + Sync + 'static>,
+    ) -> Result<Self, String> {
         let lan_ip = crate::webchat_net::primary_lan_ip()
             .ok_or_else(|| "未检测到可用的局域网 IP（请先连接 WiFi 或以太网）".to_string())?;
         let wifi_name = crate::webchat_net::current_wifi_ssid();
@@ -95,6 +101,7 @@ impl WebChatServer {
             injector: ctx.injector.clone(),
             history: ctx.history.clone(),
             pending_acks: SyncMutex::new(HashMap::new()),
+            notify_bind_change,
         });
 
         // 构建 Socket.IO layer
@@ -319,6 +326,8 @@ struct ServerState {
     /// payload.id 完全一致。注入完成时上层 Bridge 会调 `deliver_ack` 取出
     /// 对应 AckSender 回调给手机。
     pending_acks: SyncMutex<HashMap<String, AckSender>>,
+    /// binding 数量变化时（绑定 / 断开）通知上层 bridge 刷新快照并 emit 前端事件。
+    notify_bind_change: Arc<dyn Fn() + Send + Sync + 'static>,
 }
 
 /// OTP 全量状态。rotate 时一把锁整体替换，避免字段间不一致。
@@ -348,6 +357,8 @@ fn make_otp_state() -> OtpState {
 struct Binding {
     user_token_hash: [u8; 32],
     client_id: String,
+    /// Socket.IO socket id，用于 disconnect 时反查并移除 binding
+    socket_sid: String,
     bound_at_ms: i64,
     ua: String,
 }
@@ -519,9 +530,26 @@ async fn on_connect(socket: SocketRef) {
         },
     );
 
-    socket.on_disconnect(|socket: SocketRef| async move {
-        tracing::info!("[webchat] client disconnected: sid={}", socket.id);
-    });
+    socket.on_disconnect(
+        |socket: SocketRef, State(state): State<Arc<ServerState>>| async move {
+            let sid = socket.id.to_string();
+            tracing::info!("[webchat] client disconnected: sid={}", sid);
+            let removed = {
+                match state.bindings.lock() {
+                    Ok(mut bindings) => {
+                        let before = bindings.len();
+                        bindings.retain(|b| b.socket_sid != sid);
+                        bindings.len() < before
+                    }
+                    Err(_) => false,
+                }
+            };
+            if removed {
+                tracing::info!("[webchat] binding removed for sid={}, notifying bridge", sid);
+                (state.notify_bind_change)();
+            }
+        },
+    );
 }
 
 /// 把 AckSender 按 composite_id 暂存，等注入完成时 deliver_ack 回调。
@@ -550,7 +578,7 @@ fn _unused_ack_convert() {
 }
 
 async fn handle_hello(
-    _socket: &SocketRef,
+    socket: &SocketRef,
     msg: &HelloMsg,
     state: Arc<ServerState>,
 ) -> Result<String, &'static str> {
@@ -581,8 +609,10 @@ async fn handle_hello(
     {
         let mut bindings = state.bindings.lock().map_err(|_| "LOCK_POISONED")?;
         // 同一 clientId 二次握手（手机刷新）→ 替换旧 binding
+        let socket_sid = socket.id.to_string();
         if let Some(existing) = bindings.iter_mut().find(|b| b.client_id == msg.client_id) {
             existing.user_token_hash = user_token_hash;
+            existing.socket_sid = socket_sid;
             existing.bound_at_ms = now_ms();
             if let Some(ua) = &msg.ua {
                 existing.ua = ua.clone();
@@ -591,6 +621,7 @@ async fn handle_hello(
             bindings.push(Binding {
                 user_token_hash,
                 client_id: msg.client_id.clone(),
+                socket_sid,
                 bound_at_ms: now_ms(),
                 ua: msg.ua.clone().unwrap_or_default(),
             });
