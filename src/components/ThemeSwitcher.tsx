@@ -88,7 +88,6 @@ export default function ThemeSwitcher() {
         >
           {OPTIONS.map((opt) => {
             const active = opt.value === theme;
-            const OptionIcon = opt.Icon;
             return (
               <button
                 type="button"
@@ -104,7 +103,6 @@ export default function ThemeSwitcher() {
                   className="shrink-0 text-accent"
                   style={{ visibility: active ? "visible" : "hidden" }}
                 />
-                <OptionIcon size={12} strokeWidth={1.5} className="shrink-0 text-muted" />
                 <span className="text-[12px] text-text leading-tight">
                   {t(THEME_KEY[opt.value])}
                 </span>
