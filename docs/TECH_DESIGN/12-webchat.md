@@ -107,7 +107,9 @@ struct ClientBinding {
 | `rotate_otp` | 新 `otp_plain` / `otp_hash` / `expires_at_unix_ms` + 重置 `otp_attempts` / `otp_locked` | `session_id`、`bindings`、`port`、`lan_ip`、server task 本身 |
 | `stop_webchat` | 整个 server drop，所有 bindings 清空，`pending_acks` 全部以 failure 回调 | 无 |
 
-`session_id` 是绑在 QR URL 里（`/?s=ses_XXX`）的，轮换 OTP 时**不变**，所以手机扫到的 QR 不会失效，只需输入新 OTP 即可。
+`session_id` 是绑在 QR URL 里（`/?s=ses_XXX&otp=XXXXXX`）的，**OTP 也随 QR 一起刷新**：轮换 OTP 时 `qr_url()` 返回带新 OTP 的 URL，桌面自动重新渲染 QR，手机只要重新扫码即可完成握手，**无需手动输入验证码**。
+
+**QR 过期场景**（极罕见）：如果手机扫码成功但在 Socket.IO 握手前 OTP 恰好换轮，server 会返回 `SESSION_EXPIRED`，移动端 SPA 自动显示"二维码已过期，请重新扫码"提示，不需要用户做任何其他操作。
 
 实现上把 OTP 相关字段合并进一个 `Mutex<OtpState>`，`rotate_otp()` 一把锁全量替换：
 
@@ -131,7 +133,7 @@ impl WebChatServer {
 }
 ```
 
-UI 触发：前端 `WebChatConnectionTab` 用 setInterval 维持 1Hz 倒计时，`remainingSecs === 0` 时自动 `invoke("webchat_rotate_otp")`，Tauri command 调 `rotate_otp()` + emit `typebridge://webchat-session-update` 刷新 snapshot，前端拿到新 OTP + 新 expires_at，进度条回满。
+UI 触发：前端 `WebChatConnectionTab` 用 setInterval 维持 1Hz 倒计时（用于驱动 QR 周围的进度环动画），`remainingSecs === 0` 时自动 `invoke("webchat_rotate_otp")`，Tauri command 调 `rotate_otp()` + emit `typebridge://webchat-session-update` 刷新 snapshot，前端拿到新 `qr_url`（含新 OTP），重新渲染 QR + 进度环回满。**桌面 UI 不再展示 OTP 数字/倒计时文字**，仅凭进度环暗示有效期。
 
 **axum router 关键顺序**：
 

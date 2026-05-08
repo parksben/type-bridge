@@ -28,6 +28,7 @@ const ZH = {
   error: {
     titleNoSession: "请用桌面 App 扫码",
     titleOtpLocked: "验证码已锁定",
+    titleOtpExpired: "二维码已过期",
     titleSessionExpired: "会话已过期",
     titleServerClosed: "桌面端 WebChat 已关闭",
     titleUnknown: "出错了",
@@ -35,6 +36,8 @@ const ZH = {
       "当前链接没有会话信息。请在桌面打开 TypeBridge，进入「连接 TypeBridge → WebChat」，点「启动会话」后用这台手机扫描桌面上的二维码。",
     bodyOtpLocked:
       "验证码错误次数过多，会话已锁定。请在桌面 TypeBridge 上点「重启会话」生成新的验证码。",
+    bodyOtpExpired:
+      "二维码已过期，请重新扫描桌面 TypeBridge 上的新二维码。",
     bodySessionExpired:
       "5 分钟内未完成验证，会话已过期。请在桌面 TypeBridge 上点「重启会话」生成新的二维码。",
     bodyServerClosed:
@@ -116,6 +119,7 @@ const EN: Dict = {
   error: {
     titleNoSession: "Scan from desktop app",
     titleOtpLocked: "Code locked",
+    titleOtpExpired: "QR code expired",
     titleSessionExpired: "Session expired",
     titleServerClosed: "Desktop WebChat closed",
     titleUnknown: "Something went wrong",
@@ -123,6 +127,8 @@ const EN: Dict = {
       "No session info in this link. Open TypeBridge on your desktop, go to \"Connect TypeBridge → WebChat\", click \"Start session\", and scan the QR with this phone.",
     bodyOtpLocked:
       "Too many wrong codes — the session is locked. Click \"Restart session\" in desktop TypeBridge to generate a new code.",
+    bodyOtpExpired:
+      "The QR code has expired. Please re-scan the new QR code on your desktop TypeBridge.",
     bodySessionExpired:
       "Verification not completed within 5 minutes — the session expired. Click \"Restart session\" in desktop TypeBridge for a new QR.",
     bodyServerClosed:

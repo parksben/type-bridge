@@ -1,9 +1,10 @@
-import { AlertCircle, QrCode } from "lucide-react";
+import { AlertCircle, QrCode, RefreshCw } from "lucide-react";
 import { t } from "@/i18n";
 
 type Reason =
   | "no-session"
   | "otp-locked"
+  | "otp-expired"
   | "session-expired"
   | "server-closed"
   | "unknown";
@@ -17,6 +18,7 @@ function titleOf(r: Reason): string {
   switch (r) {
     case "no-session": return t("error.titleNoSession");
     case "otp-locked": return t("error.titleOtpLocked");
+    case "otp-expired": return t("error.titleOtpExpired");
     case "session-expired": return t("error.titleSessionExpired");
     case "server-closed": return t("error.titleServerClosed");
     default: return t("error.titleUnknown");
@@ -27,6 +29,7 @@ function bodyOf(r: Reason): string {
   switch (r) {
     case "no-session": return t("error.bodyNoSession");
     case "otp-locked": return t("error.bodyOtpLocked");
+    case "otp-expired": return t("error.bodyOtpExpired");
     case "session-expired": return t("error.bodySessionExpired");
     case "server-closed": return t("error.bodyServerClosed");
     default: return t("error.bodyUnknown");
@@ -34,6 +37,7 @@ function bodyOf(r: Reason): string {
 }
 
 export default function ErrorScreen({ reason, detail }: Props) {
+  const isRescan = reason === "otp-expired";
   return (
     <main className="min-h-[100dvh] flex items-center justify-center px-6 py-10 safe-area-top safe-area-bottom">
       <div className="max-w-sm w-full text-center">
@@ -43,11 +47,15 @@ export default function ErrorScreen({ reason, detail }: Props) {
             background:
               reason === "no-session"
                 ? "var(--tb-accent-soft)"
+                : isRescan
+                ? "color-mix(in srgb, var(--tb-accent) 12%, transparent)"
                 : "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
           }}
         >
           {reason === "no-session" ? (
             <QrCode size={28} strokeWidth={1.8} className="text-[var(--tb-accent)]" />
+          ) : isRescan ? (
+            <RefreshCw size={28} strokeWidth={1.8} className="text-[var(--tb-accent)]" />
           ) : (
             <AlertCircle size={28} strokeWidth={1.8} className="text-[var(--tb-danger)]" />
           )}
