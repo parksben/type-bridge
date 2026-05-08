@@ -258,7 +258,7 @@ export const ZH = {
   },
 
   inputSettings: {
-    intro: "配置消息到达本地后的输入行为，包括自动提交与提交按键",
+    intro: "开启「自动提交」功能，消息发送后自动按下键盘的提交按键",
     autoSubmitGroup: "自动提交",
     autoSubmitTitle: "输入后自动提交",
     autoSubmitDesc: "写入完成后模拟按下提交按键，完成一键发送",
@@ -579,7 +579,7 @@ export const EN: Dict = {
   },
 
   inputSettings: {
-    intro: "Configure how messages are typed after they arrive locally",
+    intro: "Enable \"Auto-submit\" to automatically press the submit key after a message is sent",
     autoSubmitGroup: "Auto-submit",
     autoSubmitTitle: "Auto-submit after typing",
     autoSubmitDesc: "After writing finishes, simulate the submit key for one-shot send",
