@@ -10,7 +10,6 @@ import {
   RotateCw,
   ScanLine,
   Square,
-  Timer,
   Unplug,
   Wifi,
 } from "lucide-react";
@@ -224,7 +223,6 @@ export default function WebChatConnectionTab() {
             remainingSecs={remaining}
             busy={busy}
             onStop={stop}
-            onRotate={() => rotateOtp(true)}
           />
         )}
         {(phase === "expired" || phase === "error") && (
@@ -285,122 +283,105 @@ function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
   );
 }
 
-/// pending + bound 共用的"会话运行中"视图：QR + OTP 横向并排 + 进度条融入 OTP
-/// 容器底部做装饰，信息密度高、视觉紧凑。phase 区分度由外层 wifiBanner /
-/// boundBanner 完成。
+/// pending + bound 共用的"会话运行中"视图：二维码居中，外圈进度环显示 OTP
+/// 剩余有效时间（无数字倒计时）。底部一行"用手机扫码即可连接"提示 + 停止按钮。
+/// phase 区分度由外层 wifiBanner / boundBanner 完成。
 function SessionLiveView({
   snap,
   qrDataUrl,
   remainingSecs,
   busy,
   onStop,
-  onRotate,
 }: {
   snap: WebChatSnapshot;
   qrDataUrl: string | null;
   remainingSecs: number;
   busy: boolean;
   onStop: () => void;
-  onRotate: () => void;
 }) {
-  const serverUrl = snap.lan_ip && snap.port ? `http://${snap.lan_ip}:${snap.port}` : "";
   const isBound = snap.phase.kind === "bound";
-  const otp = snap.otp || "";
+
+  // 进度环参数
+  const r = 96;
+  const circumference = 2 * Math.PI * r;
+  const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
+  const offset = circumference * (1 - percent / 100);
+  const lowTime = remainingSecs <= 10;
+
+  // OTP 轮换瞬间 remainingSecs 从 ~0 跳到 SESSION_TTL_SECS，这一帧禁掉 transition
+  // 让进度环瞬间跳满，下一帧再恢复正常动画
+  const prevRef = useRef(remainingSecs);
+  const isJumpUp = remainingSecs > prevRef.current;
+  useEffect(() => {
+    prevRef.current = remainingSecs;
+  });
 
   return (
     <>
-      {/* QR + OTP 横向并排：QR 160px、OTP 列 flex-1 */}
-      <div className="flex gap-4 items-stretch">
-        {/* Left: QR */}
-        <div className="flex flex-col items-center gap-2 shrink-0">
+      {/* 二维码 + 进度环（居中） */}
+      <div className="flex flex-col items-center gap-3">
+        <div style={{ position: "relative", width: 200, height: 200 }}>
+          {/* 进度环 SVG */}
+          <svg
+            width="200"
+            height="200"
+            viewBox="0 0 200 200"
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+            aria-hidden="true"
+          >
+            {/* 底色轨道 */}
+            <circle
+              cx="100"
+              cy="100"
+              r={r}
+              fill="none"
+              stroke="var(--border)"
+              strokeWidth="3"
+            />
+            {/* 进度弧线，从 12 点方向顺时针收缩 */}
+            <circle
+              cx="100"
+              cy="100"
+              r={r}
+              fill="none"
+              stroke={lowTime ? "var(--error)" : "var(--accent)"}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={`${circumference}`}
+              strokeDashoffset={`${offset}`}
+              transform="rotate(-90 100 100)"
+              style={{
+                transition: isJumpUp
+                  ? "none"
+                  : "stroke-dashoffset 1s linear, stroke 200ms",
+              }}
+            />
+          </svg>
+          {/* 二维码容器，内缩 8px 留出进度环位置 */}
           <div
-            className="rounded-lg p-2.5 flex items-center justify-center"
+            className="absolute rounded-lg flex items-center justify-center"
             style={{
+              inset: "8px",
               background: "white",
               border: "1px solid var(--border)",
-              width: 180,
-              height: 180,
             }}
           >
             {qrDataUrl ? (
-              <img src={qrDataUrl} alt="WebChat QR" width={160} height={160} />
+              <img src={qrDataUrl} alt="WebChat QR" width={152} height={152} />
             ) : (
               <RotateCw size={18} strokeWidth={1.75} className="animate-spin text-muted" />
             )}
           </div>
-          <div className="flex items-center gap-1 text-[10.5px] text-muted">
-            <ScanLine size={10} strokeWidth={1.75} />
-            <span>{ti18n("webchat.scanWithCamera")}</span>
-          </div>
-          {serverUrl && (
-            <div
-              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-              style={{
-                background: "var(--surface-2)",
-                color: "var(--muted)",
-              }}
-              title={serverUrl}
-            >
-              {serverUrl}
-            </div>
-          )}
         </div>
 
-        {/* Right: OTP column */}
-        <div className="flex-1 flex flex-col gap-2 justify-center min-w-0">
-          {/* label + 手动刷新 */}
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-              <span className="text-accent">●</span>
-              {ti18n("webchat.otpLabel")}
-            </label>
-            <button
-              onClick={onRotate}
-              disabled={busy}
-              className="flex items-center justify-center w-6 h-6 rounded transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[var(--surface-2)]"
-              title={ti18n("webchat.refreshOtp")}
-              aria-label={ti18n("webchat.refreshOtpAria")}
-            >
-              <RotateCw size={12} strokeWidth={2} className="text-muted" />
-            </button>
-          </div>
-
-          {/* OTP pill 单容器 + 底部进度条装饰 */}
-          <div
-            className="relative rounded-xl overflow-hidden"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-center py-4 font-mono font-semibold tabular-nums text-text"
-              style={{
-                fontSize: "24px",
-                letterSpacing: "0.38em",
-                // 右移半格弥补 letter-spacing 导致的视觉左偏
-                paddingLeft: "0.38em",
-              }}
-            >
-              {otp || "------"}
-            </div>
-            <OtpProgressUnderline remainingSecs={remainingSecs} />
-          </div>
-
-          {/* 剩余时间（小字辅助，非主视觉） */}
-          <div className="flex items-center gap-1 text-[10.5px] font-mono tabular-nums text-muted">
-            <Timer size={10} strokeWidth={1.75} />
-            <span>{ti18n("webchat.remaining", { time: formatRemaining(remainingSecs) })}</span>
-          </div>
+        {/* 扫码提示 */}
+        <div className="flex items-center gap-1.5 text-[11px] text-muted">
+          <ScanLine size={11} strokeWidth={1.75} />
+          <span>{ti18n("webchat.scanHint")}</span>
         </div>
       </div>
 
-      <p className="text-[11px] text-muted leading-relaxed">
-        {ti18n("webchat.otpHint")}
-      </p>
-
-      {/* 停止 / 断开会话按钮：isBound（已有手机绑定）→ 断开会话 + Unplug；
-          否则 server 起着但还没人扫码 → 停止（server）+ Square */}
+      {/* 停止 / 断开会话按钮 */}
       <button
         onClick={onStop}
         disabled={busy}
@@ -491,42 +472,6 @@ function ErrorView({
   );
 }
 
-/// OTP 容器底部的装饰性倒计时进度条。高度 3px，吸底 + overflow-hidden 让它
-/// 看起来是容器的一部分。宽度从 100% 平滑缩到 0%，归零时上层自动调
-/// rotate_webchat_otp，expires_at 更新后跳回 100% 重新开始；最后 10s 变红。
-///
-/// 关键：OTP 轮换瞬间 remainingSecs 从 ~0 跳到 SESSION_TTL_SECS。直接用 CSS
-/// transition 会让条子从近 0% 平滑长到 100%，看起来像新一轮"反向加载"。这里
-/// 用 ref 记上一次值，检测到向上跳跃时**这一帧禁掉 transition**，让条子瞬间
-/// 跳满，下一帧再恢复 1s linear 的正常缩短动画。
-function OtpProgressUnderline({ remainingSecs }: { remainingSecs: number }) {
-  const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
-  const lowTime = remainingSecs <= 10;
-  const fillColor = lowTime ? "var(--error)" : "var(--accent)";
-
-  const prevRef = useRef(remainingSecs);
-  const isJumpUp = remainingSecs > prevRef.current;
-  useEffect(() => {
-    prevRef.current = remainingSecs;
-  });
-
-  return (
-    <div
-      className="absolute bottom-0 left-0 right-0 h-[3px] pointer-events-none"
-      style={{ background: "var(--surface-2)" }}
-    >
-      <div
-        className="h-full"
-        style={{
-          width: `${percent}%`,
-          background: fillColor,
-          transition: isJumpUp ? "none" : "width 1s linear, background 200ms",
-        }}
-      />
-    </div>
-  );
-}
-
 function ConnectionPill({ phase, bound }: { phase: Phase; bound: number }) {
   const dotClass =
     phase === "bound" ? "dot-connected" : phase === "pending" ? "dot-connecting" : "dot-idle";
@@ -546,10 +491,4 @@ function ConnectionPill({ phase, bound }: { phase: Phase; bound: number }) {
       <span className="text-[12.5px] text-muted">{text}</span>
     </div>
   );
-}
-
-function formatRemaining(secs: number): string {
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
-  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }

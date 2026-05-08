@@ -5,7 +5,6 @@ import { WebChatClient, type ClientStatus } from "@/lib/socket";
 import { getOrCreateClientId, clearBinding, saveBinding } from "@/lib/storage";
 import { t } from "@/i18n";
 import PCBlockView from "@/components/PCBlockView";
-import HandshakeForm from "@/components/HandshakeForm";
 import ChatPage from "@/components/ChatPage";
 import ErrorScreen from "@/components/ErrorScreen";
 
@@ -16,20 +15,22 @@ type State =
   | { kind: "loading" }
   | { kind: "pc-block" }
   | { kind: "no-session" }
-  | { kind: "handshake"; sessionId: string }
   | { kind: "chat"; sessionId: string }
   | { kind: "error"; reason: ErrorReason; detail?: string };
 
-type ErrorReason = "otp-locked" | "session-expired" | "server-closed" | "unknown";
+type ErrorReason = "otp-locked" | "otp-expired" | "server-closed" | "unknown";
 
 export default function App() {
   const [state, setState] = useState<State>({ kind: "loading" });
-  const [otpErrorNonce, setOtpErrorNonce] = useState(0);
-  const [otpErrorMsg, setOtpErrorMsg] = useState<string | undefined>();
 
   // WebChatClient 全生命周期单例
   const clientRef = useRef<WebChatClient | null>(null);
   const [socketStatus, setSocketStatus] = useState<ClientStatus>("connecting");
+
+  // 从 URL 解析出的会话信息
+  const sessionInfoRef = useRef<{ sessionId: string; otp: string } | null>(null);
+  // 防止 auto-hello 被多次触发
+  const helloAttemptedRef = useRef(false);
 
   // 启动：UA 分流 + URL 解析
   useEffect(() => {
@@ -40,16 +41,16 @@ export default function App() {
       return;
     }
 
-    // URL ?s=sessionId
+    // URL ?s=sessionId&otp=XXXXXX
     const params = new URLSearchParams(window.location.search);
     const sid = params.get("s") ?? "";
-    if (!sid || !SESSION_ID_REGEX.test(sid)) {
+    const otp = params.get("otp") ?? "";
+    if (!sid || !SESSION_ID_REGEX.test(sid) || !otp) {
       setState({ kind: "no-session" });
       return;
     }
 
-    // 进握手
-    setState({ kind: "handshake", sessionId: sid });
+    sessionInfoRef.current = { sessionId: sid, otp };
 
     // dev 模式下，Rust server 会 302 把页面重定向到 Vite dev (5173) 并在 query 里
     // 加 apiPort=<rust_port>。这里读出来后让 socket.io-client 显式连那个端口
@@ -59,7 +60,7 @@ export default function App() {
       ? `http://${window.location.hostname}:${apiPort}`
       : undefined;
 
-    // 创建 client 并 connect
+    // 创建 client 并 connect；state 保持 loading 直到 hello 完成
     const client = new WebChatClient({
       url: apiUrl,
       onStatusChange: (s) => setSocketStatus(s),
@@ -72,37 +73,41 @@ export default function App() {
     };
   }, []);
 
-  async function handleOtp(otp: string) {
+  // Socket 连接后自动发送 hello（OTP 来自 URL 参数，无需用户手动输入）
+  useEffect(() => {
+    if (state.kind !== "loading") return;
+    if (socketStatus !== "connected") return;
+    if (helloAttemptedRef.current) return;
+
     const client = clientRef.current;
-    if (!client || state.kind !== "handshake") return;
-    setOtpErrorMsg(undefined);
+    const info = sessionInfoRef.current;
+    if (!client || !info) return;
 
-    const ack = await client.hello(otp, getOrCreateClientId());
-    if (ack.ok) {
-      // 持久化绑定（刷新恢复用；v2 P3 阶段只存不用，P5 阶段再做 token 探测复用）
-      saveBinding({
-        sessionId: state.sessionId,
-        userToken: ack.userToken,
-        issuedAt: Date.now(),
-      });
-      setState({ kind: "chat", sessionId: state.sessionId });
-      return;
-    }
+    helloAttemptedRef.current = true;
 
-    // 失败：按 reason 分流
-    const reason = ack.reason;
-    if (reason === "OTP_LOCKED") {
-      setState({ kind: "error", reason: "otp-locked" });
-      return;
-    }
-    if (reason === "SESSION_EXPIRED") {
-      setState({ kind: "error", reason: "session-expired" });
-      return;
-    }
-    // OTP_INVALID 或其他 → 抖动提示，允许再试
-    setOtpErrorNonce((n) => n + 1);
-    setOtpErrorMsg(humanizeReason(reason));
-  }
+    client.hello(info.otp, getOrCreateClientId()).then((ack) => {
+      if (ack.ok) {
+        saveBinding({
+          sessionId: info.sessionId,
+          userToken: ack.userToken,
+          issuedAt: Date.now(),
+        });
+        setState({ kind: "chat", sessionId: info.sessionId });
+        return;
+      }
+
+      // 失败：按 reason 分流
+      const reason = ack.reason;
+      if (reason === "OTP_LOCKED") {
+        setState({ kind: "error", reason: "otp-locked" });
+      } else if (reason === "SESSION_EXPIRED" || reason === "OTP_INVALID") {
+        // OTP 已过期或不匹配（可能扫到刚轮换过的旧 QR）→ 提示重扫
+        setState({ kind: "error", reason: "otp-expired" });
+      } else {
+        setState({ kind: "error", reason: "unknown", detail: reason });
+      }
+    });
+  }, [state.kind, socketStatus]);
 
   // socket 状态变 "disconnected" 且已在 chat 态 → 判定桌面关闭
   useEffect(() => {
@@ -137,16 +142,6 @@ export default function App() {
     return <ErrorScreen reason="no-session" />;
   }
 
-  if (state.kind === "handshake") {
-    return (
-      <HandshakeForm
-        onSubmit={handleOtp}
-        errorNonce={otpErrorNonce}
-        errorMessage={otpErrorMsg}
-      />
-    );
-  }
-
   if (state.kind === "chat") {
     // 保险起见 clientRef 必然存在
     if (!clientRef.current) {
@@ -156,17 +151,4 @@ export default function App() {
   }
 
   return <ErrorScreen reason={state.reason} detail={state.detail} />;
-}
-
-function humanizeReason(reason: string): string {
-  switch (reason) {
-    case "OTP_INVALID":
-      return t("app.otpInvalid");
-    case "OTP_LOCKED":
-      return t("app.otpLocked");
-    case "SESSION_EXPIRED":
-      return t("app.sessionExpired");
-    default:
-      return reason || t("app.handshakeFailed");
-  }
 }
