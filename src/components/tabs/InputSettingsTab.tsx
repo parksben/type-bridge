@@ -99,6 +99,7 @@ export default function InputSettingsTab() {
             />
           </div>
         </div>
+        </div>
       </div>
     </div>
   );
