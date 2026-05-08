@@ -85,22 +85,30 @@ macOS 13+（Apple Silicon 或 Intel）
 | 依赖 | 版本 |
 |---|---|
 | Node.js | 20+ |
-| Rust | stable (1.95+) |
+| Rust | stable (1.75+) |
 | Go | 1.21+ |
 | Xcode Command Line Tools | 必须安装 |
+
+> 📖 **首次搭建**请阅读 [docs/DEV_SETUP.md](docs/DEV_SETUP.md)，包含完整的环境初始化步骤、常见报错解法和镜像配置。
 
 ### 快速开始
 
 ```bash
-npm install
+# 1. 安装 npm 依赖（根目录 + webchat-local 子项目）
+npm install && cd webchat-local && npm install && cd ..
 
-# 编译 Go sidecar（aarch64）
+# 2. 编译 Go sidecar（三个渠道，aarch64）
+mkdir -p src-tauri/binaries
 for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
   (cd "$bridge" && GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
-    go build -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
+    go build -ldflags '-s -w' \
+      -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
 done
 
-# 启动开发模式
+# 3. 构建 webchat-local 静态资源（tauri dev 不会自动触发）
+cd webchat-local && npm run build && cd ..
+
+# 4. 启动开发模式（首次约 5-10 分钟冷编译，之后秒级增量）
 npm run tauri dev
 ```
 
@@ -126,6 +134,7 @@ type-bridge/
 ### 开发时注意
 
 - **Go sidecar 需手动重新编译** — `tauri dev` 不会自动编译 Go。修改 `.go` 文件后需手动 `go build` 对应 bridge，然后重启 `tauri dev`。
+- **webchat-local 需手动重新构建** — `tauri dev` 不会触发 `webchat-local` 的 Vite 构建。修改 `webchat-local/` 源码后需手动 `cd webchat-local && npm run build`。
 - **前端 HMR** 对 `src/` 的修改自动生效。
 - **Rust 修改** 会被 `tauri dev` 自动检测（cargo 增量编译）。
 

@@ -17,31 +17,41 @@ TypeBridge 是 macOS 菜单栏应用：接收飞书机器人消息 → 通过 Ac
 
 ## 常用命令
 
+> 📖 **首次在新机器上搭建开发环境**，请先阅读 [docs/DEV_SETUP.md](docs/DEV_SETUP.md)。  
+> 该文档详细记录了前置依赖安装、Go sidecar 编译、webchat-local 构建等一次性步骤，以及常见报错与解法。
+
 ```bash
 # 开发模式（首次编译约 5-10 分钟，之后秒级增量）
 npm run tauri dev
 
-# 打包 .dmg
-npm run tauri build
+# 打包 .dmg（单架构）
+npm run tauri build -- --target aarch64-apple-darwin
 
-# 单独编译 Go sidecar（修改 feishu-bridge/*.go 后必须手动重编）
-cd feishu-bridge && GOOS=darwin GOARCH=arm64 \
-  go build -o ../src-tauri/binaries/feishu-bridge-aarch64-apple-darwin .
+# 双架构打包
+./scripts/build-all.sh
+
+# 单独编译 Go sidecar（修改任意 *-bridge/*.go 后必须手动重编对应 bridge）
+cd feishu-bridge && GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
+  go build -o ../src-tauri/binaries/feishu-bridge-aarch64-apple-darwin . && cd ..
 
 # 只检查 Rust 编译错误（比 tauri dev 快很多）
 cd src-tauri && cargo check
 ```
 
-**Go sidecar 必须手动重编** — `tauri dev` 不会触发 Go 的重新编译。改完 `.go` 文件必须跑上面那行 `go build`，然后重启 `tauri dev`。
+**Go sidecar 必须手动重编** — `tauri dev` 不会触发 Go 的重新编译。改完 `.go` 文件必须跑上面那行 `go build`，然后重启 `tauri dev`。  
+**webchat-local/dist 需手动构建** — `tauri dev` 不会触发 `webchat-local` 的构建。修改 `webchat-local/` 源码后需手动 `cd webchat-local && npm run build`。
 
-## 镜像配置（国内网络，推荐）
+## 镜像配置（国内网络）
 
-安装依赖前如果遇到慢或超时，可按需配置以下镜像：
-- npm: `npm config set registry https://registry.npmmirror.com`
-- Cargo: 在 `~/.cargo/config.toml` 中配置 USTC sparse index
-- Rustup: `export RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static`
-- Go proxy: 构建命令内加 `GOPROXY=https://goproxy.cn,direct`
-- Homebrew: `export HOMEBREW_BOTTLE_DOMAIN=https://mirrors.ustc.edu.cn/homebrew-bottles`
+详见 [docs/DEV_SETUP.md § 镜像配置](docs/DEV_SETUP.md#镜像配置国内网络)。速查：
+
+| 工具 | 配置 |
+|---|---|
+| npm | `npm config set registry https://registry.npmmirror.com` |
+| Go | 构建命令内加 `GOPROXY=https://goproxy.cn,direct` |
+| Cargo | `~/.cargo/config.toml` 配置 USTC sparse index |
+| Rustup | `export RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static` |
+| Homebrew | `export HOMEBREW_BOTTLE_DOMAIN=https://mirrors.ustc.edu.cn/homebrew-bottles` |
 
 ## 架构：三进程 IPC + WebChat 本地 Socket.IO server
 
