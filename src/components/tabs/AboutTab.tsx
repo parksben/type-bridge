@@ -233,6 +233,40 @@ function ConfirmInstallDialog({
   const isOpening = downloadState.phase === "opening";
   const isBusy = isDownloading || isOpening;
 
+  const [showSlowHint, setShowSlowHint] = useState(false);
+  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 下载开始时启动 5 秒计时器
+  useEffect(() => {
+    if (!isDownloading) {
+      setShowSlowHint(false);
+      if (slowTimerRef.current) {
+        clearTimeout(slowTimerRef.current);
+        slowTimerRef.current = null;
+      }
+      return;
+    }
+    slowTimerRef.current = setTimeout(() => setShowSlowHint(true), 5000);
+    return () => {
+      if (slowTimerRef.current) {
+        clearTimeout(slowTimerRef.current);
+        slowTimerRef.current = null;
+      }
+    };
+  }, [isDownloading]);
+
+  // 有字节传输后取消计时器
+  useEffect(() => {
+    if (
+      downloadState.phase === "downloading" &&
+      downloadState.downloaded > 0 &&
+      slowTimerRef.current
+    ) {
+      clearTimeout(slowTimerRef.current);
+      slowTimerRef.current = null;
+    }
+  }, [downloadState]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -258,13 +292,31 @@ function ConfirmInstallDialog({
         ) : isDownloading ? (
           /* ── 下载进度 ── */
           <div className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-[15px] font-semibold text-text mb-0.5">
-                {ti18n("about.downloading")}
-              </h2>
-              <p className="text-[12px] text-subtle font-mono">
-                TypeBridge v{latest}
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[15px] font-semibold text-text mb-0.5">
+                  {ti18n("about.downloading")}
+                </h2>
+                <p className="text-[12px] text-subtle font-mono">
+                  TypeBridge v{latest}
+                </p>
+              </div>
+              {showSlowHint && (
+                <p className="text-[11px] text-muted text-right shrink-0 leading-relaxed pt-0.5">
+                  {ti18n("about.downloadSlowHintPre")}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const { openUrl } = await import("@tauri-apps/plugin-opener");
+                      await openUrl("https://typebridge.parksben.xyz/#download");
+                    }}
+                    className="text-accent underline hover:opacity-80 cursor-pointer"
+                  >
+                    {ti18n("about.downloadSlowHintLink")}
+                  </button>
+                  {ti18n("about.downloadSlowHintPost")}
+                </p>
+              )}
             </div>
 
             <DownloadProgressBar
