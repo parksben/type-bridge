@@ -15,7 +15,7 @@ export const ZH = {
 
   sidebar: {
     connection: "连接 TypeBridge",
-    input: "输入设置",
+    input: "快捷输入",
     history: "历史消息",
     logs: "系统日志",
     about: "关于 TypeBridge",
@@ -258,6 +258,7 @@ export const ZH = {
   },
 
   inputSettings: {
+    intro: "配置消息到达本地后的输入行为，包括自动提交与提交按键",
     autoSubmitGroup: "自动提交",
     autoSubmitTitle: "输入后自动提交",
     autoSubmitDesc: "写入完成后模拟按下提交按键，完成一键发送",
@@ -335,7 +336,7 @@ export const EN: Dict = {
 
   sidebar: {
     connection: "Connect TypeBridge",
-    input: "Input settings",
+    input: "Quick input",
     history: "Message history",
     logs: "System log",
     about: "About TypeBridge",
@@ -578,6 +579,7 @@ export const EN: Dict = {
   },
 
   inputSettings: {
+    intro: "Configure how messages are typed after they arrive locally",
     autoSubmitGroup: "Auto-submit",
     autoSubmitTitle: "Auto-submit after typing",
     autoSubmitDesc: "After writing finishes, simulate the submit key for one-shot send",

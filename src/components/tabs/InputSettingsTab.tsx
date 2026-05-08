@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Keyboard, Zap } from "lucide-react";
+import { Info, Keyboard, Zap } from "lucide-react";
 import { useAppStore, DEFAULT_SUBMIT_KEY, type Settings } from "../../store";
 import { useI18n } from "../../i18n";
 import KeyBindInput from "../KeyBindInput";
@@ -41,8 +41,22 @@ export default function InputSettingsTab() {
   }, [autoSubmit, submitKey, hydrated]);
 
   return (
-    <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
-      <div className="max-w-md mx-auto flex flex-col gap-5">
+    <div className="h-full flex flex-col">
+      {/* 顶部 intro 说明 */}
+      <div
+        className="flex items-center gap-2 px-6 py-3 text-[12.5px]"
+        style={{
+          background: "var(--surface-2)",
+          borderBottom: "1px solid var(--border)",
+          color: "var(--muted)",
+        }}
+      >
+        <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
+        <span>{t("inputSettings.intro")}</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto thin-scroll px-10 py-8">
+        <div className="max-w-md mx-auto flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <Zap size={12} strokeWidth={1.75} />
