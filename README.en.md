@@ -141,10 +141,6 @@ npm run tauri build -- --target aarch64-apple-darwin
 
 Output: `src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
 
-### CI/CD
-
-Push a `v*` tag or trigger the `Release` workflow manually via GitHub Actions.
-
 ## 📄 License
 
 [MIT](LICENSE)
