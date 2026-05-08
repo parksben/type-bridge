@@ -336,9 +336,9 @@ export const EN: Dict = {
 
   sidebar: {
     connection: "Connect TypeBridge",
-    input: "Quick input",
-    history: "Message history",
-    logs: "System log",
+    input: "Auto Submit",
+    history: "Message History",
+    logs: "System Log",
     about: "About TypeBridge",
     language: "Language",
   },
