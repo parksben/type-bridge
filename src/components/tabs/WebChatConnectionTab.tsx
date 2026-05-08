@@ -283,7 +283,7 @@ function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
   );
 }
 
-/// pending + bound 共用的"会话运行中"视图：二维码居中，外圈进度环显示 OTP
+/// pending + bound 共用的"会话运行中"视图：二维码居中，底部横向进度条显示 OTP
 /// 剩余有效时间（无数字倒计时）。底部一行"用手机扫码即可连接"提示 + 停止按钮。
 /// phase 区分度由外层 wifiBanner / boundBanner 完成。
 function SessionLiveView({
@@ -301,15 +301,11 @@ function SessionLiveView({
 }) {
   const isBound = snap.phase.kind === "bound";
 
-  // 进度环参数
-  const r = 96;
-  const circumference = 2 * Math.PI * r;
   const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
-  const offset = circumference * (1 - percent / 100);
   const lowTime = remainingSecs <= 10;
 
   // OTP 轮换瞬间 remainingSecs 从 ~0 跳到 SESSION_TTL_SECS，这一帧禁掉 transition
-  // 让进度环瞬间跳满，下一帧再恢复正常动画
+  // 让进度条瞬间跳满，下一帧再恢复正常动画
   const prevRef = useRef(remainingSecs);
   const isJumpUp = remainingSecs > prevRef.current;
   useEffect(() => {
@@ -318,64 +314,51 @@ function SessionLiveView({
 
   return (
     <>
-      {/* 二维码 + 进度环（居中） */}
-      <div className="flex flex-col items-center gap-3">
-        <div style={{ position: "relative", width: 200, height: 200 }}>
-          {/* 进度环 SVG */}
-          <svg
-            width="200"
-            height="200"
-            viewBox="0 0 200 200"
-            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+      {/* 二维码卡片（居中） */}
+      <div className="flex flex-col items-center">
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            border: "1px solid var(--border)",
+            background: "white",
+          }}
+        >
+          {/* 二维码图像区域 */}
+          <div className="flex items-center justify-center p-3">
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="WebChat QR" width={168} height={168} />
+            ) : (
+              <div
+                className="flex items-center justify-center"
+                style={{ width: 168, height: 168 }}
+              >
+                <RotateCw size={20} strokeWidth={1.75} className="animate-spin text-muted" />
+              </div>
+            )}
+          </div>
+
+          {/* 横向进度条：紧贴二维码底部，无圆角上边 */}
+          <div
+            className="relative"
+            style={{ height: 3, background: "var(--border)" }}
             aria-hidden="true"
           >
-            {/* 底色轨道 */}
-            <circle
-              cx="100"
-              cy="100"
-              r={r}
-              fill="none"
-              stroke="var(--border)"
-              strokeWidth="3"
-            />
-            {/* 进度弧线，从 12 点方向顺时针收缩 */}
-            <circle
-              cx="100"
-              cy="100"
-              r={r}
-              fill="none"
-              stroke={lowTime ? "var(--error)" : "var(--accent)"}
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={`${circumference}`}
-              strokeDashoffset={`${offset}`}
-              transform="rotate(-90 100 100)"
+            <div
               style={{
-                transition: isJumpUp
-                  ? "none"
-                  : "stroke-dashoffset 1s linear, stroke 200ms",
+                position: "absolute",
+                left: 0,
+                top: 0,
+                height: "100%",
+                width: `${percent}%`,
+                background: lowTime ? "var(--error)" : "var(--accent)",
+                transition: isJumpUp ? "none" : "width 1s linear, background 200ms",
               }}
             />
-          </svg>
-          {/* 二维码容器，内缩 8px 留出进度环位置 */}
-          <div
-            className="absolute rounded-lg flex items-center justify-center"
-            style={{
-              inset: "8px",
-              background: "white",
-              border: "1px solid var(--border)",
-            }}
-          >
-            {qrDataUrl ? (
-              <img src={qrDataUrl} alt="WebChat QR" width={152} height={152} />
-            ) : (
-              <RotateCw size={18} strokeWidth={1.75} className="animate-spin text-muted" />
-            )}
           </div>
         </div>
 
         {/* 扫码提示 */}
-        <div className="flex items-center gap-1.5 text-[11px] text-muted">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted mt-3">
           <ScanLine size={11} strokeWidth={1.75} />
           <span>{ti18n("webchat.scanHint")}</span>
         </div>
