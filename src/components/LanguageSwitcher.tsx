@@ -55,13 +55,13 @@ export default function LanguageSwitcher() {
     <div ref={rootRef} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 pl-3 pr-2 h-7 text-[12px] rounded-md transition-colors text-left w-full text-subtle hover:text-muted"
+        className="flex items-center gap-1.5 px-2 h-7 text-[12px] rounded-md transition-colors text-left text-subtle hover:text-muted"
         style={open ? { background: "var(--surface-2)" } : undefined}
         aria-label={t("sidebar.language")}
         aria-expanded={open}
       >
         <Languages size={12} strokeWidth={1.5} />
-        <span className="truncate flex-1">{currentLabel}</span>
+        <span className="truncate">{currentLabel}</span>
         <ChevronDown
           size={11}
           strokeWidth={1.75}
