@@ -312,6 +312,9 @@ export const ZH = {
     downloadProgress: "下载进度",
     downloadOpening: "正在打开安装包…",
     confirm: "确认更新",
+    downloadSlowHintPre: "本地下载太慢？可",
+    downloadSlowHintLink: "前往官网",
+    downloadSlowHintPost: "下载",
   },
 
   log: {
@@ -633,6 +636,9 @@ export const EN: Dict = {
     downloadProgress: "Download progress",
     downloadOpening: "Opening installer…",
     confirm: "Confirm update",
+    downloadSlowHintPre: "Slow download? ",
+    downloadSlowHintLink: "Visit official site",
+    downloadSlowHintPost: " to download",
   },
 
   log: {
