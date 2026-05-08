@@ -15,7 +15,7 @@ export const ZH = {
 
   sidebar: {
     connection: "连接 TypeBridge",
-    input: "快捷输入",
+    input: "自动提交",
     history: "历史消息",
     logs: "系统日志",
     about: "关于 TypeBridge",
