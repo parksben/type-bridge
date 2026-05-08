@@ -6,6 +6,7 @@ import logoUrl from "../../assets/icons/typebridge.png";
 import { useI18n, t as ti18n } from "../../i18n";
 import { localizeRuntime } from "../../i18n/runtime";
 import LanguageSwitcher from "../LanguageSwitcher";
+import ThemeSwitcher from "../ThemeSwitcher";
 
 // 与 src-tauri/src/about.rs 的 UpdateCheckResult 对齐
 interface UpdateCheckResult {
@@ -156,9 +157,14 @@ export default function AboutTab() {
         <CheckResultLine status={status} onShowConfirm={openConfirm} />
       </div>
 
-      {/* 语言切换 — 页面右下角 */}
-      <div className="absolute bottom-4 right-4 w-30">
-        <LanguageSwitcher />
+      {/* 语言切换 + 主题切换 — 页面右下角并排 */}
+      <div className="absolute bottom-4 right-4 flex items-center gap-1.5">
+        <div className="w-28">
+          <LanguageSwitcher />
+        </div>
+        <div className="w-24">
+          <ThemeSwitcher />
+        </div>
       </div>
 
       {confirmOpen && status.kind === "has-update" && (

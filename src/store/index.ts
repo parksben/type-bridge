@@ -10,6 +10,10 @@ export type ChannelId = "webchat" | "feishu" | "dingtalk" | "wecom";
 /// 首屏防闪 hint 写在 localStorage。详见 docs/TECH_DESIGN.md §三十六。
 export type Lang = "zh" | "en";
 
+/// UI 主题模式。仅存 localStorage（`tb_theme`），不写入 Rust Settings。
+/// 防闪脚本在 index.html 中读取并即时应用 data-theme 属性。
+export type Theme = "system" | "light" | "dark";
+
 /// 历史遗留导出：渠道展示名（中文版）。组件层应改用 useI18n() 的
 /// t("channel.xxx") 取得当前语言的渠道名；保留此常量是为了兼容老
 /// 代码路径，不再被新代码使用。
@@ -110,6 +114,8 @@ interface AppStore {
   activeConnectionChannel: ChannelId;
   /// UI 语言。空字符串「未选择」时由 LanguagePicker 弹首启卡片。
   language: Lang | "";
+  /// UI 主题。"system" = 跟随系统（默认）。
+  theme: Theme;
 
   setChannelConnected: (channel: ChannelId, connected: boolean) => void;
   setAutoSubmit: (v: boolean) => void;
@@ -118,6 +124,7 @@ interface AppStore {
   setActiveConnectionChannel: (ch: ChannelId) => void;
   /// 仅更新内存状态。持久化由调用方负责（hooks/usePersistLanguage.ts）。
   setLanguage: (lang: Lang) => void;
+  setTheme: (theme: Theme) => void;
   addLog: (entry: Omit<LogEntry, "time">) => void;
   clearLogs: () => void;
   setHistory: (items: HistoryMessage[]) => void;
@@ -139,6 +146,15 @@ function readLangHint(): Lang | "" {
   }
 }
 
+function readThemeHint(): Theme {
+  try {
+    const v = window.localStorage.getItem("tb_theme");
+    return v === "light" || v === "dark" || v === "system" ? v : "system";
+  } catch {
+    return "system";
+  }
+}
+
 export const useAppStore = create<AppStore>((set) => ({
   channelConnected: {},
   autoSubmit: true,
@@ -149,6 +165,7 @@ export const useAppStore = create<AppStore>((set) => ({
   activeTab: "connection",
   activeConnectionChannel: "webchat",
   language: readLangHint(),
+  theme: readThemeHint(),
 
   setChannelConnected: (channel, connected) =>
     set((state) => ({
@@ -166,6 +183,20 @@ export const useAppStore = create<AppStore>((set) => ({
       // 忽略 storage 异常（隐私模式 / 配额满）——内存状态仍然生效
     }
     set({ language });
+  },
+  setTheme: (theme) => {
+    try {
+      window.localStorage.setItem("tb_theme", theme);
+    } catch {
+      // 忽略 storage 异常
+    }
+    // 同步应用到 <html> data-theme 属性
+    if (theme === "system") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+    set({ theme });
   },
 
   addLog: (entry) =>

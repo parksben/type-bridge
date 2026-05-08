@@ -6,7 +6,18 @@
     <!-- CSS 加载前立即设好背景色，并将内容区隐藏，等 React 挂载完再渐显 -->
     <script>
       (function () {
-        var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var theme = "";
+        try { theme = window.localStorage.getItem("tb_theme") || ""; } catch (e) {}
+        var dark;
+        if (theme === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+          dark = true;
+        } else if (theme === "light") {
+          document.documentElement.setAttribute("data-theme", "light");
+          dark = false;
+        } else {
+          dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        }
         document.documentElement.style.background = dark ? "#0e0e10" : "#faf9f6";
         document.documentElement.style.opacity = "0";
       })();

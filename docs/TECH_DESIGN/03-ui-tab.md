@@ -68,6 +68,23 @@
 
 只用一个 accent 色（暖橙），辅以 success（绿）和 idle（灰）。**不引入第二个品牌色**——单色克制是质感来源。
 
+### 8.3.1 三主题模式（system / light / dark）
+
+- 用户可在「关于」页右下角的主题切换控件选择：**跟随系统 / 浅色 / 深色**。
+- 实现方式：在 `<html>` 上添加 `data-theme="light"` 或 `data-theme="dark"` 属性；不设属性时由 `@media (prefers-color-scheme: dark)` 决定（即系统模式）。
+- CSS 规则：
+  ```css
+  @media (prefers-color-scheme: dark) {
+    /* :root:not([data-theme="light"]) 才应用暗色 token */
+    :root:not([data-theme="light"]) { ... }
+  }
+  /* 显式强制深色 */
+  :root[data-theme="dark"] { ... }
+  ```
+- 防闪烁：`index.html` 内联脚本在 CSS 加载前从 `localStorage.tb_theme` 读取值并即时设置 `data-theme` 属性及背景色。
+- 持久化：仅 localStorage（`tb_theme`），不写入 Rust Settings（主题属于纯视觉偏好，无需跨设备同步）。
+- 状态：Zustand store 新增 `theme: Theme` (`"system" | "light" | "dark"`) 和 `setTheme()` action。
+
 ### 8.4 视觉细节
 
 - **窗口背景**：暖白 / 深灰底色 + 极轻 SVG 噪点纹理（opacity 4%）增加肌理感

@@ -20,6 +20,7 @@ export const ZH = {
     logs: "系统日志",
     about: "关于 TypeBridge",
     language: "语言",
+    theme: "主题",
   },
 
   language: {
@@ -28,6 +29,12 @@ export const ZH = {
     zh: "简体中文",
     en: "English",
     hint: "可在左下角随时切换",
+  },
+
+  theme: {
+    system: "跟随系统",
+    light: "浅色",
+    dark: "深色",
   },
 
   errorBoundary: {
@@ -344,6 +351,7 @@ export const EN: Dict = {
     logs: "System Log",
     about: "About TypeBridge",
     language: "Language",
+    theme: "Theme",
   },
 
   language: {
@@ -352,6 +360,12 @@ export const EN: Dict = {
     zh: "简体中文",
     en: "English",
     hint: "Switchable anytime in the bottom-left corner",
+  },
+
+  theme: {
+    system: "System",
+    light: "Light",
+    dark: "Dark",
   },
 
   errorBoundary: {
