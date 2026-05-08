@@ -112,7 +112,7 @@ export default function AboutTab() {
   }
 
   return (
-    <div className="h-full overflow-y-auto flex items-center justify-center px-8 py-8">
+    <div className="relative h-full overflow-y-auto flex items-center justify-center px-8 py-8">
       <div className="w-full max-w-md flex flex-col items-center text-center gap-5">
         <img
           src={logoUrl}
@@ -153,12 +153,12 @@ export default function AboutTab() {
           )}
         </button>
 
-        {/* 语言切换 — 弱化，紧跟检查更新按钮 */}
-        <div className="w-36">
-          <LanguageSwitcher />
-        </div>
-
         <CheckResultLine status={status} onShowConfirm={openConfirm} />
+      </div>
+
+      {/* 语言切换 — 页面右下角 */}
+      <div className="absolute bottom-4 right-4 w-30">
+        <LanguageSwitcher />
       </div>
 
       {confirmOpen && status.kind === "has-update" && (
