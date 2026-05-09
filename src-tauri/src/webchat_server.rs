@@ -56,6 +56,10 @@ const PORT_START: u16 = 8723;
 const PORT_RANGE: u16 = 10; // 8723..=8732 试十个
 const SESSION_TTL_SECS: u64 = 60; // 每个 OTP 活 60 秒，归零时桌面自动轮换（不重启 server）
 const MAX_OTP_ATTEMPTS: u8 = 5;
+/// binding 超过 150s（即 2.5 分钟）无任何消息就自动释放；手机端再发消息会收到未认证错误，提示用户重新扫码。
+const IDLE_TIMEOUT_MS: i64 = 150_000;
+/// idle 清理 task 扫描间隔
+const IDLE_CHECK_INTERVAL_SECS: u64 = 30;
 
 // ──────────────────────────────────────────────────────────────
 // 公开类型
@@ -172,6 +176,43 @@ impl WebChatServer {
             }
             tracing::info!("[webchat] server task exited");
         });
+
+        // 启动 idle binding 清理 task：每 IDLE_CHECK_INTERVAL_SECS 秒扫描一次，
+        // 超过 IDLE_TIMEOUT_MS 无消息的 binding 自动释放。
+        // 手机再发消息会收到 "未认证" 的 ack，提示用户重新扫码。
+        {
+            let state_for_idle = state.clone();
+            let cancel_for_idle = cancel.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(
+                    std::time::Duration::from_secs(IDLE_CHECK_INTERVAL_SECS)
+                );
+                loop {
+                    tokio::select! {
+                        _ = interval.tick() => {}
+                        _ = cancel_for_idle.cancelled() => break,
+                    }
+                    let now = now_ms();
+                    let removed = {
+                        let mut bindings = match state_for_idle.bindings.lock() {
+                            Ok(g) => g,
+                            Err(_) => continue,
+                        };
+                        let before = bindings.len();
+                        bindings.retain(|b| now - b.last_active_ms < IDLE_TIMEOUT_MS);
+                        before - bindings.len()
+                    };
+                    if removed > 0 {
+                        tracing::info!(
+                            "[webchat] idle cleanup: removed {} expired binding(s)",
+                            removed
+                        );
+                        (state_for_idle.notify_bind_change)();
+                    }
+                }
+                tracing::debug!("[webchat] idle cleanup task exited");
+            });
+        }
 
         Ok(Self {
             state,
@@ -370,6 +411,8 @@ struct Binding {
     socket_sid: String,
     bound_at_ms: i64,
     ua: String,
+    /// 最近一次收到消息的时间戳（ms）。idle 超过 IDLE_TIMEOUT_MS 后由后台 task 自动移除 binding。
+    last_active_ms: i64,
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -614,6 +657,7 @@ async fn on_connect(socket: SocketRef) {
                 let _ = ack.send(&GenericAck { success: false, reason: Some(e) });
                 return;
             }
+            touch_active(&msg.user_token, &state);
             if !ALLOWED_COMBOS.contains(&msg.combo.as_str()) {
                 let _ = ack.send(&GenericAck {
                     success: false,
@@ -768,10 +812,12 @@ async fn handle_hello(
         let mut bindings = state.bindings.lock().map_err(|_| "LOCK_POISONED")?;
         // 同一 clientId 二次握手（手机刷新）→ 替换旧 binding
         let socket_sid = socket.id.to_string();
+        let now = now_ms();
         if let Some(existing) = bindings.iter_mut().find(|b| b.client_id == msg.client_id) {
             existing.user_token_hash = user_token_hash;
             existing.socket_sid = socket_sid;
-            existing.bound_at_ms = now_ms();
+            existing.bound_at_ms = now;
+            existing.last_active_ms = now;
             if let Some(ua) = &msg.ua {
                 existing.ua = ua.clone();
             }
@@ -780,8 +826,9 @@ async fn handle_hello(
                 user_token_hash,
                 client_id: msg.client_id.clone(),
                 socket_sid,
-                bound_at_ms: now_ms(),
+                bound_at_ms: now,
                 ua: msg.ua.clone().unwrap_or_default(),
+                last_active_ms: now,
             });
         }
         tracing::info!(
@@ -796,16 +843,19 @@ async fn handle_hello(
 
 async fn handle_text(msg: &TextMsg, state: Arc<ServerState>) -> Result<String, String> {
     verify_user_token(&msg.user_token, &state)?;
+    touch_active(&msg.user_token, &state);
     ingest_text(&msg.client_message_id, &msg.text, &state)
 }
 
 async fn handle_image(msg: &ImageMsg, state: Arc<ServerState>) -> Result<String, String> {
     verify_user_token(&msg.user_token, &state)?;
+    touch_active(&msg.user_token, &state);
     ingest_image(&msg.client_message_id, &msg.data, &msg.mime, &state)
 }
 
 async fn handle_key(msg: &KeyMsg, state: Arc<ServerState>) -> Result<String, String> {
     verify_user_token(&msg.user_token, &state)?;
+    touch_active(&msg.user_token, &state);
     if !ALLOWED_KEY_CODES.contains(&msg.code.as_str()) {
         return Err(format!("不支持的按键：{}", msg.code));
     }
@@ -822,6 +872,20 @@ fn verify_user_token(token: &str, state: &ServerState) -> Result<(), String> {
         Ok(())
     } else {
         Err("未认证或 token 已失效".into())
+    }
+}
+
+/// 更新对应 token binding 的 last_active_ms（touch 语义，任何消息均调用）。
+fn touch_active(token: &str, state: &ServerState) {
+    let h = sha256_hash(token.as_bytes());
+    if let Ok(mut bindings) = state.bindings.lock() {
+        let now = now_ms();
+        for b in bindings.iter_mut() {
+            if constant_time_eq(&b.user_token_hash, &h) {
+                b.last_active_ms = now;
+                break;
+            }
+        }
     }
 }
 
