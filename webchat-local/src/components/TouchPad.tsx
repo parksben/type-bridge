@@ -48,7 +48,6 @@ export default function TouchPad({ client, disabled }: Props) {
   const tapCountRef = useRef(0);
   const lastTapTimeRef = useRef(0);
   const pendingTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pinchStartDist = useRef(0);
   const prevCentroid = useRef({ x: 0, y: 0 });
   const twoFingerStart = useRef<{ x: number; y: number } | null>(null);
   const twoFingerMoved = useRef(false);
@@ -103,7 +102,6 @@ export default function TouchPad({ client, disabled }: Props) {
         x: (t1.clientX + t2.clientX) / 2,
         y: (t1.clientY + t2.clientY) / 2,
       };
-      pinchStartDist.current = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       prevCentroid.current = centroid;
       twoFingerStart.current = { ...centroid };
       twoFingerMoved.current = false;
@@ -131,14 +129,12 @@ export default function TouchPad({ client, disabled }: Props) {
     } else if (count === 2) {
       const t1 = e.touches[0];
       const t2 = e.touches[1];
-      const newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       const centroid = {
         x: (t1.clientX + t2.clientX) / 2,
         y: (t1.clientY + t2.clientY) / 2,
       };
       const scrollDx = centroid.x - prevCentroid.current.x;
       const scrollDy = centroid.y - prevCentroid.current.y;
-      const distDelta = newDist - pinchStartDist.current;
 
       if (twoFingerStart.current) {
         const totalMove = Math.hypot(
@@ -149,14 +145,9 @@ export default function TouchPad({ client, disabled }: Props) {
       }
 
       if (!disabled) {
-        // 滚动方向：默认跟随手指（Mac 自然滚动方向），反向时取反
         const dir = scrollRevRef.current ? -1 : 1;
         if (Math.abs(scrollDx) > 0.3 || Math.abs(scrollDy) > 0.3) {
           client.sendMouseScroll(dir * scrollDx * SCROLL_MULTIPLIER, dir * scrollDy * SCROLL_MULTIPLIER);
-        }
-        if (Math.abs(distDelta) > 2) {
-          client.sendMouseZoom(distDelta * 0.012);
-          pinchStartDist.current = newDist;
         }
       }
 
