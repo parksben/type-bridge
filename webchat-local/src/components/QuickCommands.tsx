@@ -67,7 +67,7 @@ const NAV_CMDS: CmdDef[] = [
 const EDIT_CMDS: CmdDef[] = [
   { labelKey: "monitor.cmdUndo",    Icon: Undo2,         spec: { type: "combo", combo: "Undo" } },
   { labelKey: "monitor.cmdRedo",    Icon: Redo2,         spec: { type: "combo", combo: "Redo" } },
-  { labelKey: "monitor.cmdNewline", Icon: CornerDownLeft, spec: { type: "text", text: "\n" } },
+  { labelKey: "monitor.cmdNewline", Icon: CornerDownLeft, spec: { type: "key", code: "Enter" } },
   { labelKey: "monitor.cmdDelete",  Icon: Delete,        spec: { type: "key", code: "Backspace" }, accent: true },
   { labelKey: "monitor.cmdClear",   Icon: Trash2,        spec: { type: "clear" }, accent: true },
   { labelKey: "monitor.cmdEscape",  Icon: LogOut,        spec: { type: "key", code: "Escape" } },
