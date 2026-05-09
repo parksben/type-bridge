@@ -16,6 +16,8 @@ import {
   ArrowRightToLine,
   ArrowUpToLine,
   ArrowDownToLine,
+  Trash2,
+  LogOut,
   X,
 } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
@@ -31,7 +33,8 @@ type Props = {
 type CmdSpec =
   | { type: "key"; code: string }
   | { type: "text"; text: string }
-  | { type: "combo"; combo: string };
+  | { type: "combo"; combo: string }
+  | { type: "clear" };                 // SelectAll + Backspace
 
 type CmdDef = {
   labelKey: TKey;
@@ -40,7 +43,9 @@ type CmdDef = {
   accent?: boolean;
 };
 
-// ─── Arrow definitions (cross layout) ──────────────────────────
+type TabId = "arrows" | "nav" | "edit" | "clipboard";
+
+// ─── Arrows ────────────────────────────────────────────────────
 const CMD_UP: CmdDef    = { labelKey: "monitor.cmdArrowUp",    Icon: ArrowUp,    spec: { type: "key", code: "ArrowUp" } };
 const CMD_DOWN: CmdDef  = { labelKey: "monitor.cmdArrowDown",  Icon: ArrowDown,  spec: { type: "key", code: "ArrowDown" } };
 const CMD_LEFT: CmdDef  = { labelKey: "monitor.cmdArrowLeft",  Icon: ArrowLeft,  spec: { type: "key", code: "ArrowLeft" } };
@@ -60,13 +65,15 @@ const EDIT_CMDS: CmdDef[] = [
   { labelKey: "monitor.cmdRedo",    Icon: Redo2,         spec: { type: "combo", combo: "Redo" } },
   { labelKey: "monitor.cmdNewline", Icon: CornerDownLeft, spec: { type: "text", text: "\n" } },
   { labelKey: "monitor.cmdDelete",  Icon: Delete,        spec: { type: "key", code: "Backspace" }, accent: true },
+  { labelKey: "monitor.cmdClear",   Icon: Trash2,        spec: { type: "clear" }, accent: true },
+  { labelKey: "monitor.cmdEscape",  Icon: LogOut,        spec: { type: "key", code: "Escape" } },
 ];
 
 // ─── Clipboard ─────────────────────────────────────────────────
 const CLIPBOARD_CMDS: CmdDef[] = [
-  { labelKey: "monitor.cmdSelectAll", Icon: Maximize2,     spec: { type: "combo", combo: "SelectAll" } },
-  { labelKey: "monitor.cmdCopy",      Icon: Copy,          spec: { type: "combo", combo: "Copy" } },
-  { labelKey: "monitor.cmdCut",       Icon: Scissors,      spec: { type: "combo", combo: "Cut" } },
+  { labelKey: "monitor.cmdSelectAll", Icon: Maximize2,      spec: { type: "combo", combo: "SelectAll" } },
+  { labelKey: "monitor.cmdCopy",      Icon: Copy,           spec: { type: "combo", combo: "Copy" } },
+  { labelKey: "monitor.cmdCut",       Icon: Scissors,       spec: { type: "combo", combo: "Cut" } },
   { labelKey: "monitor.cmdPaste",     Icon: ClipboardPaste, spec: { type: "combo", combo: "Paste" } },
 ];
 
@@ -121,23 +128,18 @@ function CmdButton({
   );
 }
 
-// ─── Section label ─────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="text-[11px] font-semibold uppercase tracking-wider mb-2 mt-5 first:mt-0"
-      style={{ color: "var(--tb-muted)", letterSpacing: "0.08em" }}
-    >
-      {children}
-    </div>
-  );
-}
-
 // ─── Main ──────────────────────────────────────────────────────
 
 export default function QuickCommands({ client, disabled, onClose }: Props) {
+  const [activeTab, setActiveTab] = useState<TabId>("arrows");
   const [error, setError] = useState<string | null>(null);
+
+  const TABS: { id: TabId; label: string }[] = [
+    { id: "arrows",    label: t("monitor.cmdGroupArrows") },
+    { id: "nav",       label: t("monitor.cmdGroupNav") },
+    { id: "edit",      label: t("monitor.cmdGroupEdit") },
+    { id: "clipboard", label: t("monitor.cmdGroupClipboard") },
+  ];
 
   async function handlePress(cmd: CmdDef) {
     if (disabled) return;
@@ -150,9 +152,18 @@ export default function QuickCommands({ client, disabled, onClose }: Props) {
     } else if (cmd.spec.type === "text") {
       const ack = await client.sendText(newClientMessageId(), cmd.spec.text);
       success = ack.success; reason = ack.reason;
-    } else {
+    } else if (cmd.spec.type === "combo") {
       const ack = await client.sendKeyCombo(newClientMessageId(), cmd.spec.combo);
       success = ack.success; reason = ack.reason;
+    } else if (cmd.spec.type === "clear") {
+      // 全选 → 删除
+      const ack1 = await client.sendKeyCombo(newClientMessageId(), "SelectAll");
+      if (!ack1.success) { success = false; reason = ack1.reason; }
+      else {
+        await new Promise<void>((r) => setTimeout(r, 60));
+        const ack2 = await client.sendKey(newClientMessageId(), "Backspace");
+        success = ack2.success; reason = ack2.reason;
+      }
     }
 
     if (!success) {
@@ -176,66 +187,96 @@ export default function QuickCommands({ client, disabled, onClose }: Props) {
             type="button"
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full"
-            style={{ background: "var(--tb-surface)", color: "var(--tb-muted)", border: "1px solid var(--tb-border)" }}
+            style={{ background: "var(--tb-bg)", color: "var(--tb-muted)" }}
           >
-            <X size={17} strokeWidth={2.2} />
+            <X size={18} strokeWidth={2.2} />
           </button>
         </div>
       )}
 
+      {/* Error banner */}
+      {error && (
+        <div
+          className="mx-4 mt-3 px-3 py-2 rounded-xl text-[12px] text-center"
+          style={{
+            background: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+            color: "var(--tb-danger)",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* ── Horizontal tab bar ─────────────────────────────── */}
       <div
-        className="flex-1 overflow-y-auto scrollbar-none px-4 pb-8 safe-area-bottom"
-        style={{ background: "var(--tb-bg)", paddingTop: onClose ? "12px" : "16px" }}
+        className="flex gap-1 px-4 pt-3 pb-2 shrink-0 overflow-x-auto scrollbar-none"
+        style={{ borderBottom: "1px solid var(--tb-border)" }}
       >
-        {/* Error toast */}
-        {error && (
-          <div
-            className="mb-3 px-3 py-2 rounded-xl text-[12px] text-center"
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className="px-3.5 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors shrink-0"
             style={{
-              background: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
-              color: "var(--tb-danger)",
+              background: activeTab === id ? "var(--tb-accent)" : "var(--tb-surface)",
+              color: activeTab === id ? "white" : "var(--tb-muted)",
+              border: activeTab === id ? "none" : "1px solid var(--tb-border)",
             }}
           >
-            {error}
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab content ────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+
+        {/* Arrows tab */}
+        {activeTab === "arrows" && (
+          <div className="flex flex-col gap-2 items-center">
+            {/* Row 1: Up */}
+            <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
+              <div />
+              <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
+              <div />
+            </div>
+            {/* Row 2: Left / Down / Right */}
+            <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
+              <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
+              <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
+              <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
+            </div>
           </div>
         )}
 
-        {/* ── Direction keys: cross layout ────────────────── */}
-        <SectionLabel>{t("monitor.cmdGroupArrows")}</SectionLabel>
-        {/* 3-col grid: [empty | ↑ | empty] [← | ↓ | →] */}
-        <div className="grid grid-cols-3 gap-2">
-          <div />
-          <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
-          <div />
-          <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
-          <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
-          <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
-        </div>
+        {/* Nav tab */}
+        {activeTab === "nav" && (
+          <div className="grid grid-cols-2 gap-2">
+            {NAV_CMDS.map((cmd) => (
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+            ))}
+          </div>
+        )}
 
-        {/* ── Navigation ──────────────────────────────────── */}
-        <SectionLabel>{t("monitor.cmdGroupNav")}</SectionLabel>
-        {/* 2-col: [行首 | 行尾] [页首 | 页尾] */}
-        <div className="grid grid-cols-2 gap-2">
-          {NAV_CMDS.map((cmd) => (
-            <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-          ))}
-        </div>
+        {/* Edit tab */}
+        {activeTab === "edit" && (
+          <div className="grid grid-cols-2 gap-2">
+            {EDIT_CMDS.map((cmd) => (
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+            ))}
+          </div>
+        )}
 
-        {/* ── Edit ────────────────────────────────────────── */}
-        <SectionLabel>{t("monitor.cmdGroupEdit")}</SectionLabel>
-        <div className="grid grid-cols-2 gap-2">
-          {EDIT_CMDS.map((cmd) => (
-            <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-          ))}
-        </div>
+        {/* Clipboard tab */}
+        {activeTab === "clipboard" && (
+          <div className="grid grid-cols-2 gap-2">
+            {CLIPBOARD_CMDS.map((cmd) => (
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+            ))}
+          </div>
+        )}
 
-        {/* ── Clipboard ───────────────────────────────────── */}
-        <SectionLabel>{t("monitor.cmdGroupClipboard")}</SectionLabel>
-        <div className="grid grid-cols-2 gap-2">
-          {CLIPBOARD_CMDS.map((cmd) => (
-            <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-          ))}
-        </div>
       </div>
     </>
   );

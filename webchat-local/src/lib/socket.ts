@@ -62,6 +62,19 @@ export class WebChatClient {
     this.socket.disconnect();
   }
 
+  /**
+   * 监听 server 推送的 OTP 轮换通知（每 60s 一次）。
+   * 回调接收新 OTP 明文，调用方负责更新 URL。
+   * 仅认证成功（hello ok）的连接才会收到此事件。
+   */
+  onOtpRefresh(callback: (newOtp: string) => void): () => void {
+    const handler = (payload: { otp: string }) => {
+      if (payload?.otp) callback(payload.otp);
+    };
+    this.socket.on("otp-refresh", handler);
+    return () => this.socket.off("otp-refresh", handler);
+  }
+
   /** 握手：送 OTP 给 server 校验，返回 userToken */
   async hello(otp: string, clientId: string): Promise<HelloAck> {
     return new Promise((resolve) => {
@@ -181,5 +194,51 @@ export class WebChatClient {
           },
         );
     });
+  }
+
+  /** 发送快捷键组合（Undo/Redo/SelectAll/Copy/Cut/Paste）。server 直接模拟 Cmd+* */
+  async sendKeyCombo(clientMessageId: string, combo: string): Promise<MessageAck> {
+    if (!this.userToken) {
+      return { success: false, reason: t("socket.notHandshaked") };
+    }
+    return new Promise((resolve) => {
+      this.socket
+        .timeout(10000)
+        .emit(
+          "key_combo",
+          { userToken: this.userToken, clientMessageId, combo },
+          (err: unknown, ack: MessageAck) => {
+            if (err) {
+              resolve({ success: false, reason: t("socket.timeout") });
+              return;
+            }
+            resolve(ack ?? { success: false, reason: t("socket.serverNoResponse") });
+          },
+        );
+    });
+  }
+
+  /** 鼠标移动（相对位移）。fire-and-forget，无 ack。 */
+  sendMouseMove(dx: number, dy: number): void {
+    if (!this.userToken) return;
+    this.socket.emit("mouse_move", { userToken: this.userToken, dx, dy });
+  }
+
+  /** 双指滚动。fire-and-forget，无 ack。dx/dy 为像素量（负=向上/左）。 */
+  sendMouseScroll(dx: number, dy: number): void {
+    if (!this.userToken) return;
+    this.socket.emit("mouse_scroll", { userToken: this.userToken, dx, dy });
+  }
+
+  /** 鼠标按键事件（down / up）。fire-and-forget，无 ack。 */
+  sendMouseClick(button: "left" | "right", action: "down" | "up"): void {
+    if (!this.userToken) return;
+    this.socket.emit("mouse_click", { userToken: this.userToken, button, action });
+  }
+
+  /** 双指缩放。delta 为归一化量（正=放大，负=缩小）。fire-and-forget。 */
+  sendMouseZoom(delta: number): void {
+    if (!this.userToken) return;
+    this.socket.emit("mouse_zoom", { userToken: this.userToken, delta });
   }
 }

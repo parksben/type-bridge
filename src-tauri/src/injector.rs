@@ -64,8 +64,8 @@ const CG_MOUSE_BUTTON_RIGHT: u32 = 1;
 const CG_SCROLL_EVENT_UNIT_PIXEL: u32 = 0;
 /// kCGEventMagnify — trackpad 双指缩放手势
 const CG_EVENT_MAGNIFY: u32 = 29;
-/// kCGEventMagnification field id（来自 IOKit 私有头文件，实测稳定）
-const CG_FIELD_MAGNIFICATION: u32 = 116;
+/// kCGEventGestureMagnification field id（CGEventField 枚举值，参见 CGEventTypes.h 113 = 0x71）
+const CG_FIELD_MAGNIFICATION: u32 = 113;
 
 unsafe fn set_event_flags(event: *mut std::ffi::c_void, flags: u64) {
     CGEventSetFlags(event, flags);

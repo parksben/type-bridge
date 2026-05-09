@@ -100,6 +100,19 @@ export default function App() {
           issuedAt: Date.now(),
         });
         setState({ kind: "chat", sessionId: info.sessionId });
+
+        // 监听 server 推送的 OTP 轮换通知，实时刷新 URL 里的 otp 参数。
+        // 这样当 iOS Safari 在后台杀掉页面后，用户重新打开浏览器时
+        // 页面能以最新 OTP 重新握手，无需用户重新扫码。
+        client.onOtpRefresh((newOtp) => {
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.set("otp", newOtp);
+            history.replaceState(null, "", url.toString());
+          } catch {
+            // URL 操作失败时静默忽略，不影响正常收发消息
+          }
+        });
         return;
       }
 
