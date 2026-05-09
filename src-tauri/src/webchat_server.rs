@@ -475,6 +475,10 @@ const ALLOWED_KEY_CODES: &[&str] = &[
     "ArrowDown",
     "ArrowLeft",
     "ArrowRight",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown",
 ];
 
 /// key_combo 白名单（仅允许已知无害的编辑快捷键）。

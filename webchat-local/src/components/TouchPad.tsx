@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { Settings2, X } from "lucide-react";
+import { Settings2, Keyboard, X } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
-import { newClientMessageId } from "@/lib/storage";
+import QuickCommands from "./QuickCommands";
 import { t } from "@/i18n";
 
 type Props = {
@@ -12,11 +12,11 @@ type Props = {
 type TouchData = { x: number; y: number };
 
 const LS_SENSITIVITY = "tb_touchpad_sensitivity";
+const LS_SCROLL_REVERSED = "tb_scroll_reversed";
 const DEFAULT_SENSITIVITY = 1.5;
-const TAP_MAX_DURATION = 260;         // ms — lifted within this → tap
-const MULTI_TAP_INTERVAL = 320;       // ms — taps within this → multi-click
-const TWO_FINGER_MOVE_THRESHOLD = 14; // px — 2-finger centroid travel → not a tap
-const THREE_FINGER_SWIPE_MIN = 38;    // px — min travel to fire 3-finger gesture
+const TAP_MAX_DURATION = 260;
+const MULTI_TAP_INTERVAL = 320;
+const TWO_FINGER_MOVE_THRESHOLD = 14;
 const SCROLL_MULTIPLIER = 2.2;
 
 function loadSensitivity(): number {
@@ -28,13 +28,22 @@ function loadSensitivity(): number {
   }
 }
 
+function loadScrollReversed(): boolean {
+  try {
+    return localStorage.getItem(LS_SCROLL_REVERSED) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export default function TouchPad({ client, disabled }: Props) {
   const [sensitivity, setSensitivity] = useState<number>(loadSensitivity);
+  const [scrollReversed, setScrollReversed] = useState<boolean>(loadScrollReversed);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCommands, setShowCommands] = useState(false);
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);
 
-  // All touch tracking in refs — zero re-renders during gesture
   const touchesRef = useRef<Map<number, TouchData>>(new Map());
   const padMovedRef = useRef(false);
   const touchStartTimeRef = useRef(0);
@@ -45,16 +54,21 @@ export default function TouchPad({ client, disabled }: Props) {
   const prevCentroid = useRef({ x: 0, y: 0 });
   const twoFingerStart = useRef<{ x: number; y: number } | null>(null);
   const twoFingerMoved = useRef(false);
-  const threeFingerStart = useRef<{ x: number; y: number } | null>(null);
-  const threeFingerFired = useRef(false);
   const sensRef = useRef(sensitivity);
-  const leftHeldRef = useRef(false);  // bottom left button currently held
+  const scrollRevRef = useRef(scrollReversed);
+  const leftHeldRef = useRef(false);
 
   function saveSensitivity(v: number) {
     const clamped = Math.round(v * 10) / 10;
     setSensitivity(clamped);
     sensRef.current = clamped;
     try { localStorage.setItem(LS_SENSITIVITY, String(clamped)); } catch { /* ignore */ }
+  }
+
+  function saveScrollReversed(v: boolean) {
+    setScrollReversed(v);
+    scrollRevRef.current = v;
+    try { localStorage.setItem(LS_SCROLL_REVERSED, String(v)); } catch { /* ignore */ }
   }
 
   function clearPendingTap() {
@@ -73,17 +87,14 @@ export default function TouchPad({ client, disabled }: Props) {
     }
   }
 
-  // ─── Pad touch events ─────────────────────────────────────────
+  // ─── Pad touch events ──────────────────────────────────────
 
   function handlePadTouchStart(e: React.TouchEvent) {
     e.preventDefault();
-
     for (const touch of Array.from(e.changedTouches)) {
       touchesRef.current.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
     }
-
     const count = e.touches.length;
-
     if (count === 1) {
       padMovedRef.current = false;
       touchStartTimeRef.current = Date.now();
@@ -98,13 +109,6 @@ export default function TouchPad({ client, disabled }: Props) {
       prevCentroid.current = centroid;
       twoFingerStart.current = { ...centroid };
       twoFingerMoved.current = false;
-    } else if (count === 3) {
-      const all = Array.from(e.touches);
-      threeFingerStart.current = {
-        x: all.reduce((s, t) => s + t.clientX, 0) / 3,
-        y: all.reduce((s, t) => s + t.clientY, 0) / 3,
-      };
-      threeFingerFired.current = false;
     }
   }
 
@@ -112,7 +116,6 @@ export default function TouchPad({ client, disabled }: Props) {
     e.preventDefault();
     const count = e.touches.length;
 
-    // 1-finger move OR left-button held + 1 pad finger (2 total but drag mode)
     if (count === 1 || (count === 2 && leftHeldRef.current)) {
       const ct = e.changedTouches[0];
       const prev = touchesRef.current.get(ct.identifier);
@@ -148,11 +151,13 @@ export default function TouchPad({ client, disabled }: Props) {
       }
 
       if (!disabled) {
+        // 滚动方向：默认跟随手指（Mac 自然滚动方向），反向时取反
+        const dir = scrollRevRef.current ? -1 : 1;
         if (Math.abs(scrollDx) > 0.3 || Math.abs(scrollDy) > 0.3) {
-          client.sendMouseScroll(-scrollDx * SCROLL_MULTIPLIER, -scrollDy * SCROLL_MULTIPLIER);
+          client.sendMouseScroll(dir * scrollDx * SCROLL_MULTIPLIER, dir * scrollDy * SCROLL_MULTIPLIER);
         }
-        if (Math.abs(distDelta) > 4) {
-          client.sendMouseZoom(distDelta * 0.008);
+        if (Math.abs(distDelta) > 2) {
+          client.sendMouseZoom(distDelta * 0.012);
           pinchStartDist.current = newDist;
         }
       }
@@ -161,36 +166,15 @@ export default function TouchPad({ client, disabled }: Props) {
       for (const touch of Array.from(e.changedTouches)) {
         touchesRef.current.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
       }
-    } else if (count === 3) {
-      if (!threeFingerFired.current && threeFingerStart.current) {
-        const all = Array.from(e.touches);
-        const cx = all.reduce((s, t) => s + t.clientX, 0) / 3;
-        const cy = all.reduce((s, t) => s + t.clientY, 0) / 3;
-        const dx = cx - threeFingerStart.current.x;
-        const dy = cy - threeFingerStart.current.y;
-        if (Math.hypot(dx, dy) > THREE_FINGER_SWIPE_MIN) {
-          threeFingerFired.current = true;
-          if (!disabled) {
-            let combo: string;
-            if (Math.abs(dx) > Math.abs(dy)) {
-              combo = dx < 0 ? "DesktopLeft" : "DesktopRight";
-            } else {
-              combo = dy < 0 ? "MissionControl" : "AppExpose";
-            }
-            client.sendKeyCombo(newClientMessageId(), combo);
-          }
-        }
-      }
     }
   }
 
   function handlePadTouchEnd(e: React.TouchEvent) {
     e.preventDefault();
-
     const remaining = e.touches.length;
     const endCount = e.changedTouches.length;
 
-    // ── 2-finger tap → right-click ──────────────────────────────
+    // 双指抬起 → 右键单击
     if (remaining === 0 && endCount >= 2 && !twoFingerMoved.current) {
       const duration = Date.now() - touchStartTimeRef.current;
       if (duration < TAP_MAX_DURATION + 80 && !disabled) {
@@ -204,7 +188,7 @@ export default function TouchPad({ client, disabled }: Props) {
       return;
     }
 
-    // ── 1-finger tap → single / double / triple click ──────────
+    // 单指短触 → 单击 / 双击 / 三击
     if (remaining === 0 && endCount === 1 && !padMovedRef.current) {
       const duration = Date.now() - touchStartTimeRef.current;
       if (duration < TAP_MAX_DURATION) {
@@ -216,7 +200,6 @@ export default function TouchPad({ client, disabled }: Props) {
         }
         lastTapTimeRef.current = now;
         clearPendingTap();
-
         const currentCount = tapCountRef.current;
         pendingTapTimerRef.current = setTimeout(() => {
           const clicks = Math.min(currentCount, 3) as 1 | 2 | 3;
@@ -230,46 +213,39 @@ export default function TouchPad({ client, disabled }: Props) {
     for (const touch of Array.from(e.changedTouches)) {
       touchesRef.current.delete(touch.identifier);
     }
-
     if (remaining === 0) {
       twoFingerStart.current = null;
-      threeFingerStart.current = null;
-      threeFingerFired.current = false;
     }
   }
 
-  // ─── Bottom button events ──────────────────────────────────────
+  // ─── Bottom button events ──────────────────────────────────
 
   function handleLeftStart(e: React.TouchEvent) {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); e.preventDefault();
     setLeftPressed(true);
     leftHeldRef.current = true;
     if (!disabled) client.sendMouseClick("left", "down");
   }
   function handleLeftEnd(e: React.TouchEvent) {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); e.preventDefault();
     setLeftPressed(false);
     leftHeldRef.current = false;
     if (!disabled) client.sendMouseClick("left", "up");
   }
   function handleRightStart(e: React.TouchEvent) {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); e.preventDefault();
     setRightPressed(true);
     if (!disabled) client.sendMouseClick("right", "down");
   }
   function handleRightEnd(e: React.TouchEvent) {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); e.preventDefault();
     setRightPressed(false);
     if (!disabled) client.sendMouseClick("right", "up");
   }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* ── Settings bottom sheet ─────────────────────────────── */}
+      {/* ── Settings bottom sheet ─────────────────────────── */}
       {showSettings && (
         <div
           className="fixed inset-0 z-50 flex items-end"
@@ -295,15 +271,13 @@ export default function TouchPad({ client, disabled }: Props) {
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-3">
+            {/* 灵敏度 */}
+            <div className="flex items-center gap-3 mb-1">
               <span className="text-[12px] w-8 text-right shrink-0" style={{ color: "var(--tb-muted)" }}>
                 {t("monitor.sensitivityLow")}
               </span>
               <input
-                type="range"
-                min={0.5}
-                max={3}
-                step={0.1}
+                type="range" min={0.5} max={3} step={0.1}
                 value={sensitivity}
                 onChange={(e) => saveSensitivity(parseFloat(e.target.value))}
                 className="flex-1"
@@ -313,22 +287,86 @@ export default function TouchPad({ client, disabled }: Props) {
                 {t("monitor.sensitivityHigh")}
               </span>
             </div>
-            <div className="text-center text-[13px] font-medium" style={{ color: "var(--tb-accent)" }}>
+            <div className="text-center text-[13px] font-medium mb-5" style={{ color: "var(--tb-accent)" }}>
               {sensitivity.toFixed(1)}×
+            </div>
+
+            {/* 滚动方向 */}
+            <div
+              className="flex items-center justify-between py-3.5 border-t"
+              style={{ borderColor: "var(--tb-border)" }}
+            >
+              <span className="text-[14px]" style={{ color: "var(--tb-text)" }}>
+                {t("monitor.touchpadScrollDir")}
+              </span>
+              <div
+                className="flex rounded-lg overflow-hidden"
+                style={{ border: "1px solid var(--tb-border)" }}
+              >
+                {(
+                  [
+                    { value: false, label: t("monitor.touchpadScrollNatural") },
+                    { value: true, label: t("monitor.touchpadScrollReverse") },
+                  ] as { value: boolean; label: string }[]
+                ).map(({ value, label }) => (
+                  <button
+                    key={String(value)}
+                    type="button"
+                    onClick={() => saveScrollReversed(value)}
+                    className="px-4 py-1.5 text-[13px] font-medium transition-colors"
+                    style={{
+                      background: scrollReversed === value ? "var(--tb-accent)" : "var(--tb-bg)",
+                      color: scrollReversed === value ? "white" : "var(--tb-muted)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Toolbar: settings button ──────────────────────────── */}
-      <div className="flex items-center justify-end px-3 pt-3 pb-1 shrink-0">
+      {/* ── Quick Commands sheet ──────────────────────────── */}
+      {showCommands && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col"
+          style={{ background: "rgba(0,0,0,0.38)" }}
+        >
+          <div className="flex-1" onClick={() => setShowCommands(false)} />
+          <div
+            className="rounded-t-3xl overflow-hidden flex flex-col"
+            style={{ background: "var(--tb-bg)", maxHeight: "72vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QuickCommands
+              client={client}
+              disabled={disabled}
+              onClose={() => setShowCommands(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Toolbar ───────────────────────────────────────── */}
+      <div className="flex items-center justify-end gap-2 px-3 pt-3 pb-1 shrink-0">
         <button
           type="button"
-          onTouchEnd={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            setShowSettings(true);
+          onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowCommands(true); }}
+          onClick={() => setShowCommands(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-full"
+          style={{
+            background: "var(--tb-surface)",
+            color: "var(--tb-muted)",
+            border: "1px solid var(--tb-border)",
           }}
+        >
+          <Keyboard size={16} strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowSettings(true); }}
           onClick={() => setShowSettings(true)}
           className="w-9 h-9 flex items-center justify-center rounded-full"
           style={{
@@ -341,7 +379,7 @@ export default function TouchPad({ client, disabled }: Props) {
         </button>
       </div>
 
-      {/* ── Trackpad area ─────────────────────────────────────── */}
+      {/* ── Trackpad area ─────────────────────────────────── */}
       <div
         className="mx-3 flex-1 relative rounded-2xl touch-none select-none overflow-hidden"
         style={{
@@ -353,7 +391,6 @@ export default function TouchPad({ client, disabled }: Props) {
         onTouchEnd={handlePadTouchEnd}
         onTouchCancel={handlePadTouchEnd}
       >
-        {/* Usage hint — bottom */}
         <div
           className="absolute bottom-3 left-0 right-0 text-center text-[11px] pointer-events-none"
           style={{ color: "var(--tb-muted)" }}
@@ -362,7 +399,7 @@ export default function TouchPad({ client, disabled }: Props) {
         </div>
       </div>
 
-      {/* ── Bottom mouse buttons ──────────────────────────────── */}
+      {/* ── Bottom mouse buttons ──────────────────────────── */}
       <div className="flex gap-2 px-4 pt-3 pb-6 safe-area-bottom shrink-0">
         <button
           type="button"

@@ -51,6 +51,10 @@ const ZH = {
     statusReconnecting: "重连中",
     emptyHint: "发出去的每一条消息会自动写入\n桌面当前聚焦的输入框。",
     emptyHintTry: "可以试试发一条文字消息，或点图片按钮拍照 / 上传。",
+    sendConfirmTitle: "如何发送？",
+    sendTextOnly: "仅发送文本",
+    sendTextAndEnter: "发送并提交",
+    cancelSend: "暂不发送",
   },
 
   composer: {
@@ -73,10 +77,10 @@ const ZH = {
   },
 
   monitor: {
-    modeChat: "消息",
-    modeTouchpad: "触控板",
+    modeChat: "打字",
+    modeTouchpad: "触控",
     modeShortcuts: "快捷指令",
-    touchpadHint: "单指移动 · 双指滚动/捏合 · 双指点击右键 · 三指切换桌面",
+    touchpadHint: "单指移动 · 双指滚动/捏合 · 双指点击右键",
     touchpadLeftBtn: "左键",
     touchpadRightBtn: "右键",
     sensitivity: "灵敏度",
@@ -84,6 +88,7 @@ const ZH = {
     sensitivityHigh: "快",
     sensitivityDone: "完成",
     cmdGroupArrows: "方向键",
+    cmdGroupNav: "导航",
     cmdGroupEdit: "编辑",
     cmdGroupClipboard: "剪贴板",
     cmdArrowUp: "上",
@@ -98,6 +103,13 @@ const ZH = {
     cmdCopy: "复制",
     cmdCut: "剪切",
     cmdPaste: "粘贴",
+    cmdHome: "行首",
+    cmdEnd: "行尾",
+    cmdPageUp: "页首",
+    cmdPageDown: "页尾",
+    touchpadScrollDir: "滚动方向",
+    touchpadScrollNatural: "跟随手指",
+    touchpadScrollReverse: "反向",
     cmdFailed: "操作失败",
   },
 
@@ -171,6 +183,10 @@ const EN: Dict = {
     statusReconnecting: "Reconnecting",
     emptyHint: "Every message you send is auto-written into\nyour focused desktop input.",
     emptyHintTry: "Try sending a text message, or tap the image button to capture / upload a photo.",
+    sendConfirmTitle: "How to send?",
+    sendTextOnly: "Send text only",
+    sendTextAndEnter: "Send & submit",
+    cancelSend: "Cancel",
   },
 
   composer: {
@@ -193,10 +209,10 @@ const EN: Dict = {
   },
 
   monitor: {
-    modeChat: "Messages",
+    modeChat: "Type",
     modeTouchpad: "Trackpad",
     modeShortcuts: "Shortcuts",
-    touchpadHint: "1-finger move · 2-finger scroll/pinch · 2-tap right-click · 3-finger swipe",
+    touchpadHint: "1-finger move · 2-finger scroll/pinch · 2-tap right-click",
     touchpadLeftBtn: "Left",
     touchpadRightBtn: "Right",
     sensitivity: "Sensitivity",
@@ -204,6 +220,7 @@ const EN: Dict = {
     sensitivityHigh: "Fast",
     sensitivityDone: "Done",
     cmdGroupArrows: "Arrows",
+    cmdGroupNav: "Navigation",
     cmdGroupEdit: "Edit",
     cmdGroupClipboard: "Clipboard",
     cmdArrowUp: "Up",
@@ -218,6 +235,13 @@ const EN: Dict = {
     cmdCopy: "Copy",
     cmdCut: "Cut",
     cmdPaste: "Paste",
+    cmdHome: "Line Start",
+    cmdEnd: "Line End",
+    cmdPageUp: "Page Top",
+    cmdPageDown: "Page End",
+    touchpadScrollDir: "Scroll Direction",
+    touchpadScrollNatural: "Natural",
+    touchpadScrollReverse: "Reverse",
     cmdFailed: "Action failed",
   },
 

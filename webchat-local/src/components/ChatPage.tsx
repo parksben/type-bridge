@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ComposerBar from "./ComposerBar";
 import MessageBubble, { type ChatMessage } from "./MessageBubble";
+import TouchPad from "./TouchPad";
 import { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
 import type { CompressResult } from "@/lib/image";
@@ -11,32 +12,26 @@ type Props = {
 };
 
 type WifiStatus = "connected" | "reconnecting" | "disconnected";
+type PageMode = "chat" | "touchpad";
 
 export default function ChatPage({ client }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [wifi, setWifi] = useState<WifiStatus>("connected");
   const [imageError, setImageError] = useState<string | null>(null);
+  const [mode, setMode] = useState<PageMode>("chat");
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
-  // 状态订阅：WebChatClient 构造时已注册 onStatusChange，但我们这里再挂一次
-  // 通过 useRef 缓存的 client，无法重新订阅；改用 effect 读取 client.getUserToken()
-  // 来判断健康 —— 实际上 socket 状态由外层 App.tsx 已经订阅了。这里只展示，不做业务决策。
-
-  // 自动滚到底
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 图片错误 3s 自动清掉
   useEffect(() => {
     if (!imageError) return;
     const id = window.setTimeout(() => setImageError(null), 3000);
     return () => window.clearTimeout(id);
   }, [imageError]);
 
-  // 由外层 App 传入 status 更好；当前简化：定时 ping 检查连接
   useEffect(() => {
-    // 复用 WebChatClient 的 socket.io 心跳即可；此处仅做 UI 占位
     setWifi("connected");
   }, []);
 
@@ -53,14 +48,16 @@ export default function ChatPage({ client }: Props) {
     setMessages((prev) =>
       prev.map((m) =>
         m.clientMessageId === cmId
-          ? {
-              ...m,
-              status: ack.success ? "delivered" : "failed",
-              reason: ack.success ? undefined : ack.reason,
-            }
+          ? { ...m, status: ack.success ? "delivered" : "failed", reason: ack.success ? undefined : ack.reason }
           : m,
       ),
     );
+  }
+
+  async function sendTextAndEnter(text: string) {
+    await sendTextMsg(text);
+    await new Promise<void>((r) => setTimeout(r, 80));
+    await client.sendKey(newClientMessageId(), "Enter");
   }
 
   async function sendImageMsg(compressed: CompressResult, previewUrl: string) {
@@ -76,121 +73,128 @@ export default function ChatPage({ client }: Props) {
     setMessages((prev) =>
       prev.map((m) =>
         m.clientMessageId === cmId
-          ? {
-              ...m,
-              status: ack.success ? "delivered" : "failed",
-              reason: ack.success ? undefined : ack.reason,
-            }
+          ? { ...m, status: ack.success ? "delivered" : "failed", reason: ack.success ? undefined : ack.reason }
           : m,
       ),
     );
   }
 
-  async function sendKeyPress(code: string) {
-    const cmId = newClientMessageId();
-    const ack = await client.sendKey(cmId, code);
-    if (!ack.success) {
-      setImageError(ack.reason ?? t("composer.shortcutSendFailed"));
-    }
-  }
-
   const empty = useMemo(() => messages.length === 0, [messages]);
+
+  const TABS: { mode: PageMode; label: string }[] = [
+    { mode: "chat",     label: t("monitor.modeChat") },
+    { mode: "touchpad", label: t("monitor.modeTouchpad") },
+  ];
 
   return (
     <main className="h-[100dvh] flex flex-col safe-area-top" style={{ background: "var(--tb-bg)" }}>
-      {/* Header */}
+      {/* ── Header (tabs) ─────────────────────────────────── */}
       <header
-        className="flex items-center justify-between px-4 py-3 border-b"
-        style={{
-          background: "var(--tb-surface)",
-          borderColor: "var(--tb-border)",
-        }}
+        className="shrink-0 flex items-center px-4 py-2 border-b"
+        style={{ background: "var(--tb-surface)", borderColor: "var(--tb-border)" }}
       >
-        <div className="flex items-center gap-2.5">
-          <img
-            src="/logo.png"
-            srcSet="/logo@2x.png 2x"
-            alt=""
-            width={32}
-            height={32}
-            className="rounded-lg"
-          />
-          <div>
-            <p className="flex items-center gap-1.5 text-[15px] font-semibold leading-none">
-              TypeBridge
-              <span
-                className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
-                style={{
-                  background: "var(--tb-accent-soft)",
-                  color: "var(--tb-accent)",
-                }}
-              >
-                WebChat
-              </span>
-            </p>
-            <p className="text-[11px] text-[var(--tb-muted)] mt-1">
-              {t("chat.headerHint")}
-            </p>
-          </div>
-        </div>
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]"
-          style={{
-            background:
-              wifi === "connected"
-                ? "color-mix(in srgb, var(--tb-success) 12%, transparent)"
-                : "color-mix(in srgb, var(--tb-muted) 12%, transparent)",
-            color: wifi === "connected" ? "var(--tb-success)" : "var(--tb-muted)",
-          }}
-        >
+        {/* Connection dot */}
+        <div className="w-7 flex items-center shrink-0">
           <span
-            className="w-1.5 h-1.5 rounded-full"
+            className="w-2 h-2 rounded-full"
             style={{
               background: wifi === "connected" ? "var(--tb-success)" : "var(--tb-muted)",
+              boxShadow:
+                wifi === "connected"
+                  ? "0 0 0 3px color-mix(in srgb, var(--tb-success) 20%, transparent)"
+                  : "none",
               animation: wifi === "connected" ? "pulse-dot 2s ease-in-out infinite" : undefined,
             }}
           />
-          <span>{wifi === "connected" ? t("chat.statusConnected") : t("chat.statusReconnecting")}</span>
         </div>
+
+        {/* Pill tab switcher */}
+        <div className="flex-1 flex justify-center">
+          <div
+            className="flex rounded-full p-0.5"
+            style={{ background: "color-mix(in srgb, var(--tb-border) 60%, transparent)" }}
+          >
+            {TABS.map(({ mode: m, label }) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className="px-5 py-1.5 rounded-full text-[14px] font-semibold transition-all"
+                style={{
+                  background: mode === m ? "var(--tb-surface)" : "transparent",
+                  color: mode === m ? "var(--tb-text)" : "var(--tb-muted)",
+                  boxShadow: mode === m ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right spacer */}
+        <div className="w-7 shrink-0" />
       </header>
 
-      {/* Message list */}
-      <div className="flex-1 overflow-y-auto scrollbar-none px-3 py-3">
-        {empty && (
-          <div className="text-center text-[13px] text-[var(--tb-muted)] mt-12 leading-relaxed px-6 whitespace-pre-line">
-            {t("chat.emptyHint")}
-            <br />
-            <br />
-            {t("chat.emptyHintTry")}
+      {/* ── Chat mode ─────────────────────────────────────── */}
+      {mode === "chat" && (
+        <>
+          <div className="flex-1 overflow-y-auto scrollbar-none px-3 py-3">
+            {empty && (
+              <div className="h-full flex flex-col items-center justify-center pb-20 gap-2">
+                <img
+                  src="/logo.png"
+                  srcSet="/logo@2x.png 2x"
+                  alt=""
+                  width={52}
+                  height={52}
+                  className="rounded-xl"
+                  style={{ opacity: 0.88 }}
+                />
+                <p className="text-[16px] font-semibold mt-1" style={{ color: "var(--tb-text)" }}>
+                  TypeBridge WebChat
+                </p>
+                <p
+                  className="text-[12px] text-center leading-relaxed px-10"
+                  style={{ color: "var(--tb-muted)" }}
+                >
+                  {t("chat.emptyHint")}
+                </p>
+              </div>
+            )}
+
+            {messages.map((m) => (
+              <MessageBubble key={m.clientMessageId} msg={m} />
+            ))}
+            <div ref={listEndRef} />
           </div>
-        )}
 
-        {messages.map((m) => (
-          <MessageBubble key={m.clientMessageId} msg={m} />
-        ))}
+          {imageError && (
+            <div
+              className="mx-3 mb-2 px-3 py-2 rounded-lg text-[12px]"
+              style={{
+                background: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+                color: "var(--tb-danger)",
+              }}
+            >
+              {imageError}
+            </div>
+          )}
 
-        <div ref={listEndRef} />
-      </div>
-
-      {imageError && (
-        <div
-          className="mx-3 mb-2 px-3 py-2 rounded-lg text-[12px]"
-          style={{
-            background: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
-            color: "var(--tb-danger)",
-          }}
-        >
-          {imageError}
-        </div>
+          <ComposerBar
+            onSendText={sendTextMsg}
+            onSendTextAndEnter={sendTextAndEnter}
+            onSendImage={sendImageMsg}
+            onImageError={setImageError}
+            disabled={wifi === "disconnected"}
+          />
+        </>
       )}
 
-      <ComposerBar
-        onSendText={sendTextMsg}
-        onSendImage={sendImageMsg}
-        onSendKey={sendKeyPress}
-        onImageError={setImageError}
-        disabled={wifi === "disconnected"}
-      />
+      {/* ── Touchpad mode ─────────────────────────────────── */}
+      {mode === "touchpad" && (
+        <TouchPad client={client} disabled={wifi === "disconnected"} />
+      )}
     </main>
   );
 }
