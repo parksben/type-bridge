@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Settings2, X } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
+import { newClientMessageId } from "@/lib/storage";
 import { t } from "@/i18n";
 
 type Props = {
@@ -17,6 +18,7 @@ const TAP_MAX_DURATION = 260;
 const MULTI_TAP_INTERVAL = 320;
 const TWO_FINGER_MOVE_THRESHOLD = 14;
 const SCROLL_MULTIPLIER = 2.2;
+const THREE_FINGER_SWIPE_THRESHOLD = 40; // px，三指滑动识别最小位移
 
 function loadSensitivity(): number {
   try {
@@ -51,6 +53,9 @@ export default function TouchPad({ client, disabled }: Props) {
   const prevCentroid = useRef({ x: 0, y: 0 });
   const twoFingerStart = useRef<{ x: number; y: number } | null>(null);
   const twoFingerMoved = useRef(false);
+  const threeFingerStart = useRef<{ x: number; y: number } | null>(null);
+  const threeFingerEnd = useRef<{ x: number; y: number } | null>(null);
+  const wasThreeFinger = useRef(false);
   const sensRef = useRef(sensitivity);
   const scrollRevRef = useRef(scrollReversed);
   const leftHeldRef = useRef(false);
@@ -105,6 +110,17 @@ export default function TouchPad({ client, disabled }: Props) {
       prevCentroid.current = centroid;
       twoFingerStart.current = { ...centroid };
       twoFingerMoved.current = false;
+    } else if (count === 3) {
+      // 三指：记录起始质心，并阻止双指逻辑误触发
+      const t1 = e.touches[0], t2 = e.touches[1], t3 = e.touches[2];
+      const cx = (t1.clientX + t2.clientX + t3.clientX) / 3;
+      const cy = (t1.clientY + t2.clientY + t3.clientY) / 3;
+      threeFingerStart.current = { x: cx, y: cy };
+      threeFingerEnd.current = { x: cx, y: cy };
+      wasThreeFinger.current = true;
+      // 阻止后续双指右键误触发
+      twoFingerStart.current = null;
+      twoFingerMoved.current = true;
     }
   }
 
@@ -155,6 +171,16 @@ export default function TouchPad({ client, disabled }: Props) {
       for (const touch of Array.from(e.changedTouches)) {
         touchesRef.current.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
       }
+    } else if (count === 3) {
+      // 三指：只更新终点质心，不做任何滚动或光标移动
+      const t1 = e.touches[0], t2 = e.touches[1], t3 = e.touches[2];
+      threeFingerEnd.current = {
+        x: (t1.clientX + t2.clientX + t3.clientX) / 3,
+        y: (t1.clientY + t2.clientY + t3.clientY) / 3,
+      };
+      for (const touch of Array.from(e.changedTouches)) {
+        touchesRef.current.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+      }
     }
   }
 
@@ -162,6 +188,36 @@ export default function TouchPad({ client, disabled }: Props) {
     e.preventDefault();
     const remaining = e.touches.length;
     const endCount = e.changedTouches.length;
+
+    // ── 三指手势：所有手指抬起才发一次 combo（防抖）──────────────
+    if (wasThreeFinger.current) {
+      for (const touch of Array.from(e.changedTouches)) {
+        touchesRef.current.delete(touch.identifier);
+      }
+      if (remaining === 0) {
+        const start = threeFingerStart.current;
+        const end = threeFingerEnd.current;
+        wasThreeFinger.current = false;
+        threeFingerStart.current = null;
+        threeFingerEnd.current = null;
+        twoFingerStart.current = null;
+
+        if (start && end && !disabled) {
+          const dx = end.x - start.x;
+          const dy = end.y - start.y;
+          const adx = Math.abs(dx);
+          const ady = Math.abs(dy);
+          if (adx > ady && adx > THREE_FINGER_SWIPE_THRESHOLD) {
+            // 水平滑动：左 → Ctrl+←，右 → Ctrl+→
+            client.sendKeyCombo(newClientMessageId(), dx < 0 ? "DesktopLeft" : "DesktopRight");
+          } else if (ady > adx && ady > THREE_FINGER_SWIPE_THRESHOLD && dy < 0) {
+            // 上滑 → Ctrl+↑
+            client.sendKeyCombo(newClientMessageId(), "MissionControl");
+          }
+        }
+      }
+      return; // 三指序列期间屏蔽所有其他手势
+    }
 
     // 双指抬起 → 右键单击
     if (remaining === 0 && endCount >= 2 && !twoFingerMoved.current) {
