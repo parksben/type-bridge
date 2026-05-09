@@ -20,7 +20,6 @@ import {
   ChevronsDown,
   Trash2,
   LogOut,
-  X,
 } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
@@ -29,7 +28,6 @@ import { t, type TKey } from "@/i18n";
 type Props = {
   client: WebChatClient;
   disabled: boolean;
-  onClose?: () => void;
 };
 
 type CmdSpec =
@@ -117,13 +115,13 @@ function CmdButton({
           : "var(--tb-surface)",
         border: `1px solid ${pressed ? "var(--tb-text)" : "var(--tb-border)"}`,
         color: accent ? "var(--tb-danger)" : "var(--tb-text)",
-        minHeight: large ? "76px" : "68px",
-        padding: "10px 6px",
+        minHeight: large ? "96px" : "88px",
+        padding: "14px 8px",
       }}
     >
-      <Icon size={large ? 22 : 20} strokeWidth={2} />
+      <Icon size={large ? 26 : 24} strokeWidth={2} />
       <span
-        className="text-[11px] leading-none text-center font-medium"
+        className="text-[12px] leading-none text-center font-medium"
         style={{ color: accent ? "var(--tb-danger)" : "var(--tb-muted)" }}
       >
         {t(labelKey)}
@@ -134,7 +132,7 @@ function CmdButton({
 
 // ─── Main ──────────────────────────────────────────────────────
 
-export default function QuickCommands({ client, disabled, onClose }: Props) {
+export default function QuickCommands({ client, disabled }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("arrows");
   const [error, setError] = useState<string | null>(null);
 
@@ -178,30 +176,10 @@ export default function QuickCommands({ client, disabled, onClose }: Props) {
 
   return (
     <>
-      {/* Sheet header */}
-      {onClose && (
-        <div
-          className="flex items-center justify-between px-5 pt-4 pb-3 shrink-0"
-          style={{ borderBottom: "1px solid var(--tb-border)" }}
-        >
-          <span className="text-[15px] font-semibold" style={{ color: "var(--tb-text)" }}>
-            {t("monitor.modeShortcuts")}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full"
-            style={{ background: "var(--tb-bg)", color: "var(--tb-muted)" }}
-          >
-            <X size={18} strokeWidth={2.2} />
-          </button>
-        </div>
-      )}
-
       {/* Error banner */}
       {error && (
         <div
-          className="mx-4 mt-3 px-3 py-2 rounded-xl text-[12px] text-center"
+          className="mx-4 mt-4 px-3 py-2 rounded-xl text-[12px] text-center"
           style={{
             background: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
             color: "var(--tb-danger)",
@@ -213,7 +191,7 @@ export default function QuickCommands({ client, disabled, onClose }: Props) {
 
       {/* ── Horizontal tab bar ─────────────────────────────── */}
       <div
-        className="flex gap-1 px-4 pt-3 pb-2 shrink-0 overflow-x-auto scrollbar-none"
+        className="flex gap-1.5 px-4 pt-4 pb-3 shrink-0 overflow-x-auto scrollbar-none"
         style={{ borderBottom: "1px solid var(--tb-border)" }}
       >
         {TABS.map(({ id, label }) => (
@@ -234,19 +212,19 @@ export default function QuickCommands({ client, disabled, onClose }: Props) {
       </div>
 
       {/* ── Tab content ────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-5">
 
         {/* Arrows tab */}
         {activeTab === "arrows" && (
-          <div className="flex flex-col gap-2 items-center">
+          <div className="flex flex-col gap-3 items-center">
             {/* Row 1: Up */}
-            <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
+            <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
               <div />
               <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
               <div />
             </div>
             {/* Row 2: Left / Down / Right */}
-            <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
+            <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
               <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
               <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
               <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
@@ -256,27 +234,27 @@ export default function QuickCommands({ client, disabled, onClose }: Props) {
 
         {/* Nav tab */}
         {activeTab === "nav" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {NAV_CMDS.map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
             ))}
           </div>
         )}
 
         {/* Edit tab */}
         {activeTab === "edit" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {EDIT_CMDS.map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
             ))}
           </div>
         )}
 
         {/* Clipboard tab */}
         {activeTab === "clipboard" && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {CLIPBOARD_CMDS.map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
             ))}
           </div>
         )}

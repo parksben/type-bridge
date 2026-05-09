@@ -79,6 +79,7 @@ const ZH = {
   monitor: {
     modeChat: "打字",
     modeTouchpad: "触控",
+    modeKeyboard: "键盘",
     modeShortcuts: "快捷指令",
     touchpadHint: "单指移动 · 双指滚动/捏合 · 双指点击右键",
     touchpadLeftBtn: "左键",
@@ -215,6 +216,7 @@ const EN: Dict = {
   monitor: {
     modeChat: "Type",
     modeTouchpad: "Trackpad",
+    modeKeyboard: "Keyboard",
     modeShortcuts: "Shortcuts",
     touchpadHint: "1-finger move · 2-finger scroll/pinch · 2-tap right-click",
     touchpadLeftBtn: "Left",

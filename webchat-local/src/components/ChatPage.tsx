@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ComposerBar from "./ComposerBar";
 import MessageBubble, { type ChatMessage } from "./MessageBubble";
 import TouchPad from "./TouchPad";
+import QuickCommands from "./QuickCommands";
 import { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
 import type { CompressResult } from "@/lib/image";
@@ -12,7 +13,7 @@ type Props = {
 };
 
 type WifiStatus = "connected" | "reconnecting" | "disconnected";
-type PageMode = "chat" | "touchpad";
+type PageMode = "chat" | "touchpad" | "keyboard";
 
 export default function ChatPage({ client }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -84,6 +85,7 @@ export default function ChatPage({ client }: Props) {
   const TABS: { mode: PageMode; label: string }[] = [
     { mode: "chat",     label: t("monitor.modeChat") },
     { mode: "touchpad", label: t("monitor.modeTouchpad") },
+    { mode: "keyboard", label: t("monitor.modeKeyboard") },
   ];
 
   return (
@@ -194,6 +196,13 @@ export default function ChatPage({ client }: Props) {
       {/* ── Touchpad mode ─────────────────────────────────── */}
       {mode === "touchpad" && (
         <TouchPad client={client} disabled={wifi === "disconnected"} />
+      )}
+
+      {/* ── Keyboard (QuickCommands) mode ─────────────────── */}
+      {mode === "keyboard" && (
+        <div className="flex-1 overflow-y-auto">
+          <QuickCommands client={client} disabled={wifi === "disconnected"} />
+        </div>
       )}
     </main>
   );
