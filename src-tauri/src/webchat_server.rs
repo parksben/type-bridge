@@ -464,6 +464,10 @@ struct TextMsg {
     #[serde(rename = "clientMessageId")]
     client_message_id: String,
     text: String,
+    /// true → 注入后用 submit_config 执行提交（等同桌面端「自动提交」一次）
+    /// false（默认）→ 仅注入文本，不触发提交键
+    #[serde(default)]
+    submit: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -857,7 +861,7 @@ async fn handle_hello(
 async fn handle_text(msg: &TextMsg, state: Arc<ServerState>) -> Result<String, String> {
     verify_user_token(&msg.user_token, &state)?;
     touch_active(&msg.user_token, &state);
-    ingest_text(&msg.client_message_id, &msg.text, &state)
+    ingest_text(&msg.client_message_id, &msg.text, msg.submit, &state)
 }
 
 async fn handle_image(msg: &ImageMsg, state: Arc<ServerState>) -> Result<String, String> {
@@ -902,7 +906,7 @@ fn touch_active(token: &str, state: &ServerState) {
     }
 }
 
-fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Result<String, String> {
+fn ingest_text(client_message_id: &str, text: &str, submit: bool, state: &ServerState) -> Result<String, String> {
     // client_message_id 当前未用于 ack 回流（Socket.IO ack 由 composite_id 匹配），
     // 仅留作调试日志
     let _ = client_message_id;
@@ -933,6 +937,8 @@ fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Resu
     state.history.append(msg);
 
     // 入队
+    // submit=true → no_auto_submit=false → worker 按 submit_config 配置的组合键提交
+    // submit=false → no_auto_submit=true  → 仅注入文本，提交由手机端另行决定
     state
         .injector
         .enqueue(QueuedMessage {
@@ -943,8 +949,7 @@ fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Resu
             image_path: None,
             image_mime: None,
             key: None,
-            // WebChat 由手机端选择是否发 Enter，不走桌面端「自动提交」
-            no_auto_submit: true,
+            no_auto_submit: !submit,
         })?;
 
     Ok(composite)
