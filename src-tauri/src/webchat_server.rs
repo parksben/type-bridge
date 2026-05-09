@@ -36,6 +36,7 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use socketioxide::extract::{AckSender, Data, SocketRef, State};
+use socketioxide::socket::Sid;
 use socketioxide::SocketIo;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
@@ -177,12 +178,17 @@ impl WebChatServer {
             tracing::info!("[webchat] server task exited");
         });
 
-        // 启动 idle binding 清理 task：每 IDLE_CHECK_INTERVAL_SECS 秒扫描一次，
-        // 超过 IDLE_TIMEOUT_MS 无消息的 binding 自动释放。
-        // 手机再发消息会收到 "未认证" 的 ack，提示用户重新扫码。
+        // 启动 idle binding 清理 task（保险机制，应对 on_disconnect 未触发的极端情况）。
+        //
+        // 判活逻辑：
+        //   1. io.get_socket(sid).is_some() → Socket.IO Engine.IO ping/pong 保活中 → 跳过
+        //   2. socket 已断 + 距上次活跃 > IDLE_TIMEOUT_MS → 驱逐
+        //
+        // 正常情况下 on_disconnect 会即时清理；此 task 只处理漏网情况。
         {
             let state_for_idle = state.clone();
             let cancel_for_idle = cancel.clone();
+            let io_for_idle = io.clone();
             tokio::spawn(async move {
                 let mut interval = tokio::time::interval(
                     std::time::Duration::from_secs(IDLE_CHECK_INTERVAL_SECS)
@@ -199,7 +205,14 @@ impl WebChatServer {
                             Err(_) => continue,
                         };
                         let before = bindings.len();
-                        bindings.retain(|b| now - b.last_active_ms < IDLE_TIMEOUT_MS);
+                        bindings.retain(|b| {
+                            // socket 在线（Engine.IO heartbeat 确认）→ 保留
+                            if io_for_idle.get_socket(b.socket_sid).is_some() {
+                                return true;
+                            }
+                            // socket 已断：宽限期内保留（手机可能正在重连）
+                            now - b.last_active_ms < IDLE_TIMEOUT_MS
+                        });
                         before - bindings.len()
                     };
                     if removed > 0 {
@@ -407,8 +420,8 @@ fn make_otp_state() -> OtpState {
 struct Binding {
     user_token_hash: [u8; 32],
     client_id: String,
-    /// Socket.IO socket id，用于 disconnect 时反查并移除 binding
-    socket_sid: String,
+    /// Socket.IO socket id（Engine.IO Sid），用于 disconnect 时反查并移除 binding
+    socket_sid: Sid,
     bound_at_ms: i64,
     ua: String,
     /// 最近一次收到消息的时间戳（ms）。idle 超过 IDLE_TIMEOUT_MS 后由后台 task 自动移除 binding。
@@ -734,7 +747,7 @@ async fn on_connect(socket: SocketRef) {
 
     socket.on_disconnect(
         |socket: SocketRef, State(state): State<Arc<ServerState>>| async move {
-            let sid = socket.id.to_string();
+            let sid = socket.id;
             tracing::info!("[webchat] client disconnected: sid={}", sid);
             let removed = {
                 match state.bindings.lock() {
@@ -811,7 +824,7 @@ async fn handle_hello(
     {
         let mut bindings = state.bindings.lock().map_err(|_| "LOCK_POISONED")?;
         // 同一 clientId 二次握手（手机刷新）→ 替换旧 binding
-        let socket_sid = socket.id.to_string();
+        let socket_sid = socket.id;
         let now = now_ms();
         if let Some(existing) = bindings.iter_mut().find(|b| b.client_id == msg.client_id) {
             existing.user_token_hash = user_token_hash;
