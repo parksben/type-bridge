@@ -39,7 +39,11 @@ export default function ConnectionHub() {
         }}
       >
         <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
-        <span>{t("connectionHub.intro")}</span>
+        <span>
+          {activeConnectionChannel === "webchat"
+            ? t("connectionHub.introWebchat")
+            : t("connectionHub.introIM")}
+        </span>
       </div>
 
       {/* 横向渠道子 tab */}

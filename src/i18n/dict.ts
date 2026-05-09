@@ -60,7 +60,8 @@ export const ZH = {
   },
 
   connectionHub: {
-    intro: "通过内置 WebChat 或 IM 应用机器人连接 TypeBridge 进行输入",
+    introWebchat: "扫码配对，手机变身桌面鼠标键盘",
+    introIM: "给机器人发消息，自动写入桌面当前聚焦输入框",
   },
 
   feishu: {
@@ -392,7 +393,8 @@ export const EN: Dict = {
   },
 
   connectionHub: {
-    intro: "Connect TypeBridge via built-in WebChat or your IM bots to start typing",
+    introWebchat: "Scan to pair — turn your phone into a mouse and keyboard",
+    introIM: "Send a message to your bot — it types into the focused input for you",
   },
 
   feishu: {
