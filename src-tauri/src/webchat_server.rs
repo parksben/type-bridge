@@ -38,6 +38,7 @@ use sha2::{Digest, Sha256};
 use socketioxide::extract::{AckSender, Data, SocketRef, State};
 use socketioxide::SocketIo;
 use tokio::net::TcpListener;
+use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tower_http::services::{ServeDir, ServeFile};
@@ -94,6 +95,8 @@ impl WebChatServer {
         let session_id = generate_session_id();
         let initial_otp = make_otp_state();
 
+        let (otp_refresh_tx, _) = broadcast::channel(8);
+
         let state = Arc::new(ServerState {
             session_id: session_id.clone(),
             otp: SyncMutex::new(initial_otp),
@@ -102,6 +105,7 @@ impl WebChatServer {
             history: ctx.history.clone(),
             pending_acks: SyncMutex::new(HashMap::new()),
             notify_bind_change,
+            otp_refresh: otp_refresh_tx,
         });
 
         // 构建 Socket.IO layer
@@ -237,6 +241,9 @@ impl WebChatServer {
             *g = fresh;
         }
         tracing::info!("[webchat] OTP rotated, new expires_at_ms={}", expires_at_ms);
+        // 推送新 OTP 给所有已认证连接，让手机端实时刷新 URL 里的 OTP，
+        // 保证切换 App 后浏览器重载页面时仍能自动重连
+        let _ = self.state.otp_refresh.send(plain.clone());
         (plain, expires_at_ms)
     }
 
@@ -328,6 +335,8 @@ struct ServerState {
     pending_acks: SyncMutex<HashMap<String, AckSender>>,
     /// binding 数量变化时（绑定 / 断开）通知上层 bridge 刷新快照并 emit 前端事件。
     notify_bind_change: Arc<dyn Fn() + Send + Sync + 'static>,
+    /// OTP 轮换广播：rotate_otp 将新 OTP 明文发入，hello 成功的连接各自订阅并推送给手机。
+    otp_refresh: broadcast::Sender<String>,
 }
 
 /// OTP 全量状态。rotate 时一把锁整体替换，避免字段间不一致。
@@ -469,6 +478,7 @@ struct MouseZoomMsg {
 /// 任何不在此列表的 code 立即拒绝，绝不入队，避免 WebChat 变成"远程任意按键执行"通道。
 const ALLOWED_KEY_CODES: &[&str] = &[
     "Enter",
+    "Escape",
     "Backspace",
     "Space",
     "ArrowUp",
@@ -509,13 +519,27 @@ async fn on_connect(socket: SocketRef) {
     socket.on(
         "hello",
         |socket: SocketRef, Data::<HelloMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
-            let result = handle_hello(&socket, &msg, state).await;
+            let result = handle_hello(&socket, &msg, state.clone()).await;
             match result {
                 Ok(user_token) => {
                     let _ = ack.send(&HelloAck::Ok {
                         ok: true,
                         user_token,
                         session_id: socket.ns().to_string(),
+                    });
+                    // 订阅 OTP 轮换广播：后台任务将每次新 OTP 推送给此 socket，
+                    // 手机端收到后实时更新 URL 里的 otp 参数，确保页面重载时能自动重连
+                    let mut rx = state.otp_refresh.subscribe();
+                    let socket_clone = socket.clone();
+                    tokio::spawn(async move {
+                        while let Ok(new_otp) = rx.recv().await {
+                            if socket_clone
+                                .emit("otp-refresh", &serde_json::json!({ "otp": new_otp }))
+                                .is_err()
+                            {
+                                break; // socket 已关闭，结束任务
+                            }
+                        }
                     });
                 }
                 Err(reason) => {
@@ -805,6 +829,11 @@ fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Resu
     // client_message_id 当前未用于 ack 回流（Socket.IO ack 由 composite_id 匹配），
     // 仅留作调试日志
     let _ = client_message_id;
+    // 防御性 trim：去除首尾空白（含 \n），避免移动端软键盘回车键误带换行
+    let text = text.trim();
+    if text.is_empty() {
+        return Err("文本不能为空".into());
+    }
     let source_id = format!("wc_{}", short_uid());
     let composite = crate::channel::composite_id(ChannelId::WebChat, &source_id);
 
