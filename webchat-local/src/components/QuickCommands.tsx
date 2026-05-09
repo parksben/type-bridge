@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowUp,
   ArrowDown,
@@ -130,9 +130,18 @@ function CmdButton({
 
 // ─── Main ──────────────────────────────────────────────────────
 
+const TAB_IDS: TabId[] = ["arrows", "nav", "edit", "clipboard"];
+
 export default function QuickCommands({ client, disabled }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("arrows");
   const [error, setError] = useState<string | null>(null);
+  // 是否正在程序化滚动（点击 Tab 触发），期间暂停 scroll spy
+  const isProgrammaticScroll = useRef(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<Record<TabId, HTMLDivElement | null>>({
+    arrows: null, nav: null, edit: null, clipboard: null,
+  });
 
   const TABS: { id: TabId; label: string }[] = [
     { id: "arrows",    label: t("monitor.cmdGroupArrows") },
@@ -140,6 +149,40 @@ export default function QuickCommands({ client, disabled }: Props) {
     { id: "edit",      label: t("monitor.cmdGroupEdit") },
     { id: "clipboard", label: t("monitor.cmdGroupClipboard") },
   ];
+
+  // ── Scroll spy ───────────────────────────────────────────────
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    function onScroll() {
+      if (isProgrammaticScroll.current) return;
+      const st = container!.scrollTop;
+      let current: TabId = "arrows";
+      for (const id of TAB_IDS) {
+        const el = sectionRefs.current[id];
+        if (el && el.offsetTop <= st + 48) current = id;
+      }
+      setActiveTab(current);
+    }
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // ── Click tab → scroll to section ───────────────────────────
+  function handleTabClick(id: TabId) {
+    setActiveTab(id);
+    const el = sectionRefs.current[id];
+    const container = scrollRef.current;
+    if (!el || !container) return;
+
+    isProgrammaticScroll.current = true;
+    container.scrollTo({ top: el.offsetTop, behavior: "smooth" });
+
+    // smooth scroll 结束后恢复 spy（通常 300-500ms）
+    setTimeout(() => { isProgrammaticScroll.current = false; }, 600);
+  }
 
   async function handlePress(cmd: CmdDef) {
     if (disabled) return;
@@ -156,7 +199,6 @@ export default function QuickCommands({ client, disabled }: Props) {
       const ack = await client.sendKeyCombo(newClientMessageId(), cmd.spec.combo);
       success = ack.success; reason = ack.reason;
     } else if (cmd.spec.type === "clear") {
-      // 全选 → 删除
       const ack1 = await client.sendKeyCombo(newClientMessageId(), "SelectAll");
       if (!ack1.success) { success = false; reason = ack1.reason; }
       else {
@@ -177,7 +219,7 @@ export default function QuickCommands({ client, disabled }: Props) {
       {/* Error banner */}
       {error && (
         <div
-          className="mx-4 mt-4 px-3 py-2 rounded-xl text-[12px] text-center"
+          className="mx-4 mt-3 px-3 py-2 rounded-xl text-[12px] text-center shrink-0"
           style={{
             background: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
             color: "var(--tb-danger)",
@@ -187,88 +229,99 @@ export default function QuickCommands({ client, disabled }: Props) {
         </div>
       )}
 
-      {/* ── Horizontal tab bar ─────────────────────────────── */}
+      {/* ── Underline tab bar ──────────────────────────────── */}
       <div
-        className="flex gap-1.5 px-4 pt-4 pb-3 shrink-0 overflow-x-auto scrollbar-none"
+        className="flex shrink-0 overflow-x-auto scrollbar-none"
         style={{ borderBottom: "1px solid var(--tb-border)" }}
       >
         {TABS.map(({ id, label }) => (
           <button
             key={id}
             type="button"
-            onClick={() => setActiveTab(id)}
-            className="px-3.5 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors shrink-0"
-            style={{
-              background: activeTab === id ? "var(--tb-accent)" : "var(--tb-surface)",
-              color: activeTab === id ? "white" : "var(--tb-muted)",
-              border: activeTab === id ? "none" : "1px solid var(--tb-border)",
-            }}
+            onClick={() => handleTabClick(id)}
+            className="flex-1 py-3 text-[13px] font-semibold whitespace-nowrap transition-colors relative"
+            style={{ color: activeTab === id ? "var(--tb-accent)" : "var(--tb-muted)" }}
           >
             {label}
+            {/* 下划线 */}
+            <span
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full transition-all duration-200"
+              style={{
+                width: activeTab === id ? "80%" : "0%",
+                height: "2px",
+                background: "var(--tb-accent)",
+              }}
+            />
           </button>
         ))}
       </div>
 
-      {/* ── Tab content ────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 py-5">
+      {/* ── Scrollable content — all sections rendered ─────── */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
 
-        {/* Arrows tab */}
-        {activeTab === "arrows" && (
-          <div className="flex flex-col gap-3 items-center">
-            {/* Row 1: Up */}
-            <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
-              <div />
-              <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
-              <div />
-            </div>
-            {/* Row 2: Left / Down / Right */}
-            <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
-              <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
-              <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
-              <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
-            </div>
+        {/* Arrows section */}
+        <div
+          ref={(el) => { sectionRefs.current["arrows"] = el; }}
+          className="flex flex-col gap-3 items-center px-4 pt-5 pb-10"
+        >
+          <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
+            <div />
+            <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
+            <div />
           </div>
-        )}
-
-        {/* Nav tab */}
-        {activeTab === "nav" && (
-          <div className="flex flex-col gap-3">
-            {/* 行首 / 行尾 — 水平并排 */}
-            <div className="grid grid-cols-2 gap-3">
-              <CmdButton cmd={CMD_HOME}      onPress={handlePress} disabled={disabled} large />
-              <CmdButton cmd={CMD_END}       onPress={handlePress} disabled={disabled} large />
-            </div>
-            {/* 上翻页/下翻页 + 页首/页尾 — 左右各自垂直堆叠 */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-3">
-                <CmdButton cmd={CMD_PAGE_UP}    onPress={handlePress} disabled={disabled} large />
-                <CmdButton cmd={CMD_PAGE_DOWN}  onPress={handlePress} disabled={disabled} large />
-              </div>
-              <div className="flex flex-col gap-3">
-                <CmdButton cmd={CMD_DOC_TOP}    onPress={handlePress} disabled={disabled} large />
-                <CmdButton cmd={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} large />
-              </div>
-            </div>
+          <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
+            <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
+            <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
+            <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
           </div>
-        )}
+        </div>
 
-        {/* Edit tab */}
-        {activeTab === "edit" && (
+        {/* Nav section */}
+        <div
+          ref={(el) => { sectionRefs.current["nav"] = el; }}
+          className="flex flex-col gap-3 px-4 pt-5 pb-10"
+          style={{ borderTop: "1px solid var(--tb-border)" }}
+        >
           <div className="grid grid-cols-2 gap-3">
-            {EDIT_CMDS.map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
-            ))}
+            <CmdButton cmd={CMD_HOME}      onPress={handlePress} disabled={disabled} large />
+            <CmdButton cmd={CMD_END}       onPress={handlePress} disabled={disabled} large />
           </div>
-        )}
-
-        {/* Clipboard tab */}
-        {activeTab === "clipboard" && (
           <div className="grid grid-cols-2 gap-3">
-            {CLIPBOARD_CMDS.map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
-            ))}
+            <div className="flex flex-col gap-3">
+              <CmdButton cmd={CMD_PAGE_UP}    onPress={handlePress} disabled={disabled} large />
+              <CmdButton cmd={CMD_PAGE_DOWN}  onPress={handlePress} disabled={disabled} large />
+            </div>
+            <div className="flex flex-col gap-3">
+              <CmdButton cmd={CMD_DOC_TOP}    onPress={handlePress} disabled={disabled} large />
+              <CmdButton cmd={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} large />
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Edit section */}
+        <div
+          ref={(el) => { sectionRefs.current["edit"] = el; }}
+          className="grid grid-cols-2 gap-3 px-4 pt-5 pb-10"
+          style={{ borderTop: "1px solid var(--tb-border)" }}
+        >
+          {EDIT_CMDS.map((cmd) => (
+            <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
+          ))}
+        </div>
+
+        {/* Clipboard section */}
+        <div
+          ref={(el) => { sectionRefs.current["clipboard"] = el; }}
+          className="grid grid-cols-2 gap-3 px-4 pt-5"
+          style={{ borderTop: "1px solid var(--tb-border)" }}
+        >
+          {CLIPBOARD_CMDS.map((cmd) => (
+            <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
+          ))}
+        </div>
+
+        {/* 底部撑高，确保最后一个 section 可滚动到顶部 */}
+        <div style={{ height: "50vh" }} aria-hidden />
 
       </div>
     </>
