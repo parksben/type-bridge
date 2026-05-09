@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  ArrowRightLeft,
-  Bot,
-  FileText,
+  MessageSquareText,
   Mic,
+  MousePointer2,
   Sparkles,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useT, renderMarked } from "../lib/i18n";
 
-type SceneId = "voiceToText" | "aiCoding" | "docProduction" | "crossDevice";
+type SceneId = "touchpad" | "typeInput" | "voiceInput" | "quickCommands";
 
 type SceneDef = {
   id: SceneId;
@@ -28,52 +28,52 @@ type SceneDef = {
 
 const SCENE_DEFS: SceneDef[] = [
   {
-    id: "voiceToText",
+    id: "touchpad",
+    icon: MousePointer2,
+    tint: "rgba(234, 88, 12, 0.18)",
+    tabLabelKey: "scenes.touchpad.title",
+    titleKey: "scenes.touchpad.title",
+    subtitleKey: "scenes.touchpad.subtitle",
+    descriptionKey: "scenes.touchpad.description",
+    detailsKey: "scenes.touchpad.details",
+    tipKey: "scenes.touchpad.tip",
+    themeKey: "scenes.touchpad.theme",
+  },
+  {
+    id: "typeInput",
+    icon: MessageSquareText,
+    tint: "rgba(14, 165, 233, 0.18)",
+    tabLabelKey: "scenes.typeInput.title",
+    titleKey: "scenes.typeInput.title",
+    subtitleKey: "scenes.typeInput.subtitle",
+    descriptionKey: "scenes.typeInput.description",
+    detailsKey: "scenes.typeInput.details",
+    tipKey: "scenes.typeInput.tip",
+    themeKey: "scenes.typeInput.theme",
+  },
+  {
+    id: "voiceInput",
     icon: Mic,
     tint: "rgba(255, 122, 77, 0.18)",
-    tabLabelKey: "scenes.voiceToText.title",
-    titleKey: "scenes.voiceToText.title",
-    subtitleKey: "scenes.voiceToText.subtitle",
-    descriptionKey: "scenes.voiceToText.description",
-    detailsKey: "scenes.voiceToText.details",
-    tipKey: "scenes.voiceToText.tip",
-    themeKey: "scenes.voiceToText.theme",
+    tabLabelKey: "scenes.voiceInput.title",
+    titleKey: "scenes.voiceInput.title",
+    subtitleKey: "scenes.voiceInput.subtitle",
+    descriptionKey: "scenes.voiceInput.description",
+    detailsKey: "scenes.voiceInput.details",
+    tipKey: "scenes.voiceInput.tip",
+    themeKey: "scenes.voiceInput.theme",
   },
   {
-    id: "aiCoding",
-    icon: Bot,
+    id: "quickCommands",
+    icon: Zap,
     tint: "rgba(192, 132, 252, 0.18)",
-    tabLabelKey: "scenes.aiCoding.title",
-    titleKey: "scenes.aiCoding.title",
-    subtitleKey: "scenes.aiCoding.subtitle",
-    descriptionKey: "scenes.aiCoding.description",
-    detailsKey: "scenes.aiCoding.details",
-    tipKey: "scenes.aiCoding.tip",
-    themeKey: "scenes.aiCoding.theme",
-  },
-  {
-    id: "docProduction",
-    icon: FileText,
-    tint: "rgba(34, 211, 238, 0.18)",
-    tabLabelKey: "scenes.docProduction.title",
-    titleKey: "scenes.docProduction.title",
-    subtitleKey: "scenes.docProduction.subtitle",
-    descriptionKey: "scenes.docProduction.description",
-    detailsKey: "scenes.docProduction.details",
-    tipKey: "scenes.docProduction.tip",
-    themeKey: "scenes.docProduction.theme",
-  },
-  {
-    id: "crossDevice",
-    icon: ArrowRightLeft,
-    tint: "rgba(14, 165, 233, 0.18)",
-    tabLabelKey: "scenes.crossDevice.title",
-    titleKey: "scenes.crossDevice.title",
-    subtitleKey: "scenes.crossDevice.subtitle",
-    descriptionKey: "scenes.crossDevice.description",
-    detailsKey: "scenes.crossDevice.details",
-    tipKey: "scenes.crossDevice.tip",
-    themeKey: "scenes.crossDevice.theme",
+    tabLabelKey: "scenes.quickCommands.title",
+    titleKey: "scenes.quickCommands.title",
+    subtitleKey: "scenes.quickCommands.subtitle",
+    descriptionKey: "scenes.quickCommands.description",
+    detailsKey: "scenes.quickCommands.details",
+    tipKey: "scenes.quickCommands.tip",
+    themeKey: "scenes.quickCommands.theme",
   },
 ];
 

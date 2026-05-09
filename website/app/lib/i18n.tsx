@@ -22,20 +22,20 @@ const DICT = {
   "nav.scenes": { zh: "适用场景", en: "Use Cases" },
   "nav.flow": { zh: "使用流程", en: "How It Works" },
   "nav.download": { zh: "下载安装", en: "Download" },
-  "nav.tagline": { zh: "聊天即打字", en: "Chat to Type" },
-  "nav.brandAria": { zh: "TypeBridge — 聊天即打字", en: "TypeBridge — Chat to Type" },
+  "nav.tagline": { zh: "手机即键鼠", en: "Phone as Keyboard & Mouse" },
+  "nav.brandAria": { zh: "TypeBridge — 手机即键鼠", en: "TypeBridge — Phone as Keyboard & Mouse" },
   "nav.githubAria": { zh: "查看 TypeBridge GitHub 仓库", en: "View TypeBridge on GitHub" },
 
   // ── Hero ───────────────────────────────────
-  "hero.headline": { zh: "聊天即打字", en: "Chat to Type" },
+  "hero.headline": { zh: "手机即键鼠", en: "Your Phone, Keyboard & Mouse" },
   "hero.subtitle": {
-    zh: "说话、打字、发图片——手机发一条消息，电脑输入框直接落字",
-    en: "Speak, type, or send an image — your phone message appears right where your cursor is.",
+    zh: "扫一下，手机变成无线键盘和触控板——打字、移动鼠标、语音输入，全部实时到达 Mac",
+    en: "Scan once — your phone becomes a wireless keyboard and trackpad. Type, move the cursor, use your voice. All lands on your Mac in real time.",
   },
   "hero.ctaDownload": { zh: "免费下载", en: "Download Free" },
   "hero.ctaHowto": { zh: "如何使用", en: "How It Works" },
-  "hero.desktopText": { zh: "聊天即打字", en: "Chat to Type" },
-  "hero.phoneUserMsg": { zh: "聊天即打字", en: "Chat to Type" },
+  "hero.desktopText": { zh: "手机即键鼠", en: "Keyboard & Mouse" },
+  "hero.phoneUserMsg": { zh: "手机即键鼠", en: "Phone as Keyboard & Mouse" },
   "hero.phoneInputPlaceholder": { zh: "输入消息…", en: "Type a message…" },
 
   // ── Concept banner channel labels ──────────
@@ -46,121 +46,122 @@ const DICT = {
 
   // ── Scenes ─────────────────────────────────
   "scenes.heading": {
-    zh: "每一个场景，都在验证**聊天即打字**",
-    en: "Every use case proves: **Chat to Type**",
+    zh: "每一种姿势，都是**手机即键鼠**",
+    en: "Every gesture proves: **Your Phone, Keyboard & Mouse**",
   },
-  "scenes.subheading": { zh: "4 个典型用法，找到你的那个", en: "Four ways to use it. Pick yours." },
+  "scenes.subheading": { zh: "触控、打字、语音、快捷键——手机全都能", en: "Trackpad, typing, voice, shortcuts — your phone does it all." },
   "scenes.tipLabel": { zh: "提示：", en: "Tip: " },
-  "scenes.voiceToText.title": { zh: "语音输入，桌面直达", en: "Speak, and It Appears on Your Mac" },
-  "scenes.voiceToText.subtitle": { zh: "说一句话，就出现在电脑上", en: "Say it on your phone. See it on your desktop." },
-  "scenes.voiceToText.description": {
-    zh: "对着手机说话，飞书、钉钉、企微帮你转成文字，再自动送进电脑当前输入框。写邮件、回消息、填表单——嘴就是键盘。",
-    en: "Speak into your phone — Feishu, DingTalk, or WeCom transcribes it and sends it straight to your Mac's active input field. Compose emails, reply to messages, fill forms — your voice is the keyboard.",
-  },
-  "scenes.voiceToText.details": {
-    zh: [
-      "填 Jira / OA 表单 → 手机口述 → 输入框直接落字，双手不离键盘",
-      "VSCode 写注释 → 手机口述 → 编辑器里实时落字",
-      "站会时想快速记录 → 手机说一句 → Notion / 飞书文档实时落字",
-    ],
-    en: [
-      "Fill a Jira / OA form → dictate on your phone → field fills itself, hands stay on keyboard",
-      "Write a comment in VSCode → dictate on your phone → appears inline in the editor",
-      "In a standup, want to jot a note → speak into your phone → Notion / docs update in real time",
-    ],
-  },
-  "scenes.voiceToText.tip": {
-    zh: "打开「自动提交」开关，说完话连回车都不用按。",
-    en: "Turn on \"Auto-submit\" and you won't even need to press Enter.",
-  },
-  "scenes.voiceToText.theme": { zh: "把嘴变成键盘。", en: "Your voice is the keyboard." },
 
-  "scenes.aiCoding.title": { zh: "AI 编程，动口不动手", en: "Code with AI — Just Speak" },
-  "scenes.aiCoding.subtitle": { zh: "说一句指令，AI 就开始写代码", en: "Say a command. AI starts coding." },
-  "scenes.aiCoding.description": {
-    zh: "在 Cursor、Copilot Chat 里，用手机说出你的需求——「帮我重构这个函数」「加一个错误处理」——AI 收到完整指令立刻执行，你甚至不用碰键盘。",
-    en: "In Cursor or Copilot Chat, speak your request — \"Refactor this function\" or \"Add error handling\" — and the AI gets the full instruction instantly. You never touch the keyboard.",
+  "scenes.touchpad.title": { zh: "手机屏就是你的触控板", en: "Your Phone Screen Is the Trackpad" },
+  "scenes.touchpad.subtitle": { zh: "单指移鼠标，双指滚页面", en: "One finger to move. Two to scroll." },
+  "scenes.touchpad.description": {
+    zh: "打开触控板模式，单指移动鼠标，双指上下滚动，左键右键随手点——无需蓝牙，无需配对，扫码即用的无线触控板。",
+    en: "Switch to trackpad mode. One finger moves the cursor, two fingers scroll. Left click, right click — no Bluetooth, no pairing. Just scan and use.",
   },
-  "scenes.aiCoding.details": {
+  "scenes.touchpad.details": {
     zh: [
-      "手机说「给这段代码写单测」→ Cursor 对话栏收到指令 → AI 自动生成",
-      "重构时不想打断思路 → 手机口述需求 → AI 继续干活",
-      "开会时想到一个 bug → 手机说给 AI → 回来代码已修好",
+      "演示 PPT 时站在台前远程控制电脑，不用走回工位",
+      "躺在沙发上浏览网页，手机当遥控翻页",
+      "三指左右滑，在多桌面之间自由切换",
     ],
     en: [
-      "Say \"Write unit tests for this\" → appears in Cursor chat → AI generates them",
-      "Don't break your flow during a refactor → describe the change on your phone → AI keeps working",
-      "Spot a bug during a meeting → tell AI on your phone → come back to fixed code",
+      "Give a presentation from the front — control your Mac without returning to your desk",
+      "Browse from the couch — use your phone as a wireless scroll controller",
+      "Three-finger swipe left or right to switch desktops",
     ],
   },
-  "scenes.aiCoding.tip": {
-    zh: "口头描述往往比打字更准确——尤其是复杂的重构需求。",
-    en: "Speaking is often more precise than typing — especially for complex refactoring instructions.",
+  "scenes.touchpad.tip": {
+    zh: "三指上滑可触发 Mission Control，三指左右滑在桌面间切换。",
+    en: "Three-finger swipe up for Mission Control. Left or right to switch desktops.",
   },
-  "scenes.aiCoding.theme": { zh: "给 AI 配一个声音遥控器。", en: "A voice remote for your AI." },
+  "scenes.touchpad.theme": { zh: "手机就是触控板。", en: "Your phone is the trackpad." },
 
-  "scenes.docProduction.title": { zh: "写文档，边说边出稿", en: "Write Docs by Speaking" },
-  "scenes.docProduction.subtitle": { zh: "说话就是写作，不敲一个字", en: "Talk it out. Zero typing." },
-  "scenes.docProduction.description": {
-    zh: "写周报、技术文档、会议纪要——对着手机边想边说，文字实时流进电脑上的编辑器。说完就是草稿，不用事后整理。",
-    en: "Weekly reports, technical docs, meeting notes — think out loud into your phone, and the text streams into your Mac's editor in real time. What you say is your first draft.",
+  "scenes.typeInput.title": { zh: "手机打字，电脑收字", en: "Type on Phone. Receive on Mac." },
+  "scenes.typeInput.subtitle": { zh: "任意输入框，实时落字", en: "Any field, instant delivery." },
+  "scenes.typeInput.description": {
+    zh: "在手机上打字发送，文字立刻注入电脑当前光标处——任何 App、任何输入框，不需要剪贴板，不需要切换设备。",
+    en: "Type and send on your phone. The text lands instantly at your Mac's cursor — any app, any input field. No clipboard. No device switching.",
   },
-  "scenes.docProduction.details": {
+  "scenes.typeInput.details": {
     zh: [
-      "写周报 → 手机逐条口述 → Notion / 飞书文档里逐行出现",
-      "写技术文档 → 手机描述思路 → Markdown 编辑器实时生成段落",
-      "会议刚结束 → 趁记忆新鲜口述纪要 → 电脑上直接有文字",
+      "站着开会也能向电脑输入内容，不用回工位",
+      "手机收到验证码 → 直接发送 → 电脑输入框自动落字",
+      "双手不离鼠标时，用手机补那几个字",
     ],
     en: [
-      "Weekly report → dictate bullet by bullet → appears in Notion or Feishu Docs",
-      "Technical doc → describe your thinking → Markdown editor fills in real time",
-      "Meeting just ended → capture notes while fresh → text is already on your Mac",
+      "Add text to your Mac while standing — no need to return to your desk",
+      "Got a verification code on your phone → send it → appears in the Mac's input field",
+      "Keep both hands on the mouse — let your phone handle the typing",
     ],
   },
-  "scenes.docProduction.tip": {
-    zh: "中文语音转文字可达 200+ 字/分钟，比键盘快一倍以上。",
-    en: "Speech-to-text reaches 200+ characters/minute — over twice as fast as typing.",
+  "scenes.typeInput.tip": {
+    zh: "开启「自动提交」，发送即等于按下回车，省掉最后一步。",
+    en: "Enable \"Auto-submit\" — sending the message is the same as pressing Enter.",
   },
-  "scenes.docProduction.theme": { zh: "让文档以说话的速度产出。", en: "Docs at the speed of speech." },
+  "scenes.typeInput.theme": { zh: "手机键盘，电脑输入。", en: "Phone keyboard. Mac input." },
 
-  "scenes.crossDevice.title": { zh: "跨设备粘贴，一步到位", en: "Cross-Device Paste, One Step" },
-  "scenes.crossDevice.subtitle": { zh: "手机上看到什么，电脑上就有什么", en: "See it on your phone. Have it on your Mac." },
-  "scenes.crossDevice.description": {
-    zh: "任何 App 里的内容——笔记、消息、表单——发给机器人，直接注入电脑当前输入框。不用登录微信 / QQ，不依赖第三方同步服务。",
-    en: "Content from any app — notes, messages, forms — send it to the bot, and it lands right in your Mac's active input field. No WeChat/QQ login needed. No third-party sync required.",
+  "scenes.voiceInput.title": { zh: "张嘴说话，桌面出字", en: "Speak Into Phone. Text on Mac." },
+  "scenes.voiceInput.subtitle": { zh: "语音转文字，实时上屏", en: "Voice to text, in real time." },
+  "scenes.voiceInput.description": {
+    zh: "打开手机输入法语音功能，说完发送，文字就出现在电脑光标处。写邮件、填表单、向 AI 发指令——嘴是最快的键盘。",
+    en: "Use your phone's voice input, speak, then send. The transcription lands right at your Mac's cursor. Compose emails, fill forms, prompt AI — your voice is the fastest keyboard.",
   },
-  "scenes.crossDevice.details": {
+  "scenes.voiceInput.details": {
     zh: [
-      "手机上记的会议备忘 → 发给机器人 → 电脑 Notion / 文档里直接落字",
-      "手机表单填写了一半 → 发给机器人 → 电脑浏览器表单栏自动填入",
-      "手机验证码收到 → 发给机器人 → 电脑验证码输入框自动出现",
+      "写周报 → 逐条口述 → Notion / 飞书文档里实时出现",
+      "向 AI 发指令 → 口述需求 → Cursor / Copilot 立刻收到",
+      "填表单 → 说一段 → 字段自动落字，不用切换窗口",
     ],
     en: [
-      "Meeting notes jotted on your phone → send to bot → lands in Notion or your doc on Mac",
-      "Half-filled form on your phone → send to bot → auto-fills the same form in your Mac browser",
-      "Verification code arrives on your phone → send to bot → appears in the code field on your Mac",
+      "Weekly report → dictate line by line → appears in Notion or Docs in real time",
+      "AI prompts → speak your request → Cursor or Copilot receives it instantly",
+      "Fill a form → dictate a paragraph → field auto-fills, no window switching",
     ],
   },
-  "scenes.crossDevice.tip": {
-    zh: "不依赖任何云同步——只要 IM 机器人能收到，电脑就能落字。",
-    en: "No cloud sync needed — as long as the bot receives it, it lands on your Mac.",
+  "scenes.voiceInput.tip": {
+    zh: "中文语音识别可达 200+ 字/分钟，比键盘快一倍以上。",
+    en: "Voice recognition reaches 200+ characters/minute — twice as fast as typing.",
   },
-  "scenes.crossDevice.theme": { zh: "手机就是电脑的剪贴板。", en: "Your phone is your Mac's clipboard." },
+  "scenes.voiceInput.theme": { zh: "嘴比键盘快。", en: "Voice beats the keyboard." },
+
+  "scenes.quickCommands.title": { zh: "快捷指令，一触即发", en: "Shortcuts. One Tap." },
+  "scenes.quickCommands.subtitle": { zh: "方向键、复制粘贴、撤销——手不离鼠标", en: "Arrow keys, copy-paste, undo — no keyboard reach." },
+  "scenes.quickCommands.description": {
+    zh: "切换到「键盘」模式，方向键、行首行尾、上下翻页、复制粘贴、撤销重做——常用快捷键全在手机上，手不用离开鼠标。",
+    en: "Switch to keyboard mode. Arrow keys, Home/End, Page Up/Down, Copy/Paste, Undo/Redo — all on your phone. Your hand never leaves the mouse.",
+  },
+  "scenes.quickCommands.details": {
+    zh: [
+      "翻代码时上下翻页，手不离鼠标",
+      "选中文字 → 手机点复制 → 粘贴到另一个窗口",
+      "写文档时撤销重做，手机上一触即发",
+    ],
+    en: [
+      "Scroll through code — hand never leaves the mouse",
+      "Select text → tap copy on phone → paste in another window",
+      "Undo and redo while writing — one tap on your phone",
+    ],
+  },
+  "scenes.quickCommands.tip": {
+    zh: "支持方向键、Home/End、PageUp/Down、Cmd+↑↓ 等常用快捷键。",
+    en: "Supports arrow keys, Home/End, PageUp/Down, Cmd+↑↓, and more.",
+  },
+  "scenes.quickCommands.theme": { zh: "快捷键，在手心里。", en: "Shortcuts in your palm." },
 
   // ── Flow ───────────────────────────────────
-  "flow.heading": { zh: "把**聊天**变成**输入**，只需四步", en: "Turn **chat** into **input** in four steps" },
-  "flow.subheading": { zh: "下载、打开、连接、落字——两分钟搞定", en: "Download, launch, connect, type — done in two minutes" },
-  "flow.step01.title": { zh: "下载 App", en: "Download" },
-  "flow.step01.subtitle": { zh: "下载 macOS 版，免费安装", en: "Download the macOS app — free" },
-  "flow.step02.title": { zh: "打开 App", en: "Launch" },
-  "flow.step02.subtitle": { zh: "按提示开启系统授权", en: "Grant permissions when prompted" },
+  "flow.heading": { zh: "四步，把手机变成**无线键鼠**", en: "Four steps to **wireless keyboard & mouse**" },
+  "flow.subheading": { zh: "下载、授权、扫码、用——两分钟搞定", en: "Download, permit, scan, control — done in two minutes" },
+  "flow.step01.title": { zh: "下载安装", en: "Download" },
+  "flow.step01.subtitle": { zh: "免费下载 macOS 版，拖入应用程序文件夹", en: "Download the free macOS app, drag to Applications" },
+  "flow.step02.title": { zh: "开启权限", en: "Grant Access" },
+  "flow.step02.subtitle": { zh: "首次启动按提示授权辅助功能，一次永久有效", en: "Grant Accessibility permission on first launch — once and done" },
   "flow.step03.pickOne": { zh: "任选其一", en: "Pick one" },
-  "flow.choice.webchat.label": { zh: "扫码 WebChat", en: "Scan QR (WebChat)" },
-  "flow.choice.webchat.desc": { zh: "同 WiFi 手机扫码即连", en: "Same WiFi, scan to connect" },
-  "flow.choice.im.label": { zh: "连接 IM 机器人", en: "Connect IM Bot" },
+  "flow.choice.webchat.label": { zh: "扫码即连", en: "Scan to Connect" },
+  "flow.choice.webchat.desc": { zh: "手机扫 App 内二维码，同 WiFi 秒连", en: "Scan the QR in the app — same WiFi, instant connection" },
+  "flow.choice.im.label": { zh: "IM 机器人", en: "IM Bot" },
   "flow.choice.im.desc": { zh: "飞书 / 钉钉 / 企微自建应用", en: "Feishu / DingTalk / WeCom" },
-  "flow.step04.title": { zh: "桌面落字", en: "Type on Desktop" },
-  "flow.step04.subtitle": { zh: "文字、图片、语音转写，直达输入框", en: "Text, images, voice — all land in your input field" },
+  "flow.step04.title": { zh: "随心控制", en: "Control Freely" },
+  "flow.step04.subtitle": { zh: "打字、滑动触控板、语音——三种姿势，实时到达", en: "Type, swipe the trackpad, use your voice — all reach your Mac in real time" },
 
   // ── Download ───────────────────────────────
   "download.heading": { zh: "下载 & 安装", en: "Download & Install" },
@@ -192,7 +193,7 @@ const DICT = {
   },
 
   // ── Footer ─────────────────────────────────
-  "footer.tagline": { zh: "聊天即打字", en: "Chat to Type" },
+  "footer.tagline": { zh: "手机即键鼠", en: "Phone as Keyboard & Mouse" },
 } as const;
 
 // ────────────────────────────────────────────
@@ -201,12 +202,12 @@ const DICT = {
 
 const META = {
   title: {
-    zh: "TypeBridge — 聊天即打字",
-    en: "TypeBridge — Chat to Type",
+    zh: "TypeBridge — 手机即键鼠",
+    en: "TypeBridge — Your Phone, Keyboard & Mouse",
   },
   description: {
-    zh: "聊天即打字：说话、发文字、发图片——手机聊一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
-    en: "Chat to Type: Speak, text, or send an image — your message lands right where your cursor is. A macOS menu bar app.",
+    zh: "手机即键鼠：扫码连接，手机变成无线键盘和触控板。打字、移动鼠标、语音输入，全部实时到达 macOS。",
+    en: "Your phone becomes a wireless keyboard and trackpad for your Mac. Type, move the cursor, use your voice — all via a simple QR scan. macOS menu bar app.",
   },
 } as const;
 
