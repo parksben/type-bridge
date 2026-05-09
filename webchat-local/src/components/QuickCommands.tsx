@@ -150,37 +150,32 @@ export default function QuickCommands({ client, disabled }: Props) {
     { id: "clipboard", label: t("monitor.cmdGroupClipboard") },
   ];
 
-  // ── Scroll spy ───────────────────────────────────────────────
+  // ── Scroll spy（每屏等高，用 index 直接计算）────────────────
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
 
     function onScroll() {
       if (isProgrammaticScroll.current) return;
-      const st = container!.scrollTop;
-      let current: TabId = "arrows";
-      for (const id of TAB_IDS) {
-        const el = sectionRefs.current[id];
-        if (el && el.offsetTop <= st + 48) current = id;
-      }
-      setActiveTab(current);
+      const h = container!.clientHeight;
+      if (!h) return;
+      const idx = Math.round(container!.scrollTop / h);
+      const id = TAB_IDS[Math.min(idx, TAB_IDS.length - 1)];
+      if (id) setActiveTab(id);
     }
 
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ── Click tab → scroll to section ───────────────────────────
+  // ── Click tab → snap to section ─────────────────────────────
   function handleTabClick(id: TabId) {
     setActiveTab(id);
-    const el = sectionRefs.current[id];
     const container = scrollRef.current;
-    if (!el || !container) return;
-
+    if (!container) return;
+    const idx = TAB_IDS.indexOf(id);
     isProgrammaticScroll.current = true;
-    container.scrollTo({ top: el.offsetTop, behavior: "smooth" });
-
-    // smooth scroll 结束后恢复 spy（通常 300-500ms）
+    container.scrollTo({ top: idx * container.clientHeight, behavior: "smooth" });
     setTimeout(() => { isProgrammaticScroll.current = false; }, 600);
   }
 
@@ -259,13 +254,18 @@ export default function QuickCommands({ client, disabled }: Props) {
         ))}
       </div>
 
-      {/* ── Scrollable content — all sections rendered ─────── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+      {/* ── Scrollable content — snap one screen per section ── */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto min-h-0"
+        style={{ scrollSnapType: "y mandatory" }}
+      >
 
         {/* Arrows section */}
         <div
           ref={(el) => { sectionRefs.current["arrows"] = el; }}
-          className="flex flex-col gap-3 items-center px-4 pt-5 pb-10"
+          className="flex flex-col items-center justify-center gap-3 px-4"
+          style={{ height: "100%", scrollSnapAlign: "start" }}
         >
           <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
             <div />
@@ -282,8 +282,8 @@ export default function QuickCommands({ client, disabled }: Props) {
         {/* Nav section */}
         <div
           ref={(el) => { sectionRefs.current["nav"] = el; }}
-          className="flex flex-col gap-3 px-4 pt-5 pb-10"
-          style={{ borderTop: "1px solid var(--tb-border)" }}
+          className="flex flex-col justify-center gap-3 px-4"
+          style={{ height: "100%", scrollSnapAlign: "start" }}
         >
           <div className="grid grid-cols-2 gap-3">
             <CmdButton cmd={CMD_HOME}      onPress={handlePress} disabled={disabled} large />
@@ -304,8 +304,8 @@ export default function QuickCommands({ client, disabled }: Props) {
         {/* Edit section */}
         <div
           ref={(el) => { sectionRefs.current["edit"] = el; }}
-          className="grid grid-cols-2 gap-3 px-4 pt-5 pb-10"
-          style={{ borderTop: "1px solid var(--tb-border)" }}
+          className="grid grid-cols-2 content-center gap-3 px-4"
+          style={{ height: "100%", scrollSnapAlign: "start" }}
         >
           {EDIT_CMDS.map((cmd) => (
             <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
@@ -315,16 +315,13 @@ export default function QuickCommands({ client, disabled }: Props) {
         {/* Clipboard section */}
         <div
           ref={(el) => { sectionRefs.current["clipboard"] = el; }}
-          className="grid grid-cols-2 gap-3 px-4 pt-5"
-          style={{ borderTop: "1px solid var(--tb-border)" }}
+          className="grid grid-cols-2 content-center gap-3 px-4"
+          style={{ height: "100%", scrollSnapAlign: "start" }}
         >
           {CLIPBOARD_CMDS.map((cmd) => (
             <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
           ))}
         </div>
-
-        {/* 底部撑高，确保最后一个 section 可滚动到顶部 */}
-        <div style={{ height: "50vh" }} aria-hidden />
 
       </div>
     </div>
