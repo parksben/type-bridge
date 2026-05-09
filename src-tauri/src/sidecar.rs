@@ -717,6 +717,7 @@ pub fn retry_history_message<R: Runtime>(app: AppHandle<R>, id: String) -> Resul
         image_path: msg.image_path.clone(),
         image_mime: msg.image_path.as_ref().map(|_| "image/png".to_string()),
         key: None,
+        no_auto_submit: false,
     })?;
     Ok(())
 }

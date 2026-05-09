@@ -48,6 +48,9 @@ pub struct QueuedMessage {
     /// 控制键事件（KeyboardEvent.code）。Some 时 worker 跳过文本/图片粘贴流程，
     /// 直接 simulate_submit；不写历史，不发反馈。详见 TECH_DESIGN §35.11。
     pub key: Option<String>,
+    /// 为 true 时跳过全局 auto_submit 步骤。WebChat 渠道由手机端显式控制
+    /// 是否发送 Enter，不应受桌面端「自动提交」开关影响。
+    pub no_auto_submit: bool,
 }
 
 /// 注入服务：队列 sender
@@ -213,11 +216,12 @@ async fn process_one<R: Runtime>(
 
     // 4. 自动提交（可选）：注入完成后模拟"提交按键"
     //    快照读一次配置，避免在 spawn_blocking 里再拿锁
+    //    WebChat 消息带 no_auto_submit=true，由手机端显式控制是否发 Enter。
     let (auto_submit, submit_key) = {
         let g = submit_config.lock().unwrap();
         (g.auto_submit, g.submit_key.clone())
     };
-    if auto_submit {
+    if auto_submit && !msg.no_auto_submit {
         let _ = tauri::async_runtime::spawn_blocking(move || {
             use crate::injector;
             if let Err(e) = injector::simulate_submit(&submit_key) {
@@ -421,6 +425,7 @@ pub fn ingest_message<R: Runtime>(
         image_path,
         image_mime,
         key: None,
+        no_auto_submit: false,
     }) {
         tracing::error!("[queue] enqueue failed: {}", e);
     }

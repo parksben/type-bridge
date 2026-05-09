@@ -943,6 +943,8 @@ fn ingest_text(client_message_id: &str, text: &str, state: &ServerState) -> Resu
             image_path: None,
             image_mime: None,
             key: None,
+            // WebChat 由手机端选择是否发 Enter，不走桌面端「自动提交」
+            no_auto_submit: true,
         })?;
 
     Ok(composite)
@@ -1001,6 +1003,8 @@ fn ingest_image(
             image_path: Some(rel_path),
             image_mime: Some(mime.to_string()),
             key: None,
+            // WebChat 由手机端选择是否发 Enter，不走桌面端「自动提交」
+            no_auto_submit: true,
         })?;
 
     Ok(composite)
@@ -1034,6 +1038,7 @@ fn ingest_key(client_message_id: &str, code: &str, state: &ServerState) -> Resul
             image_path: None,
             image_mime: None,
             key: Some(code.to_string()),
+            no_auto_submit: true, // key 事件走独立分支，此字段不生效但保持一致
         })?;
 
     Ok(composite)
