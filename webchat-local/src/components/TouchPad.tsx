@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
-import { Settings2, Keyboard, X } from "lucide-react";
+import { Settings2, X } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
-import QuickCommands from "./QuickCommands";
 import { t } from "@/i18n";
 
 type Props = {
@@ -40,7 +39,6 @@ export default function TouchPad({ client, disabled }: Props) {
   const [sensitivity, setSensitivity] = useState<number>(loadSensitivity);
   const [scrollReversed, setScrollReversed] = useState<boolean>(loadScrollReversed);
   const [showSettings, setShowSettings] = useState(false);
-  const [showCommands, setShowCommands] = useState(false);
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);
 
@@ -328,42 +326,8 @@ export default function TouchPad({ client, disabled }: Props) {
         </div>
       )}
 
-      {/* ── Quick Commands sheet ──────────────────────────── */}
-      {showCommands && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col"
-          style={{ background: "rgba(0,0,0,0.38)" }}
-        >
-          <div className="flex-1" onClick={() => setShowCommands(false)} />
-          <div
-            className="rounded-t-3xl overflow-hidden flex flex-col"
-            style={{ background: "var(--tb-bg)", maxHeight: "72vh" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <QuickCommands
-              client={client}
-              disabled={disabled}
-              onClose={() => setShowCommands(false)}
-            />
-          </div>
-        </div>
-      )}
-
       {/* ── Toolbar ───────────────────────────────────────── */}
       <div className="flex items-center justify-end gap-2 px-3 pt-3 pb-1 shrink-0">
-        <button
-          type="button"
-          onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowCommands(true); }}
-          onClick={() => setShowCommands(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-full"
-          style={{
-            background: "var(--tb-surface)",
-            color: "var(--tb-muted)",
-            border: "1px solid var(--tb-border)",
-          }}
-        >
-          <Keyboard size={16} strokeWidth={2} />
-        </button>
         <button
           type="button"
           onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowSettings(true); }}
