@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="public/readme-hero-concept.png" alt="TypeBridge 手机即键鼠概念图" width="760" />
+  <img src="public/readme-hero-concept.png" alt="TypeBridge 手机即键鼠概念图" />
 </p>
 
 ---
