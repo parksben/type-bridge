@@ -200,7 +200,7 @@ export default function ChatPage({ client }: Props) {
 
       {/* ── Keyboard (QuickCommands) mode ─────────────────── */}
       {mode === "keyboard" && (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           <QuickCommands client={client} disabled={wifi === "disconnected"} />
         </div>
       )}

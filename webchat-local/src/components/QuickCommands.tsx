@@ -215,7 +215,7 @@ export default function QuickCommands({ client, disabled }: Props) {
   }
 
   return (
-    <>
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Error banner */}
       {error && (
         <div
@@ -229,10 +229,13 @@ export default function QuickCommands({ client, disabled }: Props) {
         </div>
       )}
 
-      {/* ── Underline tab bar ──────────────────────────────── */}
+      {/* ── Underline tab bar — sticky top ─────────────────── */}
       <div
         className="flex shrink-0 overflow-x-auto scrollbar-none"
-        style={{ borderBottom: "1px solid var(--tb-border)" }}
+        style={{
+          borderBottom: "1px solid var(--tb-border)",
+          background: "var(--tb-bg)",
+        }}
       >
         {TABS.map(({ id, label }) => (
           <button
@@ -257,7 +260,7 @@ export default function QuickCommands({ client, disabled }: Props) {
       </div>
 
       {/* ── Scrollable content — all sections rendered ─────── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
 
         {/* Arrows section */}
         <div
@@ -324,6 +327,6 @@ export default function QuickCommands({ client, disabled }: Props) {
         <div style={{ height: "50vh" }} aria-hidden />
 
       </div>
-    </>
+    </div>
   );
 }
