@@ -15,10 +15,10 @@ async function isEnglishRequest(): Promise<boolean> {
 export async function generateMetadata(): Promise<Metadata> {
   const en = await isEnglishRequest();
   return {
-    title: en ? "TypeBridge — Chat to Type" : "TypeBridge — 聊天即打字",
+    title: en ? "TypeBridge — Your Phone, Keyboard & Mouse" : "TypeBridge — 手机即键鼠",
     description: en
-      ? "Chat to Type: Speak, text, or send an image — your message lands right where your cursor is. A macOS menu bar app."
-      : "聊天即打字：说话、发文字、发图片——手机聊一条消息，电脑输入框直接落字。macOS 菜单栏应用。",
+      ? "Your phone becomes a wireless keyboard and trackpad for your Mac. Type, move the cursor, use your voice — all via a simple QR scan. macOS menu bar app."
+      : "手机即键鼠：扫码连接，手机变成无线键盘和触控板。打字、移动鼠标、语音输入，全部实时到达 macOS。",
     metadataBase: new URL("https://typebridge.parksben.xyz"),
     icons: {
       icon: "/favicon.ico",
@@ -27,10 +27,10 @@ export async function generateMetadata(): Promise<Metadata> {
       other: [{ rel: "icon", url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" }],
     },
     openGraph: {
-      title: en ? "TypeBridge — Chat to Type" : "TypeBridge — 聊天即打字",
+      title: en ? "TypeBridge — Your Phone, Keyboard & Mouse" : "TypeBridge — 手机即键鼠",
       description: en
-        ? "Chat on your phone, type on your Mac. Speak, text, or send an image — your message lands right where your cursor is."
-        : "聊天即打字：说话、发文字、发图片——手机聊一条消息，电脑输入框直接落字。",
+        ? "Scan once — your phone becomes a wireless keyboard and trackpad. Type, move the cursor, use your voice. All lands on your Mac in real time."
+        : "手机即键鼠：扫码连接，手机变成无线键盘和触控板。打字、移动鼠标、语音输入，全部实时到达 macOS。",
       url: "https://typebridge.parksben.xyz",
       type: "website",
     },
