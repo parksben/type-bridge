@@ -44,12 +44,13 @@
 
 **客户端 → 服务端**（`socket.emit`）：
 
-| event | payload | ack |
-|---|---|---|
-| `hello` | `{otp, clientId}` | `{ok:true,userToken,wifiName}` 或 `{ok:false,reason}` |
-| `text` | `{clientMessageId, text}` | `{success, reason?}`（注入完成回调） |
-| `image` | `{clientMessageId, data:base64, mime}` | `{success, reason?}` |
-| `key` | `{clientMessageId, code}` | `{success, reason?}` 控制键事件，详见 §35.11 |
+| event | payload | ack | 备注 |
+|---|---|---|---|
+| `hello` | `{otp, clientId}` | `{ok:true,userToken,wifiName}` 或 `{ok:false,reason}` | OTP 握手，签发 userToken |
+| `text` | `{clientMessageId, text, submit?}` | `{success, reason?}` | `submit:true` → 注入后额外执行一次提交组合键；缺省视为 `false` |
+| `image` | `{clientMessageId, data:base64, mime}` | `{success, reason?}` | |
+| `key` | `{clientMessageId, code}` | `{success, reason?}` | 单键，`code` 受 `ALLOWED_KEY_CODES` 白名单，入队，详见 §35.11 |
+| `key_combo` | `{clientMessageId, combo}` | `{success, reason?}` | 快捷键，`combo` 受 `ALLOWED_COMBOS` 白名单，**直接调 injector 不入队** |
 
 **服务端 → 客户端**（`socket.emit`）：
 
@@ -188,11 +189,12 @@ webchat-local/
 │   ├── components/
 │   │   ├── PCBlockView.tsx   # PC 拦截页
 │   │   ├── HandshakeForm.tsx # 6 位 OTP 输入
-│   │   ├── ChatPage.tsx      # 移动端聊天页
+│   │   ├── ChatPage.tsx      # 移动端聊天页（顶部Tab：打字/触控/键盘）
 │   │   ├── MessageBubble.tsx
 │   │   ├── ComposerBar.tsx
 │   │   ├── ImagePicker.tsx
-│   │   └── ShortcutKeysPanel.tsx  # 控制键面板
+│   │   ├── TouchPad.tsx      # 触控板模式（手势 + Settings sheet）
+│   │   └── QuickCommands.tsx # 快捷键面板（4-tab：方向/导航/编辑/剪贴板）
 │   └── styles/
 │       └── globals.css
 ```
@@ -207,7 +209,9 @@ loading → 读 URL ?s=<sessionId> 并 UA 检查
                         └─ 桌面断开 → ErrorScreen("disconnected")
 ```
 
-**语音入口已下线**：早期版本曾在输入栏内放 `VoiceButton`，点击弹 `VoiceHintModal` 引导用户用输入法麦克风。该按钮 + 弹层均已**整体移除**——它本身不做任何事，只起"教用户去点系统键盘麦克风"的作用，但反而让 WebChat 看起来像有语音功能、点了又什么都没发生，造成误解。原 VoiceButton 在 ComposerBar 中占据的位置改放"控制键面板展开/收起"切换按钮（详见 §35.11.4）。
+**语音入口已下线**：早期版本曾在输入栏内放 `VoiceButton`，点击弹 `VoiceHintModal` 引导用户用输入法麦克风。该按钮 + 弹层均已**整体移除**——它本身不做任何事，只起"教用户去点系统键盘麦克风"的作用，但反而让 WebChat 看起来像有语音功能、点了又什么都没发生，造成误解。
+
+**控制键面板演进**：最初以"单排7键收起/展开面板"（`ShortcutKeysPanel.tsx`）设计，后扩展为 4-tab 的 `QuickCommands`，最终从 TouchPad 底部 sheet 提升为顶部独立"键盘"Tab，整页展示，按钮显著放大。当前实现见 §35.11.4。
 
 ### 35.7 Tauri 集成
 
@@ -326,26 +330,64 @@ worker 命中 key 分支时：
 
 #### 35.11.3 安全：按键白名单
 
-`webchat_server.rs` 的 `handle_key` 在 enqueue 前必须检查 `code` 是否在常量白名单内：
+`webchat_server.rs` 维护两套白名单常量：
+
+**单键白名单**（`handle_key` 在 enqueue 前校验）：
 
 ```rust
 const ALLOWED_KEY_CODES: &[&str] = &[
-    "Enter", "Backspace", "Space",
+    "Enter", "Escape", "Backspace", "Space",
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+    "Home", "End", "PageUp", "PageDown",
 ];
 ```
 
-不在白名单的 code 立即 ack `{success:false, reason:"unsupported key"}`，**绝不入队**。理由：手机端 SPA 是静态资源，理论上可能被改造成发送任意 code（包括 `KeyA` / `Cmd+...`），白名单是 server 侧的最后防线，避免 WebChat 变成"远程任意按键执行"通道。后续若要扩展按键集合（Tab、Esc 等），在此常量加入即可。
+**快捷键白名单**（`handle_key_combo` 校验，直接调 injector 不入队）：
+
+```rust
+const ALLOWED_COMBOS: &[&str] = &[
+    "Undo", "Redo", "SelectAll", "Copy", "Cut", "Paste",
+    "DocTop", "DocBottom",
+    "DesktopLeft", "DesktopRight", "MissionControl", "AppExpose",
+];
+```
+
+`DocTop`/`DocBottom` 映射为 Cmd+↑/↓（文档首/尾）。`DesktopLeft`/`DesktopRight` 为 macOS 桌面切换组合键。
+
+不在白名单的 code/combo 立即 ack `{success:false, reason:"unsupported key"}`，**绝不入队**。理由：手机端 SPA 是静态资源，理论上可能被改造成发送任意 code（包括 `KeyA` / `Cmd+...`），白名单是 server 侧的最后防线，避免 WebChat 变成"远程任意按键执行"通道。扩展时在对应常量里加入即可。
 
 #### 35.11.4 前端组件（webchat-local）
 
-新增 `components/ShortcutKeysPanel.tsx`：
+**`components/QuickCommands.tsx`**：快捷键面板，作为顶部"键盘"Tab 的整页内容（无弹层/sheet）。
 
-- 单行水平排列 7 个按钮，**从左到右顺序固定为**：ArrowUp / ArrowDown / ArrowLeft / ArrowRight / Space / Enter / Backspace（删除键置最右）
-- 全部用 `lucide-react` 图标（ArrowUp/Down/Left/Right / Space / CornerDownLeft / Delete）
-- 接收 `onPress(code)` 回调；点击调用 `WebChatClient.sendKey(clientMessageId, code)`，不在本地 chat 列表显示气泡
-- 失败时顶部短暂浮一行 toast 文案，复用现有 `imageError` 通道
+布局：内部 4 个分类 Tab（方向键 / 导航 / 编辑 / 剪贴板），Tab 内容区可滚动。按钮尺寸大（`minHeight: 88–96px`，icon 24–26px，`gap-3`），全部 `lucide-react` 图标。
 
-`ComposerBar.tsx` 的"展开/收起"切换按钮**内嵌在输入栏右侧、原 VoiceButton 的位置**。按钮使用 lucide `Keyboard` 图标；激活态（面板展开）按钮整体填充 `--tb-accent` + 白色图标，未激活态使用普通 `--tb-bg` + `--tb-muted` 图标色。状态存 `localStorage["typebridge.shortcuts.expanded"]`，默认 `false`。
+| 分类 Tab | 按键 | 调用方式 |
+|----------|------|---------|
+| 方向键（arrows） | ↑ / ↓ / ← / →，D-pad 网格 | `sendKey(code)` |
+| 导航（nav） | 行首/行尾/上翻页/下翻页/文档首(Cmd+↑)/文档尾(Cmd+↓) | `sendKey` 或 `sendKeyCombo` |
+| 编辑（edit） | 撤销/重做/换行(Enter)/删除(Backspace)/清空(SelectAll→Backspace)/退出(Escape) | `sendKey` / `sendKeyCombo` |
+| 剪贴板（clipboard） | 全选/复制/剪切/粘贴 | `sendKeyCombo(combo)` |
 
-`WebChatClient.sendKey(clientMessageId, code)` 与 `sendText` / `sendImage` 同模式：emit + ack 超时 10s。
+- 失败时组件顶部 banner 短暂显示错误原因，2.5s 后自动消失
+- `onClose` prop 已移除，不再有 sheet header
+
+**`components/ChatPage.tsx`**（顶部 Tab 路由）：`PageMode = "chat" | "touchpad" | "keyboard"`。"键盘"Tab 直接渲染 `<QuickCommands />`，无弹层包装。
+
+**`components/TouchPad.tsx`**：触控板模式，不再内嵌 QuickCommands。工具栏仅保留 Settings 齿轮图标按钮（灵敏度 + 滚动方向 sheet）。
+
+`WebChatClient.sendKey` / `sendKeyCombo` 均为 emit + ack 超时 10s，与 `sendText` / `sendImage` 同模式。
+
+#### 35.11.5 连接保活（heartbeat 判据）
+
+空闲清理 worker（`IDLE_TIMEOUT_MS = 150_000ms`，每 30s 检查）判断 binding 是否存活时，**以 Engine.IO heartbeat 为准**：
+
+```rust
+if io_for_idle.get_socket(b.socket_sid).is_some() {
+    // Socket.IO ping/pong 仍在 → 连接活跃，保留 binding
+} else {
+    // socket 已断 → 清理
+}
+```
+
+**不再单纯依赖 `last_active_ms`**（消息活跃时间）。原因：手机锁屏/后台时不发消息，但 Socket.IO Engine.IO 会持续 ping/pong 保活。纯时间戳判断会误踢静默连接。`io.get_socket(sid).is_some()` 通过 socketioxide 直接查询底层 socket 是否还存在于内存，准确反映连接状态。
