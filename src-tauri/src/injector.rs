@@ -23,7 +23,49 @@ extern "C" {
     fn CGEventPost(tap: u32, event: *mut std::ffi::c_void);
     fn CGEventSetFlags(event: *mut std::ffi::c_void, flags: u64);
     fn CFRelease(cf: *mut std::ffi::c_void);
+    // Mouse / trackpad
+    fn CGEventCreate(source: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+    fn CGEventSetType(event: *mut std::ffi::c_void, type_: u32);
+    fn CGEventGetLocation(event: *mut std::ffi::c_void) -> CGPoint;
+    fn CGEventCreateMouseEvent(
+        source: *mut std::ffi::c_void,
+        mouse_type: u32,
+        cursor_position: CGPoint,
+        mouse_button: u32,
+    ) -> *mut std::ffi::c_void;
+    /// Non-variadic variant (avoids Rust FFI variadic limitation); wheelCount fixed at 2.
+    fn CGEventCreateScrollWheelEvent2(
+        source: *mut std::ffi::c_void,
+        units: u32,
+        wheel_count: u32,
+        wheel1: i32,
+        wheel2: i32,
+        wheel3: i32,
+    ) -> *mut std::ffi::c_void;
+    fn CGEventSetDoubleValueField(event: *mut std::ffi::c_void, field: u32, value: f64);
 }
+
+/// macOS CGPoint（与 C ABI 一致：两个 f64）
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct CGPoint {
+    x: f64,
+    y: f64,
+}
+
+// ─── CGEvent 鼠标类型常量 ──────────────────────────────────────────────
+const CG_EVENT_LEFT_MOUSE_DOWN: u32 = 1;
+const CG_EVENT_LEFT_MOUSE_UP: u32 = 2;
+const CG_EVENT_RIGHT_MOUSE_DOWN: u32 = 3;
+const CG_EVENT_RIGHT_MOUSE_UP: u32 = 4;
+const CG_EVENT_MOUSE_MOVED: u32 = 5;
+const CG_MOUSE_BUTTON_LEFT: u32 = 0;
+const CG_MOUSE_BUTTON_RIGHT: u32 = 1;
+const CG_SCROLL_EVENT_UNIT_PIXEL: u32 = 0;
+/// kCGEventMagnify — trackpad 双指缩放手势
+const CG_EVENT_MAGNIFY: u32 = 29;
+/// kCGEventMagnification field id（来自 IOKit 私有头文件，实测稳定）
+const CG_FIELD_MAGNIFICATION: u32 = 116;
 
 unsafe fn set_event_flags(event: *mut std::ffi::c_void, flags: u64) {
     CGEventSetFlags(event, flags);
@@ -263,4 +305,144 @@ pub fn ecode_to_macos_keycode(code: &str) -> Option<u16> {
         "Backquote" => 0x32,    // `
         _ => return None,
     })
+}
+
+// ─── 鼠标 / 触控板控制 ────────────────────────────────────────────────
+
+/// 获取当前鼠标坐标。每次调用都创建一个临时 CGEvent 查询。
+unsafe fn get_mouse_location() -> CGPoint {
+    let e = CGEventCreate(std::ptr::null_mut());
+    let pt = if e.is_null() {
+        CGPoint { x: 0.0, y: 0.0 }
+    } else {
+        let p = CGEventGetLocation(e);
+        CFRelease(e);
+        p
+    };
+    pt
+}
+
+/// 鼠标相对移动（WebChat 触控板单指滑动）。
+/// dx/dy 已经乘以灵敏度系数，由前端计算后传入。
+pub fn mouse_move(dx: f64, dy: f64) -> Result<(), String> {
+    unsafe {
+        let mut pos = get_mouse_location();
+        pos.x += dx;
+        pos.y += dy;
+        let event = CGEventCreateMouseEvent(
+            std::ptr::null_mut(),
+            CG_EVENT_MOUSE_MOVED,
+            pos,
+            CG_MOUSE_BUTTON_LEFT,
+        );
+        if event.is_null() {
+            return Err("CGEventCreateMouseEvent(MOUSE_MOVED) failed".into());
+        }
+        CGEventPost(0, event);
+        CFRelease(event);
+    }
+    Ok(())
+}
+
+/// 鼠标按键（down / up）。button = "left" | "right"，action = "down" | "up"。
+pub fn mouse_click(button: &str, action: &str) -> Result<(), String> {
+    let (event_type, mouse_btn) = match (button, action) {
+        ("left", "down") => (CG_EVENT_LEFT_MOUSE_DOWN, CG_MOUSE_BUTTON_LEFT),
+        ("left", "up") => (CG_EVENT_LEFT_MOUSE_UP, CG_MOUSE_BUTTON_LEFT),
+        ("right", "down") => (CG_EVENT_RIGHT_MOUSE_DOWN, CG_MOUSE_BUTTON_RIGHT),
+        ("right", "up") => (CG_EVENT_RIGHT_MOUSE_UP, CG_MOUSE_BUTTON_RIGHT),
+        _ => return Err(format!("unsupported mouse_click: {button}/{action}")),
+    };
+    unsafe {
+        let pos = get_mouse_location();
+        let event = CGEventCreateMouseEvent(
+            std::ptr::null_mut(),
+            event_type,
+            pos,
+            mouse_btn,
+        );
+        if event.is_null() {
+            return Err("CGEventCreateMouseEvent(click) failed".into());
+        }
+        CGEventPost(0, event);
+        CFRelease(event);
+    }
+    Ok(())
+}
+
+/// 双指滚动（WebChat 触控板双指滑动）。
+/// dx/dy 为像素量，负值 = 向上/向左滚动（与 macOS 自然滚动一致）。
+pub fn mouse_scroll(dx: f64, dy: f64) -> Result<(), String> {
+    unsafe {
+        // wheel1 = 垂直, wheel2 = 水平
+        let event = CGEventCreateScrollWheelEvent2(
+            std::ptr::null_mut(),
+            CG_SCROLL_EVENT_UNIT_PIXEL,
+            2,
+            dy.round() as i32,
+            dx.round() as i32,
+            0,
+        );
+        if event.is_null() {
+            return Err("CGEventCreateScrollWheelEvent2 failed".into());
+        }
+        CGEventPost(0, event);
+        CFRelease(event);
+    }
+    Ok(())
+}
+
+/// 双指缩放（Magnify 手势）。
+/// delta > 0 = 放大，delta < 0 = 缩小。推荐量级 0.02~0.15 每帧。
+pub fn mouse_zoom(delta: f64) -> Result<(), String> {
+    unsafe {
+        let event = CGEventCreate(std::ptr::null_mut());
+        if event.is_null() {
+            return Err("CGEventCreate(magnify) failed".into());
+        }
+        CGEventSetType(event, CG_EVENT_MAGNIFY);
+        CGEventSetDoubleValueField(event, CG_FIELD_MAGNIFICATION, delta);
+        CGEventPost(0, event);
+        CFRelease(event);
+    }
+    Ok(())
+}
+
+// ─── 快捷键组合 ────────────────────────────────────────────────────────
+
+/// 模拟常用快捷键组合（不操作剪贴板，直接发快捷键事件）。
+/// combo: "Undo" | "Redo" | "SelectAll" | "Copy" | "Cut" | "Paste"
+pub fn key_combo(combo: &str) -> Result<(), String> {
+    // keycode + modifier flags
+    let (keycode, flags): (u16, u64) = match combo {
+        "Undo"         => (0x06 /* Z         */, CG_FLAG_COMMAND),
+        "Redo"         => (0x06 /* Z         */, CG_FLAG_COMMAND | CG_FLAG_SHIFT),
+        "SelectAll"    => (0x00 /* A         */, CG_FLAG_COMMAND),
+        "Copy"         => (0x08 /* C         */, CG_FLAG_COMMAND),
+        "Cut"          => (0x07 /* X         */, CG_FLAG_COMMAND),
+        "Paste"        => (0x09 /* V         */, CG_FLAG_COMMAND),
+        // 3-finger desktop gestures (macOS Ctrl+Arrow shortcuts)
+        "DesktopLeft"  => (0x7B /* ArrowLeft  */, CG_FLAG_CONTROL),
+        "DesktopRight" => (0x7C /* ArrowRight */, CG_FLAG_CONTROL),
+        "MissionControl" => (0x7E /* ArrowUp  */, CG_FLAG_CONTROL),
+        "AppExpose"    => (0x7D /* ArrowDown  */, CG_FLAG_CONTROL),
+        _ => return Err(format!("unsupported combo: {combo}")),
+    };
+    unsafe {
+        let key_down = CGEventCreateKeyboardEvent(std::ptr::null_mut(), keycode, true);
+        if key_down.is_null() {
+            return Err("CGEventCreateKeyboardEvent(combo down) failed".into());
+        }
+        set_event_flags(key_down, flags);
+        CGEventPost(0, key_down);
+
+        let key_up = CGEventCreateKeyboardEvent(std::ptr::null_mut(), keycode, false);
+        if !key_up.is_null() {
+            set_event_flags(key_up, flags);
+            CGEventPost(0, key_up);
+            CFRelease(key_up);
+        }
+        CFRelease(key_down);
+    }
+    Ok(())
 }

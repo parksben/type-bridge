@@ -423,6 +423,48 @@ struct KeyMsg {
     code: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct KeyComboMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
+    #[allow(dead_code)]
+    #[serde(rename = "clientMessageId")]
+    client_message_id: String,
+    /// 快捷键名称，受 ALLOWED_COMBOS 白名单约束
+    combo: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct MouseMoveMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
+    dx: f64,
+    dy: f64,
+}
+
+#[derive(Debug, Deserialize)]
+struct MouseScrollMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
+    dx: f64,
+    dy: f64,
+}
+
+#[derive(Debug, Deserialize)]
+struct MouseClickMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
+    button: String,  // "left" | "right"
+    action: String,  // "down" | "up"
+}
+
+#[derive(Debug, Deserialize)]
+struct MouseZoomMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
+    delta: f64,
+}
+
 /// 控制键白名单：只允许无副作用的导航/编辑控制键。详见 TECH_DESIGN §35.11.3。
 /// 任何不在此列表的 code 立即拒绝，绝不入队，避免 WebChat 变成"远程任意按键执行"通道。
 const ALLOWED_KEY_CODES: &[&str] = &[
@@ -433,6 +475,12 @@ const ALLOWED_KEY_CODES: &[&str] = &[
     "ArrowDown",
     "ArrowLeft",
     "ArrowRight",
+];
+
+/// key_combo 白名单（仅允许已知无害的编辑快捷键）。
+const ALLOWED_COMBOS: &[&str] = &[
+    "Undo", "Redo", "SelectAll", "Copy", "Cut", "Paste",
+    "DesktopLeft", "DesktopRight", "MissionControl", "AppExpose",
 ];
 
 fn default_image_mime() -> String {
@@ -527,6 +575,88 @@ async fn on_connect(socket: SocketRef) {
                     });
                 }
             }
+        },
+    );
+
+    // key_combo：Undo/Redo/SelectAll/Copy/Cut/Paste — 直接调 injector，不走队列
+    socket.on(
+        "key_combo",
+        |_socket: SocketRef, Data::<KeyComboMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+            if let Err(e) = verify_user_token(&msg.user_token, &state) {
+                let _ = ack.send(&GenericAck { success: false, reason: Some(e) });
+                return;
+            }
+            if !ALLOWED_COMBOS.contains(&msg.combo.as_str()) {
+                let _ = ack.send(&GenericAck {
+                    success: false,
+                    reason: Some(format!("不支持的快捷键：{}", msg.combo)),
+                });
+                return;
+            }
+            let combo = msg.combo.clone();
+            let result = tokio::task::spawn_blocking(move || crate::injector::key_combo(&combo)).await;
+            let ok = match result {
+                Ok(Ok(())) => GenericAck { success: true, reason: None },
+                Ok(Err(e)) => GenericAck { success: false, reason: Some(e) },
+                Err(e) => GenericAck { success: false, reason: Some(e.to_string()) },
+            };
+            let _ = ack.send(&ok);
+        },
+    );
+
+    // mouse_move：fire-and-forget，无 ack
+    socket.on(
+        "mouse_move",
+        |_socket: SocketRef, Data::<MouseMoveMsg>(msg), State(state): State<Arc<ServerState>>| async move {
+            if verify_user_token(&msg.user_token, &state).is_err() {
+                return;
+            }
+            let (dx, dy) = (msg.dx, msg.dy);
+            tokio::task::spawn_blocking(move || {
+                let _ = crate::injector::mouse_move(dx, dy);
+            });
+        },
+    );
+
+    // mouse_scroll：fire-and-forget
+    socket.on(
+        "mouse_scroll",
+        |_socket: SocketRef, Data::<MouseScrollMsg>(msg), State(state): State<Arc<ServerState>>| async move {
+            if verify_user_token(&msg.user_token, &state).is_err() {
+                return;
+            }
+            let (dx, dy) = (msg.dx, msg.dy);
+            tokio::task::spawn_blocking(move || {
+                let _ = crate::injector::mouse_scroll(dx, dy);
+            });
+        },
+    );
+
+    // mouse_click：fire-and-forget（down/up 顺序由前端保证）
+    socket.on(
+        "mouse_click",
+        |_socket: SocketRef, Data::<MouseClickMsg>(msg), State(state): State<Arc<ServerState>>| async move {
+            if verify_user_token(&msg.user_token, &state).is_err() {
+                return;
+            }
+            let (button, action) = (msg.button.clone(), msg.action.clone());
+            tokio::task::spawn_blocking(move || {
+                let _ = crate::injector::mouse_click(&button, &action);
+            });
+        },
+    );
+
+    // mouse_zoom：fire-and-forget
+    socket.on(
+        "mouse_zoom",
+        |_socket: SocketRef, Data::<MouseZoomMsg>(msg), State(state): State<Arc<ServerState>>| async move {
+            if verify_user_token(&msg.user_token, &state).is_err() {
+                return;
+            }
+            let delta = msg.delta;
+            tokio::task::spawn_blocking(move || {
+                let _ = crate::injector::mouse_zoom(delta);
+            });
         },
     );
 
