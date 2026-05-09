@@ -1,7 +1,7 @@
 <div align="center">
   <img src="src/assets/icons/typebridge.png" alt="TypeBridge Logo" width="96" height="96" />
 <h1>TypeBridge</h1>
-<p><strong>手机上说话 · 电脑上输入</strong></p>
+<p><strong>手机即键鼠</strong></p>
 </div>
 
 <p align="center">
@@ -13,55 +13,43 @@
 </p>
 
 <p align="center">
-  <img src="public/readme-hero-concept.png" alt="TypeBridge 手机到桌面输入概念图" width="760" />
+  <img src="public/readme-hero-concept.png" alt="TypeBridge 手机即键鼠概念图" width="760" />
 </p>
 
 ---
 
 ## 👋 TypeBridge 是什么？
 
-TypeBridge 是一款 macOS 菜单栏应用，用来把手机上的输入送到 Mac 当前正在编辑的位置。
+TypeBridge 是一款 macOS 菜单栏应用。打开 App、扫个码，手机立刻变成 Mac 的无线键盘和触控板——打字、控鼠标、语音输入，一部手机全搞定。
 
-你可以在飞书、钉钉、企业微信机器人里发消息，也可以用内置的 WebChat。TypeBridge 收到后，会把内容放进一个统一队列，再通过系统剪贴板和 `Cmd+V` 粘贴到当前聚焦的输入框。
+你也可以通过飞书、钉钉、企业微信机器人发送消息，消息会自动注入桌面当前聚焦的输入框。
 
 ## 🧩 它解决什么问题？
 
-很多时候，手机反而是更顺手的输入设备：语音转文字快，随手打几句也方便。麻烦的是把这些内容搬到电脑上——复制、转发给自己、再切回桌面，几步下来思路很容易断。
+演示 PPT 时站在远处想遥控电脑？躺沙发刷网页不想起身？用 AI 写代码、写文档时在手机和电脑之间来回传文字？
 
-TypeBridge 做的事很简单：**手机上说完或打完，Mac 上的光标位置就能收到这段内容。**
+TypeBridge 做的事很简单：**把手机变成 Mac 的无线键盘和触控板**。打字、控制光标、语音输入，一条扫码的事儿。
 
 ## ✨ 主要能力
 
 | 能力 | |
 |---|---|
-| **四个入口，一条队列** | 飞书、钉钉、企业微信、WebChat 都可以接入；多条消息按 FIFO 顺序处理，不会抢焦点打架。 |
+| **触控板模式** | 单指移动光标，双指滚动页面，点按左键右键。不用蓝牙、不用配对，扫码就能用。 |
+| **文字输入** | 手机上打字，电脑上出字。光标在哪，字就落在哪。支持微信/飞书/钉钉/企微输入法的语音转文字。 |
+| **快捷指令** | 一键发送方向键、Cmd+Z/X/C/V、Enter、Escape 等常用快捷键，省去够键盘的麻烦。 |
+| **内置 WebChat** | 不想配 IM 机器人时，启动局域网 WebChat，手机扫码输入 OTP 即连。不走云端，消息只在同一局域网流转。 |
+| **IM 机器人接入** | 飞书、钉钉、企业微信三个渠道，发消息自动注入当前聚焦输入框。多条消息按 FIFO 顺序处理，不会抢焦点打架。 |
 | **通用粘贴策略** | 通过剪贴板 + `Cmd+V` 注入，VS Code、Terminal、浏览器、Obsidian、Slack 等常见应用都能用。 |
+| **图片也能传** | IM 里发来的图片写入系统剪贴板，再粘贴到目标应用。 |
 | **可选自动提交** | 粘贴后可以自动按 `Enter`，也可以换成你自己的提交按键。适合聊天、终端、AI 对话框。 |
-| **图片也能传** | IM 里发来的图片会写入系统剪贴板，再粘贴到目标应用。 |
-| **内置 WebChat** | 不想配 IM 机器人时，直接启动局域网 WebChat，手机扫码输入 OTP 即可连接。 |
-| **局域网优先** | WebChat 不走云端，消息只在同一局域网内流转。 |
 
-## 🔄 工作流程
+## 🔄 使用方式
 
-```mermaid
-sequenceDiagram
-    participant Phone as 手机
-    participant TB as TypeBridge
-    participant Mac as Mac 应用
-    Phone->>TB: 发送消息
-    TB->>TB: 写入 FIFO 队列
-    TB->>Mac: 剪贴板 + Cmd+V
-    Mac-->>TB: 状态反馈
-    opt 自动提交
-        TB->>Mac: Enter / 自定义按键
-    end
-```
-
-1. 在桌面端连接一个渠道：WebChat、飞书、钉钉或企业微信。
-2. 在手机上发文字、语音转文字，或发送图片。
-3. TypeBridge 收到消息后写入本地队列。
-4. 轮到该消息时，写入系统剪贴板并模拟 `Cmd+V`。
-5. 如果开启了自动提交，再补一个 `Enter` 或自定义按键。
+1. 在桌面端启动 TypeBridge，启动 WebChat 会话。
+2. 手机扫码、输入 OTP，进入打字或触控板模式。
+3. 打字 / 语音 / 控制光标，桌面端即时响应。
+4. 如果开启了自动提交，粘贴后自动补 `Enter` 或自定义按键。
+5. 也可以用飞书、钉钉、企微机器人发消息，消息写入同一 FIFO 队列串行注入。
 
 ## 📡 支持渠道
 

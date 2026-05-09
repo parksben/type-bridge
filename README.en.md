@@ -1,7 +1,7 @@
 <div align="center">
   <img src="src/assets/icons/typebridge.png" alt="TypeBridge Logo" width="96" height="96" />
 <h1>TypeBridge</h1>
-<p><strong>Speak on your phone. Type on your Mac.</strong></p>
+<p><strong>Phone as Keyboard &amp; Mouse</strong></p>
 </div>
 
 <p align="center">
@@ -13,55 +13,43 @@
 </p>
 
 <p align="center">
-  <img src="public/readme-hero-concept.png" alt="TypeBridge phone-to-desktop input concept graphic" width="760" />
+  <img src="public/readme-hero-concept.png" alt="TypeBridge phone-as-keyboard-and-mouse concept graphic" width="760" />
 </p>
 
 ---
 
 ## 👋 What is TypeBridge?
 
-TypeBridge is a macOS menu bar app that sends text from your phone to the place where your Mac cursor is already waiting.
+TypeBridge is a macOS menu bar app. Open the app, scan a code — your phone instantly becomes a wireless keyboard and trackpad for your Mac. Type, control the cursor, or use your voice, all from one device.
 
-You can send a message through a Feishu, DingTalk, or WeCom bot, or use the built-in WebChat page on your local network. TypeBridge receives it, puts it into one local queue, then pastes it into the focused app with the system clipboard and `Cmd+V`.
+You can also send messages through Feishu, DingTalk, or WeCom bots — they'll land right where your cursor is on the desktop.
 
 ## 🧩 Why does this exist?
 
-Phones are often better input devices than we admit. Voice-to-text is fast, and short notes are easy to capture. The annoying part is moving that text back to your desktop without breaking focus.
+Presenting slides from across the room? Browsing from the couch and don't want to get up? Tired of copying text back and forth between your phone and AI coding tools?
 
-TypeBridge keeps the handoff small: **speak or type on your phone, and the text lands where you are working on your Mac.**
+TypeBridge does one thing well: **turn your phone into a wireless keyboard and trackpad for your Mac**. Type, move the cursor, use your voice — just scan a code and you're set.
 
 ## ✨ Highlights
 
 | Feature | |
 |---|---|
-| **Four inputs, one queue** | Feishu, DingTalk, WeCom, and WebChat all feed into the same FIFO queue, so messages are handled one at a time. |
-| **Works by pasting** | TypeBridge writes to the clipboard and simulates `Cmd+V`, which keeps it compatible with common macOS apps such as VS Code, Terminal, browsers, Obsidian, and Slack. |
+| **Trackpad mode** | Move the cursor with one finger, scroll with two, tap to click. No Bluetooth. No pairing. Scan and go. |
+| **Text input** | Type on your phone, text appears on your Mac — wherever the cursor is. Voice-to-text works too, using your phone's built-in input method. |
+| **Quick commands** | One-tap shortcuts: arrow keys, Cmd+Z/X/C/V, Enter, Escape, and more. No need to reach for the keyboard. |
+| **Built-in WebChat** | No bot setup needed. Start a local WebChat session, scan the QR code, enter the OTP, and you're connected. Traffic stays on your LAN. |
+| **IM bot support** | Feishu, DingTalk, and WeCom bots feed into the same FIFO queue. Messages are handled one at a time — no focus conflicts. |
+| **Works by pasting** | TypeBridge writes to the clipboard and simulates `Cmd+V`, keeping it compatible with VS Code, Terminal, browsers, Obsidian, Slack, and more. |
+| **Image support** | Images sent through IM channels are injected via the system clipboard. |
 | **Optional auto-submit** | After pasting, TypeBridge can press `Enter` or a custom key. Handy for chat windows, terminals, and AI assistants. |
-| **Image support** | Images from IM channels are injected through the clipboard as well. |
-| **Built-in WebChat** | No bot setup needed. Start a local WebChat session, scan the QR code, enter the OTP, and type from your phone. |
-| **Local-first when possible** | WebChat traffic stays on your LAN and does not depend on a cloud relay. |
 
 ## 🔄 How it works
 
-```mermaid
-sequenceDiagram
-    participant Phone
-    participant TB as TypeBridge
-    participant Mac as Mac App
-    Phone->>TB: Send message
-    TB->>TB: Enqueue (FIFO)
-    TB->>Mac: Clipboard + Cmd+V
-    Mac-->>TB: Status feedback
-    opt Auto-submit
-        TB->>Mac: Enter / custom key
-    end
-```
-
-1. Connect a channel: WebChat, Feishu, DingTalk, or WeCom.
-2. Send text, voice-to-text, or an image from your phone.
-3. TypeBridge receives the message and appends it to the local queue.
-4. When the message is next, TypeBridge writes it to the clipboard and sends `Cmd+V`.
-5. If auto-submit is enabled, it sends `Enter` or your configured key afterwards.
+1. Launch TypeBridge on your Mac and start a WebChat session.
+2. Scan the QR code on your phone, enter the OTP, and switch to typing or trackpad mode.
+3. Type, use voice input, or control the cursor — your Mac responds instantly.
+4. With auto-submit enabled, TypeBridge sends `Enter` or your configured key after each paste.
+5. You can also use Feishu, DingTalk, or WeCom bots — messages go into the same FIFO queue.
 
 ## 📡 Supported channels
 
