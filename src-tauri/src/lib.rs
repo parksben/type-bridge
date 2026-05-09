@@ -80,6 +80,22 @@ pub fn run() {
             // 注册全局 ack 桥接：injection queue 的 message-status → WebChat Socket.IO ack
             webchat::install_ack_listener(app.handle());
 
+            // 自动启动 WebChat 服务，App 生命周期内常驻，进程退出时 OS 自动回收端口
+            {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let ctx = handle
+                        .state::<std::sync::Arc<sidecar::AppContext>>()
+                        .inner()
+                        .clone();
+                    if let Err(e) = ctx.webchat.start(ctx.clone(), &handle).await {
+                        tracing::error!("[webchat] auto-start failed: {e}");
+                    }
+                    let snap = ctx.webchat.snapshot(webchat::current_lang(&handle).as_deref());
+                    let _ = handle.emit("typebridge://webchat-session-update", &snap);
+                });
+            }
+
             // 启动后广播一次辅助功能权限状态，前端 ConnectionTab 据此决定是否
             // 展示 banner；前端后续会每 3s 主动 check_accessibility 轮询直到授予
             let granted = injector::check_accessibility();

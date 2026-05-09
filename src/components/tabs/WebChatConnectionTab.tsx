@@ -5,12 +5,9 @@ import QRCode from "qrcode";
 import {
   AlertCircle,
   CheckCircle2,
-  Info,
   Play,
   RotateCw,
   ScanLine,
-  Square,
-  Unplug,
   Wifi,
 } from "lucide-react";
 import { useAppStore } from "../../store";
@@ -43,12 +40,11 @@ const SESSION_TTL_SECS = 60;
 
 export default function WebChatConnectionTab() {
   const [snap, setSnap] = useState<WebChatSnapshot | null>(null);
-  const [busy, setBusy] = useState(false);
   const [now, setNow] = useState<number>(Date.now());
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const tickRef = useRef<number | null>(null);
-  // 防止 remainingSecs=0 那一刻被多次 effect 连续触发
   const rotatingRef = useRef(false);
+  const retryingRef = useRef(false);
   const addLog = useAppStore((s) => s.addLog);
   const { t } = useI18n();
 
@@ -114,30 +110,7 @@ export default function WebChatConnectionTab() {
 
   const phase: Phase = snap?.phase.kind ?? "idle";
 
-  async function start() {
-    setBusy(true);
-    try {
-      await invoke("start_webchat");
-      addLog({ kind: "connect", channel: "webchat", text: t("webchat.serverStarted") });
-    } catch (e) {
-      addLog({ kind: "error", channel: "webchat", text: t("webchat.serverStartFailed", { error: String(e) }) });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function stop() {
-    setBusy(true);
-    try {
-      await invoke("stop_webchat");
-      addLog({ kind: "connect", channel: "webchat", text: t("webchat.serverStopped") });
-    } catch (e) {
-      addLog({ kind: "error", channel: "webchat", text: t("webchat.serverStopFailed", { error: String(e) }) });
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  // OTP 过期自动轮换
   async function rotateOtp(manual: boolean) {
     if (rotatingRef.current) return;
     rotatingRef.current = true;
@@ -146,20 +119,27 @@ export default function WebChatConnectionTab() {
       if (manual) {
         addLog({ kind: "connect", channel: "webchat", text: t("webchat.otpRotated") });
       }
-      // 自动轮换路径不记日志，避免每 5 分钟刷屏
     } catch (e) {
       addLog({ kind: "error", channel: "webchat", text: t("webchat.otpRotateFailed", { error: String(e) }) });
     } finally {
-      // 稍延迟解锁，等 snapshot 更新到来刷新 expires_at 再允许下一次
-      window.setTimeout(() => {
-        rotatingRef.current = false;
-      }, 500);
+      window.setTimeout(() => { rotatingRef.current = false; }, 500);
     }
   }
 
-  // OTP 自动轮换：pending / bound 态下 remaining 归零时桌面端无感刷新 OTP。
-  // 锁定态（expired）故意 NOT 自动轮换 — 要求用户手动「重置 OTP」，保留
-  // brute-force 防护语义
+  // error 态重试启动
+  async function retryStart() {
+    if (retryingRef.current) return;
+    retryingRef.current = true;
+    try {
+      await invoke("start_webchat");
+      addLog({ kind: "connect", channel: "webchat", text: t("webchat.serverStarted") });
+    } catch (e) {
+      addLog({ kind: "error", channel: "webchat", text: t("webchat.serverStartFailed", { error: String(e) }) });
+    } finally {
+      retryingRef.current = false;
+    }
+  }
+
   useEffect(() => {
     if (phase !== "pending" && phase !== "bound") return;
     if (!snap?.expires_at) return;
@@ -215,28 +195,26 @@ export default function WebChatConnectionTab() {
         {wifiBanner}
         {boundBanner}
 
-        {phase === "idle" && <IdleView busy={busy} onStart={start} />}
+        {/* snap 尚未加载 or 自动启动中（短暂 idle） */}
+        {(snap === null || phase === "idle") && <LoadingView />}
+
         {(phase === "pending" || phase === "bound") && (
           <SessionLiveView
-            snap={snap!}
             qrDataUrl={qrDataUrl}
             remainingSecs={remaining}
-            busy={busy}
-            onStop={stop}
           />
         )}
         {(phase === "expired" || phase === "error") && (
           <ErrorView
             phase={phase}
             snap={snap}
-            busy={busy}
             onRotate={() => rotateOtp(true)}
-            onStart={start}
+            onRetry={retryStart}
           />
         )}
 
         {/* 连接状态 pill */}
-        <ConnectionPill phase={phase} bound={snap?.bound_devices ?? 0} />
+        {snap !== null && <ConnectionPill phase={phase} bound={snap?.bound_devices ?? 0} />}
       </div>
     </div>
   );
@@ -246,61 +224,23 @@ export default function WebChatConnectionTab() {
 // 子状态视图
 // ──────────────────────────────────────────────────────────────
 
-function IdleView({ busy, onStart }: { busy: boolean; onStart: () => void }) {
+function LoadingView() {
   return (
-    <>
-      <div
-        className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
-        style={{
-          background: "var(--surface-2)",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <Info size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
-        <div className="flex-1 text-text">
-          {ti18n("webchat.idleHint")}
-        </div>
-      </div>
-
-      <button
-        onClick={onStart}
-        disabled={busy}
-        className="tb-btn-primary flex items-center justify-center gap-1.5"
-      >
-        {busy ? (
-          <>
-            <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
-            {ti18n("webchat.starting")}
-          </>
-        ) : (
-          <>
-            <Play size={14} strokeWidth={1.75} />
-            {ti18n("webchat.startSession")}
-          </>
-        )}
-      </button>
-    </>
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <RotateCw size={22} strokeWidth={1.75} className="animate-spin text-muted" />
+      <span className="text-[12px] text-muted">{ti18n("webchat.starting")}</span>
+    </div>
   );
 }
 
-/// pending + bound 共用的"会话运行中"视图：二维码居中，底部横向进度条显示 OTP
-/// 剩余有效时间（无数字倒计时）。底部一行"用手机扫码即可连接"提示 + 停止按钮。
-/// phase 区分度由外层 wifiBanner / boundBanner 完成。
+/// pending + bound 共用的"会话运行中"视图
 function SessionLiveView({
-  snap,
   qrDataUrl,
   remainingSecs,
-  busy,
-  onStop,
 }: {
-  snap: WebChatSnapshot;
   qrDataUrl: string | null;
   remainingSecs: number;
-  busy: boolean;
-  onStop: () => void;
 }) {
-  const isBound = snap.phase.kind === "bound";
-
   const percent = Math.max(0, Math.min(100, (remainingSecs / SESSION_TTL_SECS) * 100));
   const lowTime = remainingSecs <= 10;
 
@@ -363,30 +303,6 @@ function SessionLiveView({
           <span>{ti18n("webchat.scanHint")}</span>
         </div>
       </div>
-
-      {/* 停止 / 断开会话按钮 */}
-      <button
-        onClick={onStop}
-        disabled={busy}
-        className="flex items-center justify-center gap-1.5 text-[13px] rounded-lg py-[10px] mt-1 transition-colors disabled:cursor-not-allowed"
-        style={{
-          background: "var(--surface-2)",
-          border: "1px solid var(--border-strong)",
-          color: busy ? "var(--subtle)" : "var(--text)",
-        }}
-      >
-        {isBound ? (
-          <>
-            <Unplug size={13} strokeWidth={1.75} />
-            {ti18n("webchat.disconnect")}
-          </>
-        ) : (
-          <>
-            <Square size={13} strokeWidth={1.75} />
-            {ti18n("webchat.stop")}
-          </>
-        )}
-      </button>
     </>
   );
 }
@@ -394,18 +310,14 @@ function SessionLiveView({
 function ErrorView({
   phase,
   snap,
-  busy,
   onRotate,
-  onStart,
+  onRetry,
 }: {
   phase: Phase;
   snap: WebChatSnapshot | null;
-  busy: boolean;
   onRotate: () => void;
-  onStart: () => void;
+  onRetry: () => void;
 }) {
-  // expired 态语义是 "OTP 被锁定（5 次输错）"，这时 server 还在跑、bindings 还在，
-  // 手动轮换 OTP 即可恢复。error 态是 server 启动失败，需要重新 start。
   const locked = phase === "expired";
   const title = locked ? ti18n("webchat.lockedTitle") : ti18n("webchat.sessionErrorTitle");
   const body = locked
@@ -430,16 +342,10 @@ function ErrorView({
       </div>
 
       <button
-        onClick={locked ? onRotate : onStart}
-        disabled={busy}
+        onClick={locked ? onRotate : onRetry}
         className="tb-btn-primary flex items-center justify-center gap-1.5"
       >
-        {busy ? (
-          <>
-            <RotateCw size={14} strokeWidth={1.75} className="animate-spin" />
-            {ti18n("webchat.processing")}
-          </>
-        ) : locked ? (
+        {locked ? (
           <>
             <RotateCw size={14} strokeWidth={1.75} />
             {ti18n("webchat.resetOtp")}
