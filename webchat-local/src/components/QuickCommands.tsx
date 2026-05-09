@@ -52,14 +52,12 @@ const CMD_LEFT: CmdDef  = { labelKey: "monitor.cmdArrowLeft",  Icon: ArrowLeft, 
 const CMD_RIGHT: CmdDef = { labelKey: "monitor.cmdArrowRight", Icon: ArrowRight, spec: { type: "key", code: "ArrowRight" } };
 
 // ─── Navigation ────────────────────────────────────────────────
-const NAV_CMDS: CmdDef[] = [
-  { labelKey: "monitor.cmdHome",      Icon: ArrowLeftToLine,  spec: { type: "key",   code: "Home" } },
-  { labelKey: "monitor.cmdEnd",       Icon: ArrowRightToLine, spec: { type: "key",   code: "End" } },
-  { labelKey: "monitor.cmdPageUp",    Icon: ArrowUpToLine,    spec: { type: "key",   code: "PageUp" } },
-  { labelKey: "monitor.cmdPageDown",  Icon: ArrowDownToLine,  spec: { type: "key",   code: "PageDown" } },
-  { labelKey: "monitor.cmdDocTop",    Icon: ChevronsUp,       spec: { type: "combo", combo: "DocTop" } },
-  { labelKey: "monitor.cmdDocBottom", Icon: ChevronsDown,     spec: { type: "combo", combo: "DocBottom" } },
-];
+const CMD_HOME: CmdDef       = { labelKey: "monitor.cmdHome",      Icon: ArrowLeftToLine,  spec: { type: "key",   code: "Home" } };
+const CMD_END: CmdDef        = { labelKey: "monitor.cmdEnd",       Icon: ArrowRightToLine, spec: { type: "key",   code: "End" } };
+const CMD_PAGE_UP: CmdDef    = { labelKey: "monitor.cmdPageUp",    Icon: ArrowUpToLine,    spec: { type: "key",   code: "PageUp" } };
+const CMD_PAGE_DOWN: CmdDef  = { labelKey: "monitor.cmdPageDown",  Icon: ArrowDownToLine,  spec: { type: "key",   code: "PageDown" } };
+const CMD_DOC_TOP: CmdDef    = { labelKey: "monitor.cmdDocTop",    Icon: ChevronsUp,       spec: { type: "combo", combo: "DocTop" } };
+const CMD_DOC_BOTTOM: CmdDef = { labelKey: "monitor.cmdDocBottom", Icon: ChevronsDown,     spec: { type: "combo", combo: "DocBottom" } };
 
 // ─── Edit ──────────────────────────────────────────────────────
 const EDIT_CMDS: CmdDef[] = [
@@ -234,10 +232,23 @@ export default function QuickCommands({ client, disabled }: Props) {
 
         {/* Nav tab */}
         {activeTab === "nav" && (
-          <div className="grid grid-cols-2 gap-3">
-            {NAV_CMDS.map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
-            ))}
+          <div className="flex flex-col gap-3">
+            {/* 行首 / 行尾 — 水平并排 */}
+            <div className="grid grid-cols-2 gap-3">
+              <CmdButton cmd={CMD_HOME}      onPress={handlePress} disabled={disabled} large />
+              <CmdButton cmd={CMD_END}       onPress={handlePress} disabled={disabled} large />
+            </div>
+            {/* 上翻页/下翻页 + 页首/页尾 — 左右各自垂直堆叠 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-3">
+                <CmdButton cmd={CMD_PAGE_UP}    onPress={handlePress} disabled={disabled} large />
+                <CmdButton cmd={CMD_PAGE_DOWN}  onPress={handlePress} disabled={disabled} large />
+              </div>
+              <div className="flex flex-col gap-3">
+                <CmdButton cmd={CMD_DOC_TOP}    onPress={handlePress} disabled={disabled} large />
+                <CmdButton cmd={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} large />
+              </div>
+            </div>
           </div>
         )}
 
