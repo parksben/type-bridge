@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: en ? "TypeBridge — Your Phone, Keyboard & Mouse" : "TypeBridge — 手机即键鼠",
     description: en
       ? "Your phone becomes a wireless keyboard and trackpad for your Mac. Type, move the cursor, use your voice — all via a simple QR scan. macOS menu bar app."
-      : "手机即键鼠：扫码连接，手机变成无线键盘和触控板。打字、移动鼠标、语音输入，全部实时到达 macOS。",
+      : "手机即键鼠：扫码把手机变成 Mac 的无线键盘和触控板。打字、控鼠标、语音输入，一部手机全搞定。",
     metadataBase: new URL("https://typebridge.parksben.xyz"),
     icons: {
       icon: "/favicon.ico",
@@ -30,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: en ? "TypeBridge — Your Phone, Keyboard & Mouse" : "TypeBridge — 手机即键鼠",
       description: en
         ? "Scan once — your phone becomes a wireless keyboard and trackpad. Type, move the cursor, use your voice. All lands on your Mac in real time."
-        : "手机即键鼠：扫码连接，手机变成无线键盘和触控板。打字、移动鼠标、语音输入，全部实时到达 macOS。",
+        : "手机即键鼠：扫码把手机变成 Mac 的无线键盘和触控板。打字、控鼠标、语音输入，一部手机全搞定。",
       url: "https://typebridge.parksben.xyz",
       type: "website",
     },
