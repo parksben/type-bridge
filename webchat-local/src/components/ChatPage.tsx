@@ -35,7 +35,7 @@ export default function ChatPage({ client }: Props) {
     setWifi("connected");
   }, []);
 
-  async function sendTextMsg(text: string) {
+  async function sendTextMsg(text: string, submit = false) {
     const cmId = newClientMessageId();
     const msg: ChatMessage = {
       clientMessageId: cmId,
@@ -44,7 +44,7 @@ export default function ChatPage({ client }: Props) {
       status: "sending",
     };
     setMessages((prev) => [...prev, msg]);
-    const ack = await client.sendText(cmId, text);
+    const ack = await client.sendText(cmId, text, submit);
     setMessages((prev) =>
       prev.map((m) =>
         m.clientMessageId === cmId
@@ -55,9 +55,9 @@ export default function ChatPage({ client }: Props) {
   }
 
   async function sendTextAndEnter(text: string) {
-    await sendTextMsg(text);
-    await new Promise<void>((r) => setTimeout(r, 80));
-    await client.sendKey(newClientMessageId(), "Enter");
+    // submit=true → 后端注入文本后直接按 submit_config 配置的组合键提交
+    // 不再硬编码 sendKey("Enter")，避免与桌面端配置的「提交键」不一致
+    await sendTextMsg(text, true);
   }
 
   async function sendImageMsg(compressed: CompressResult, previewUrl: string) {

@@ -98,8 +98,10 @@ export class WebChatClient {
     });
   }
 
-  /** 发文本消息。需要已完成 hello */
-  async sendText(clientMessageId: string, text: string): Promise<MessageAck> {
+  /** 发文本消息。需要已完成 hello
+   * @param submit true → 注入后按桌面端配置的提交键（等同「发送并提交」）；false → 仅注入文本
+   */
+  async sendText(clientMessageId: string, text: string, submit = false): Promise<MessageAck> {
     if (!this.userToken) {
       return { success: false, reason: t("socket.notHandshaked") };
     }
@@ -112,6 +114,7 @@ export class WebChatClient {
             userToken: this.userToken,
             clientMessageId,
             text,
+            submit,
           },
           (err: unknown, ack: MessageAck) => {
             if (err) {
