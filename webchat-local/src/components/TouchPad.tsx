@@ -318,25 +318,11 @@ export default function TouchPad({ client, disabled }: Props) {
       )}
 
       {/* ── Toolbar ───────────────────────────────────────── */}
-      <div className="flex items-center justify-end gap-2 px-3 pt-3 pb-1 shrink-0">
-        <button
-          type="button"
-          onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowSettings(true); }}
-          onClick={() => setShowSettings(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-full"
-          style={{
-            background: "var(--tb-surface)",
-            color: "var(--tb-muted)",
-            border: "1px solid var(--tb-border)",
-          }}
-        >
-          <Settings2 size={16} strokeWidth={2} />
-        </button>
-      </div>
+      {/* 已移入触控板右上角 overlay，不再独占一行 */}
 
       {/* ── Trackpad area ─────────────────────────────────── */}
       <div
-        className="mx-3 flex-1 relative rounded-2xl touch-none select-none overflow-hidden"
+        className="mx-3 mt-3 flex-1 relative rounded-2xl touch-none select-none overflow-hidden"
         style={{
           background: "var(--tb-surface)",
           border: "1px solid var(--tb-border)",
@@ -346,16 +332,38 @@ export default function TouchPad({ client, disabled }: Props) {
         onTouchEnd={handlePadTouchEnd}
         onTouchCancel={handlePadTouchEnd}
       >
+        {/* 中心大字提示 */}
         <div
-          className="absolute bottom-3 left-0 right-0 text-center text-[11px] pointer-events-none"
-          style={{ color: "var(--tb-muted)" }}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
         >
-          {t("monitor.touchpadHint")}
+          <span
+            className="text-[28px] font-medium tracking-wide select-none"
+            style={{ color: "color-mix(in srgb, var(--tb-muted) 35%, transparent)" }}
+          >
+            {t("monitor.touchpadHint")}
+          </span>
+        </div>
+        {/* 设置按钮 — 右上角 overlay */}
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            type="button"
+            onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowSettings(true); }}
+            onClick={() => setShowSettings(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full"
+            style={{
+              background: "color-mix(in srgb, var(--tb-surface) 80%, transparent)",
+              color: "var(--tb-muted)",
+              border: "1px solid var(--tb-border)",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <Settings2 size={16} strokeWidth={2} />
+          </button>
         </div>
       </div>
 
       {/* ── Bottom mouse buttons ──────────────────────────── */}
-      <div className="flex gap-2 px-4 pt-3 pb-6 safe-area-bottom shrink-0">
+      <div className="flex gap-2 px-4 pt-3 pb-safe shrink-0" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px) + 16px, 24px)" }}>
         <button
           type="button"
           className="flex-1 rounded-xl text-[15px] font-medium select-none transition-colors"
