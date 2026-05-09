@@ -16,6 +16,8 @@ import {
   ArrowRightToLine,
   ArrowUpToLine,
   ArrowDownToLine,
+  ChevronsUp,
+  ChevronsDown,
   Trash2,
   LogOut,
   X,
@@ -53,10 +55,12 @@ const CMD_RIGHT: CmdDef = { labelKey: "monitor.cmdArrowRight", Icon: ArrowRight,
 
 // ─── Navigation ────────────────────────────────────────────────
 const NAV_CMDS: CmdDef[] = [
-  { labelKey: "monitor.cmdHome",     Icon: ArrowLeftToLine,  spec: { type: "key", code: "Home" } },
-  { labelKey: "monitor.cmdEnd",      Icon: ArrowRightToLine, spec: { type: "key", code: "End" } },
-  { labelKey: "monitor.cmdPageUp",   Icon: ArrowUpToLine,    spec: { type: "key", code: "PageUp" } },
-  { labelKey: "monitor.cmdPageDown", Icon: ArrowDownToLine,  spec: { type: "key", code: "PageDown" } },
+  { labelKey: "monitor.cmdHome",      Icon: ArrowLeftToLine,  spec: { type: "key",   code: "Home" } },
+  { labelKey: "monitor.cmdEnd",       Icon: ArrowRightToLine, spec: { type: "key",   code: "End" } },
+  { labelKey: "monitor.cmdPageUp",    Icon: ArrowUpToLine,    spec: { type: "key",   code: "PageUp" } },
+  { labelKey: "monitor.cmdPageDown",  Icon: ArrowDownToLine,  spec: { type: "key",   code: "PageDown" } },
+  { labelKey: "monitor.cmdDocTop",    Icon: ChevronsUp,       spec: { type: "combo", combo: "DocTop" } },
+  { labelKey: "monitor.cmdDocBottom", Icon: ChevronsDown,     spec: { type: "combo", combo: "DocBottom" } },
 ];
 
 // ─── Edit ──────────────────────────────────────────────────────

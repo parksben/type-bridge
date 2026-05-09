@@ -554,6 +554,7 @@ const ALLOWED_KEY_CODES: &[&str] = &[
 /// key_combo 白名单（仅允许已知无害的编辑快捷键）。
 const ALLOWED_COMBOS: &[&str] = &[
     "Undo", "Redo", "SelectAll", "Copy", "Cut", "Paste",
+    "DocTop", "DocBottom",
     "DesktopLeft", "DesktopRight", "MissionControl", "AppExpose",
 ];
 
