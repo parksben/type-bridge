@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: en ? "TypeBridge — Your Phone, Keyboard & Mouse" : "TypeBridge — 手机即键鼠",
     description: en
-      ? "Your phone becomes a wireless keyboard and trackpad for your Mac. Type, move the cursor, use your voice — all via a simple QR scan. macOS menu bar app."
+      ? "Your phone becomes a wireless keyboard and trackpad for your Mac. Type, move the cursor, use your voice — all from your phone."
       : "手机即键鼠：扫码把手机变成 Mac 的无线键盘和触控板。打字、控鼠标、语音输入，一部手机全搞定。",
     metadataBase: new URL("https://typebridge.parksben.xyz"),
     icons: {
@@ -29,7 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: en ? "TypeBridge — Your Phone, Keyboard & Mouse" : "TypeBridge — 手机即键鼠",
       description: en
-        ? "Scan once — your phone becomes a wireless keyboard and trackpad. Type, move the cursor, use your voice. All lands on your Mac in real time."
+        ? "Open the app, scan a code — your phone instantly becomes a wireless keyboard and trackpad for your Mac. Type, move the cursor, use your voice."
         : "手机即键鼠：扫码把手机变成 Mac 的无线键盘和触控板。打字、控鼠标、语音输入，一部手机全搞定。",
       url: "https://typebridge.parksben.xyz",
       type: "website",
