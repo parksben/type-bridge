@@ -278,7 +278,7 @@ fn emit_session_update<R: Runtime>(app: &AppHandle<R>, snap: &WebChatSnapshot) {
 
 /// 从持久化 Settings 读 UI 语言（`""`/`"zh"`/`"en"`）。`""` 视为未选择，
 /// QR URL 不附加 `&lang=`，让移动端 SPA 自己检测。
-fn current_lang(app: &AppHandle<impl Runtime>) -> Option<String> {
+pub fn current_lang(app: &AppHandle<impl Runtime>) -> Option<String> {
     let _ = app;
     // get_settings 当前签名是 fn(AppHandle<Wry>)，跨 Runtime 不通用，
     // 这里直接读 store 文件以保持泛型；store 路径与 store.rs 保持一致。
