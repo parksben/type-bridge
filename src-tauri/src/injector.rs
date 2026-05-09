@@ -421,6 +421,9 @@ pub fn key_combo(combo: &str) -> Result<(), String> {
         "Copy"         => (0x08 /* C         */, CG_FLAG_COMMAND),
         "Cut"          => (0x07 /* X         */, CG_FLAG_COMMAND),
         "Paste"        => (0x09 /* V         */, CG_FLAG_COMMAND),
+        // Cmd+Arrow: 文档顶部 / 底部
+        "DocTop"    => (0x7E /* ArrowUp   */, CG_FLAG_COMMAND),
+        "DocBottom" => (0x7D /* ArrowDown */, CG_FLAG_COMMAND),
         // 3-finger desktop gestures (macOS Ctrl+Arrow shortcuts)
         "DesktopLeft"  => (0x7B /* ArrowLeft  */, CG_FLAG_CONTROL),
         "DesktopRight" => (0x7C /* ArrowRight */, CG_FLAG_CONTROL),
