@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="public/readme-hero-concept.png" alt="TypeBridge phone-as-keyboard-and-mouse concept graphic" width="760" />
+  <img src="public/readme-hero-concept.png" alt="TypeBridge phone-as-keyboard-and-mouse concept graphic" />
 </p>
 
 ---
