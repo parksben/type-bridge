@@ -449,3 +449,63 @@ pub fn key_combo(combo: &str) -> Result<(), String> {
     }
     Ok(())
 }
+
+// ─── 截图 ────────────────────────────────────────────────────────
+
+/// 截图并将结果存入剪贴板。
+/// kind: "screen" → 全屏截图；"window" → 截取前台窗口（失败时回退到全屏）
+pub fn screenshot(kind: &str) -> Result<(), String> {
+    match kind {
+        "screen" => screenshot_screen(),
+        "window" => screenshot_window(),
+        _ => Err(format!("unsupported screenshot kind: {kind}")),
+    }
+}
+
+fn screenshot_screen() -> Result<(), String> {
+    // screencapture -c: 存剪贴板；-x: 无声
+    let status = std::process::Command::new("screencapture")
+        .args(["-c", "-x"])
+        .status()
+        .map_err(|e| format!("screencapture launch failed: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("screencapture exited with: {status}"))
+    }
+}
+
+fn screenshot_window() -> Result<(), String> {
+    // 通过 osascript 获取前台进程的第一个窗口 ID（CGWindowID）
+    let output = std::process::Command::new("osascript")
+        .args([
+            "-e",
+            "tell application \"System Events\" to id of first window of \
+             (first process whose frontmost is true)",
+        ])
+        .output();
+
+    let window_id = match output {
+        Ok(o) if o.status.success() => {
+            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if s.is_empty() { None } else { Some(s) }
+        }
+        _ => None,
+    };
+
+    match window_id {
+        Some(wid) => {
+            let status = std::process::Command::new("screencapture")
+                .args(["-c", "-x", "-l", &wid])
+                .status()
+                .map_err(|e| format!("screencapture launch failed: {e}"))?;
+            if status.success() {
+                Ok(())
+            } else {
+                // 带 window id 失败（如窗口已消失），回退到全屏
+                screenshot_screen()
+            }
+        }
+        None => screenshot_screen(),
+    }
+}
