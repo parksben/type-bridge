@@ -1,46 +1,43 @@
 @import "tailwindcss";
 
 /* ───────────────────────────────────────────────────────────────
-   TypeBridge WebChat 暗色主题
-   品牌橙 #f97316（orange-500）；深海军蓝基底，强调硬件控制器质感
+   TypeBridge WebChat 亮色主题 v3
+   品牌橙 #f97316；浅灰白基底 + 强阴影 + 弹性交互，清晰可读
    ─────────────────────────────────────────────────────────────── */
 
 @theme {
-  --color-tb-bg: #0d0f14;
-  --color-tb-surface: #141720;
-  --color-tb-text: #e8e6e2;
-  --color-tb-muted: #5c6374;
-  --color-tb-subtle: #252b3b;
+  --color-tb-bg: #f1f3f7;
+  --color-tb-surface: #ffffff;
+  --color-tb-text: #0f1117;
+  --color-tb-muted: #6b7280;
+  --color-tb-subtle: #f9fafb;
   --color-tb-accent: #f97316;
-  --color-tb-accent-soft: rgba(249, 115, 22, 0.15);
-  --color-tb-border: #232839;
-  --color-tb-danger: #f87171;
-  --color-tb-success: #4ade80;
+  --color-tb-accent-soft: rgba(249, 115, 22, 0.1);
+  --color-tb-border: #e4e7ed;
+  --color-tb-danger: #ef4444;
+  --color-tb-success: #22c55e;
 }
 
 /* CSS 变量镜像（组件里 style={{ background: "var(--tb-accent)" }} 用） */
 :root {
-  --tb-bg: #0d0f14;
-  --tb-surface: #141720;
-  --tb-text: #e8e6e2;
-  --tb-muted: #5c6374;
-  --tb-subtle: #252b3b;
+  --tb-bg: #f1f3f7;
+  --tb-surface: #ffffff;
+  --tb-text: #0f1117;
+  --tb-muted: #6b7280;
+  --tb-subtle: #f9fafb;
   --tb-accent: #f97316;
-  --tb-accent-soft: rgba(249, 115, 22, 0.15);
-  --tb-accent-glow: rgba(249, 115, 22, 0.28);
-  --tb-border: #232839;
-  --tb-danger: #f87171;
-  --tb-success: #4ade80;
+  --tb-accent-soft: rgba(249, 115, 22, 0.1);
+  --tb-accent-glow: rgba(249, 115, 22, 0.35);
+  --tb-border: #e4e7ed;
+  --tb-danger: #ef4444;
+  --tb-success: #22c55e;
 
-  /* 键帽系统 */
-  --tb-key-face: #1e2535;
-  --tb-key-edge: #090b0f;
-  --tb-key-shine: rgba(255, 255, 255, 0.08);
+  /* 键帽系统（亮色）*/
+  --tb-key-face: #ffffff;
+  --tb-key-edge: #c9cdd6;
 
   /* 触控板 */
-  --tb-pad-bg: #0a0c10;
-  --tb-pad-btn: #181c28;
-  --tb-pad-btn-active: #1f2535;
+  --tb-pad-bg: #f8f9fb;
 }
 
 * {
@@ -59,14 +56,12 @@ body {
   overscroll-behavior: none;
 }
 
-/* iOS 输入框默认会被浏览器放大字体，统一 14px 防跳 */
 input,
 textarea,
 button {
   font-family: inherit;
 }
 
-/* 禁止长按出现选择菜单（聊天气泡、按钮等，输入框内部仍允许选择） */
 body,
 [data-no-select] {
   -webkit-user-select: none;
@@ -77,7 +72,6 @@ body,
   user-select: text;
 }
 
-/* 隐藏 scrollbar（手机浏览器多数默认如此，桌面上显式隐藏） */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
@@ -86,121 +80,88 @@ body,
   scrollbar-width: none;
 }
 
-/* safe-area insets */
-.safe-area-top {
-  padding-top: env(safe-area-inset-top);
-}
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.safe-area-left {
-  padding-left: env(safe-area-inset-left);
-}
-.safe-area-right {
-  padding-right: env(safe-area-inset-right);
-}
+.safe-area-top    { padding-top:    env(safe-area-inset-top); }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-area-left   { padding-left:   env(safe-area-inset-left); }
+.safe-area-right  { padding-right:  env(safe-area-inset-right); }
 
-/* OTP 输入框抖动反馈 */
+/* OTP 抖动 */
 @keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20%,
-  60% {
-    transform: translateX(-6px);
-  }
-  40%,
-  80% {
-    transform: translateX(6px);
-  }
+  0%, 100% { transform: translateX(0); }
+  20%, 60%  { transform: translateX(-6px); }
+  40%, 80%  { transform: translateX(6px); }
 }
-.animate-shake {
-  animation: shake 0.4s ease-in-out;
-}
+.animate-shake { animation: shake 0.4s ease-in-out; }
 
-/* 通用淡入上移（底部弹出面板用） */
+/* 底部面板淡入上移 */
 @keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-up {
-  animation: fade-up 0.22s ease-out;
-}
+.animate-fade-up { animation: fade-up 0.22s ease-out; }
 
 /* 连接状态脉冲点 */
 @keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
 }
 
-/* 键帽按压效果（3D depth） */
+/* ───────────────────────────────────────────────────────────────
+   .keycap — 亮色物理键帽
+   白色渐变正面 + 顶部高光 inset + 底部 3px 灰边"厚度" + 投影
+   按压：下沉 2px，厚度收窄，弹性回弹
+   ─────────────────────────────────────────────────────────────── */
 .keycap {
-  background: linear-gradient(180deg, #232c40 0%, #1a2030 100%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
+  border: 1px solid #d9dce5;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.09) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.4) inset,
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.05) inset,
     0 3px 0 var(--tb-key-edge),
-    0 5px 12px rgba(0, 0, 0, 0.45);
+    0 5px 14px rgba(0, 0, 0, 0.1);
   transition:
-    transform 80ms ease,
+    transform 80ms cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 80ms ease;
 }
 .keycap:active {
   transform: translateY(2px);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.05) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.3) inset,
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.04) inset,
     0 1px 0 var(--tb-key-edge),
-    0 2px 6px rgba(0, 0, 0, 0.35);
+    0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-/* 触控板点阵纹理 */
+/* ───────────────────────────────────────────────────────────────
+   .pad-surface — 触控板点阵纹理（亮色版）
+   浅灰背景 + 深色小点，清晰可见
+   ─────────────────────────────────────────────────────────────── */
 .pad-surface {
   background-color: var(--tb-pad-bg);
-  background-image: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.055) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
   background-size: 22px 22px;
   background-position: 11px 11px;
 }
 
-/* 硬件按钮（鼠标左/右键） */
+/* ───────────────────────────────────────────────────────────────
+   .hw-button — 硬件鼠标按键（亮色版）
+   白色渐变 → 按压变橙色暖调 + inset 凹陷感
+   ─────────────────────────────────────────────────────────────── */
 .hw-button {
-  background: linear-gradient(180deg, #1b2030 0%, #141820 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f6f8 100%);
   transition:
     background 80ms ease,
-    box-shadow 80ms ease;
+    box-shadow 80ms ease,
+    transform 80ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .hw-button.pressed {
-  background: linear-gradient(180deg, #141820 0%, #1b2030 100%);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) inset;
+  background: linear-gradient(180deg, #fff3ea 0%, #ffe9d0 100%);
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.18) inset;
+  transform: translateY(1px);
 }
 
-/* 橙色光晕脉冲（用于 accent 元素动效） */
+/* 橙色光晕脉冲 */
 @keyframes accent-glow-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 6px var(--tb-accent-glow);
-  }
-  50% {
-    box-shadow:
-      0 0 14px var(--tb-accent-glow),
-      0 0 28px rgba(249, 115, 22, 0.12);
-  }
+  0%, 100% { box-shadow: 0 0 6px var(--tb-accent-glow); }
+  50%       { box-shadow: 0 0 14px var(--tb-accent-glow), 0 0 28px rgba(249, 115, 22, 0.15); }
 }
-

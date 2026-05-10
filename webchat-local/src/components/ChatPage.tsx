@@ -95,8 +95,8 @@ export default function ChatPage({ client }: Props) {
         className="shrink-0 flex items-center px-4 py-2 border-b"
         style={{
           background: "var(--tb-surface)",
-          borderColor: "rgba(255,255,255,0.06)",
-          boxShadow: "0 1px 0 rgba(0,0,0,0.3)",
+          borderColor: "var(--tb-border)",
+          boxShadow: "0 1px 8px rgba(0,0,0,0.07)",
         }}
       >
         {/* Connection dot */}
@@ -107,7 +107,7 @@ export default function ChatPage({ client }: Props) {
               background: wifi === "connected" ? "var(--tb-success)" : "var(--tb-muted)",
               boxShadow:
                 wifi === "connected"
-                  ? "0 0 0 3px rgba(74, 222, 128, 0.2), 0 0 8px rgba(74, 222, 128, 0.3)"
+                  ? "0 0 0 3px rgba(34, 197, 94, 0.2), 0 0 8px rgba(34, 197, 94, 0.3)"
                   : "none",
               animation: wifi === "connected" ? "pulse-dot 2s ease-in-out infinite" : undefined,
             }}
@@ -118,7 +118,7 @@ export default function ChatPage({ client }: Props) {
         <div className="flex-1 flex justify-center">
           <div
             className="flex rounded-full p-0.5"
-            style={{ background: "rgba(255,255,255,0.06)" }}
+            style={{ background: "var(--tb-bg)" }}
           >
             {TABS.map(({ mode: m, label }) => (
               <button
@@ -127,10 +127,12 @@ export default function ChatPage({ client }: Props) {
                 onClick={() => setMode(m)}
                 className="px-5 py-1.5 rounded-full text-[14px] font-semibold select-none"
                 style={{
-                  background: mode === m ? "rgba(249,115,22,0.18)" : "transparent",
-                  color: mode === m ? "var(--tb-accent)" : "rgba(255,255,255,0.35)",
-                  boxShadow: mode === m ? "0 0 12px rgba(249,115,22,0.15)" : "none",
-                  transition: "background 150ms ease, color 150ms ease",
+                  background: mode === m ? "#ffffff" : "transparent",
+                  color: mode === m ? "var(--tb-accent)" : "var(--tb-muted)",
+                  boxShadow: mode === m
+                    ? "0 1px 4px rgba(0,0,0,0.1), 0 0 0 1px rgba(249,115,22,0.2)"
+                    : "none",
+                  transition: "background 150ms ease, color 150ms ease, box-shadow 150ms ease",
                 }}
               >
                 {label}

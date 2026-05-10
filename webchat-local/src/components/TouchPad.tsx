@@ -296,9 +296,9 @@ export default function TouchPad({ client, disabled }: Props) {
           <div
             className="w-full rounded-t-2xl px-6 pt-5 pb-8 safe-area-bottom animate-fade-up"
             style={{
-              background: "#1a1e2a",
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-              boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",
+              background: "#ffffff",
+              borderTop: "1px solid var(--tb-border)",
+              boxShadow: "0 -8px 32px rgba(0,0,0,0.12)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -311,8 +311,8 @@ export default function TouchPad({ client, disabled }: Props) {
                 onClick={() => setShowSettings(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-full"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "var(--tb-bg)",
+                  border: "1px solid var(--tb-border)",
                   color: "var(--tb-muted)",
                 }}
               >
@@ -364,7 +364,7 @@ export default function TouchPad({ client, disabled }: Props) {
                     onClick={() => saveScrollReversed(value)}
                     className="px-4 py-1.5 text-[13px] font-medium transition-colors"
                     style={{
-                      background: scrollReversed === value ? "var(--tb-accent)" : "var(--tb-bg)",
+                      background: scrollReversed === value ? "var(--tb-accent)" : "var(--tb-subtle)",
                       color: scrollReversed === value ? "white" : "var(--tb-muted)",
                     }}
                   >
@@ -397,10 +397,10 @@ export default function TouchPad({ client, disabled }: Props) {
           <div
             className="flex flex-col flex-1 m-3 overflow-hidden"
             style={{
-              background: "var(--tb-pad-bg)",
-              border: "1px solid rgba(255,255,255,0.07)",
+              background: "#ffffff",
+              border: "1px solid var(--tb-border)",
               borderRadius: "22px",
-              boxShadow: "0 0 0 1px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.5)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06), 0 12px 40px rgba(0,0,0,0.1)",
             }}
           >
             {/* ── Trackpad area ──────────────────────────── */}
@@ -412,12 +412,12 @@ export default function TouchPad({ client, disabled }: Props) {
               onTouchCancel={handlePadTouchEnd}
               style={{ borderRadius: "22px 22px 0 0" }}
             >
-              {/* 顶部高光线 */}
+              {/* 顶部描边高光线 */}
               <div
-                className="absolute top-0 left-4 right-4 pointer-events-none"
+                className="absolute top-0 left-6 right-6 pointer-events-none"
                 style={{
                   height: "1px",
-                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)",
                 }}
               />
               {/* 中心提示 */}
@@ -425,7 +425,7 @@ export default function TouchPad({ client, disabled }: Props) {
                 <span
                   className="text-[22px] font-light tracking-widest select-none"
                   style={{
-                    color: "rgba(255,255,255,0.07)",
+                    color: "rgba(0,0,0,0.08)",
                     fontVariantNumeric: "tabular-nums",
                     letterSpacing: "0.25em",
                   }}
@@ -443,11 +443,13 @@ export default function TouchPad({ client, disabled }: Props) {
                   style={{
                     background: landscape
                       ? "var(--tb-accent)"
-                      : "rgba(255,255,255,0.06)",
-                    color: landscape ? "white" : "rgba(255,255,255,0.4)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                      : "rgba(255,255,255,0.85)",
+                    color: landscape ? "white" : "var(--tb-muted)",
+                    border: `1px solid ${landscape ? "var(--tb-accent)" : "var(--tb-border)"}`,
                     backdropFilter: "blur(8px)",
-                    boxShadow: landscape ? "0 0 12px var(--tb-accent-glow)" : "none",
+                    boxShadow: landscape
+                      ? "0 2px 12px var(--tb-accent-glow)"
+                      : "0 2px 8px rgba(0,0,0,0.1)",
                   }}
                 >
                   {landscape
@@ -460,10 +462,11 @@ export default function TouchPad({ client, disabled }: Props) {
                   onClick={() => setShowSettings(true)}
                   className="w-9 h-9 flex items-center justify-center rounded-full select-none"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    color: "rgba(255,255,255,0.4)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(255,255,255,0.85)",
+                    color: "var(--tb-muted)",
+                    border: "1px solid var(--tb-border)",
                     backdropFilter: "blur(8px)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                   }}
                 >
                   <Settings2 size={16} strokeWidth={2} />
@@ -475,7 +478,7 @@ export default function TouchPad({ client, disabled }: Props) {
             <div
               style={{
                 height: "1px",
-                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+                background: "linear-gradient(90deg, transparent, var(--tb-border), transparent)",
                 flexShrink: 0,
               }}
             />
@@ -486,7 +489,7 @@ export default function TouchPad({ client, disabled }: Props) {
                 type="button"
                 className={`hw-button${leftPressed ? " pressed" : ""} flex-1 flex flex-col items-center justify-center gap-1 select-none`}
                 style={{
-                  borderRight: "1px solid rgba(255,255,255,0.06)",
+                  borderRight: "1px solid var(--tb-border)",
                   borderRadius: "0 0 0 22px",
                 }}
                 onTouchStart={handleLeftStart}
@@ -495,7 +498,7 @@ export default function TouchPad({ client, disabled }: Props) {
               >
                 <span
                   className="text-[13px] font-semibold tracking-wide"
-                  style={{ color: leftPressed ? "var(--tb-accent)" : "rgba(255,255,255,0.45)" }}
+                  style={{ color: leftPressed ? "var(--tb-accent)" : "var(--tb-muted)" }}
                 >
                   {t("monitor.touchpadLeftBtn")}
                 </span>
@@ -510,7 +513,7 @@ export default function TouchPad({ client, disabled }: Props) {
               >
                 <span
                   className="text-[13px] font-semibold tracking-wide"
-                  style={{ color: rightPressed ? "var(--tb-accent)" : "rgba(255,255,255,0.45)" }}
+                  style={{ color: rightPressed ? "var(--tb-accent)" : "var(--tb-muted)" }}
                 >
                   {t("monitor.touchpadRightBtn")}
                 </span>

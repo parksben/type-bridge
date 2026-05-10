@@ -118,12 +118,15 @@ function RowCmdButton({
       className="flex items-center gap-3.5 w-full rounded-2xl select-none disabled:opacity-30 disabled:cursor-not-allowed"
       style={{
         background: pressed
-          ? "rgba(255,255,255,0.05)"
-          : "rgba(255,255,255,0.03)",
-        border: `1px solid ${pressed ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
+          ? "#fff3ea"
+          : "#ffffff",
+        border: `1px solid ${pressed ? "#f9b27a" : "var(--tb-border)"}`,
         color: accent ? "var(--tb-danger)" : "var(--tb-text)",
         padding: "14px 16px",
-        transition: "background 80ms ease, border-color 80ms ease",
+        boxShadow: pressed
+          ? "0 1px 4px rgba(249,115,22,0.15)"
+          : "0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05)",
+        transition: "background 80ms ease, border-color 80ms ease, box-shadow 80ms ease",
       }}
     >
       <span style={{ color: accent ? "var(--tb-danger)" : "var(--tb-accent)", flexShrink: 0, display: "flex" }}>
@@ -178,7 +181,7 @@ function CmdButton({
       </span>
       <span
         className="text-[11px] leading-none text-center font-semibold tracking-wide"
-        style={{ color: accent ? "var(--tb-danger)" : "rgba(255,255,255,0.4)" }}
+        style={{ color: accent ? "var(--tb-danger)" : "var(--tb-muted)" }}
       >
         {t(labelKey)}
       </span>
@@ -226,16 +229,19 @@ function PairedButtons({
         className="flex-1 flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed"
         style={{
           background: isActive
-            ? "rgba(255,255,255,0.05)"
-            : "rgba(255,255,255,0.02)",
-          borderTop: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
-          borderBottom: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
-          borderLeft: side === "left" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
-          borderRight: side === "right" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
+            ? "#fff3ea"
+            : "#ffffff",
+          borderTop: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
+          borderBottom: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
+          borderLeft: side === "left" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
+          borderRight: side === "right" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
           borderRadius: side === "left" ? "16px 0 0 16px" : "0 16px 16px 0",
           minHeight: "68px",
           padding: "10px 8px",
-          transition: "background 80ms ease",
+          boxShadow: isActive
+            ? "0 1px 6px rgba(249,115,22,0.15)"
+            : "0 1px 3px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.04)",
+          transition: "background 80ms ease, box-shadow 80ms ease",
         }}
       >
         <span style={{ color: "var(--tb-accent)", display: "flex" }}>
@@ -243,7 +249,7 @@ function PairedButtons({
         </span>
         <span
           className="text-[11px] leading-none text-center font-semibold tracking-wide"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          style={{ color: "var(--tb-muted)" }}
         >
           {t(labelKey)}
         </span>
@@ -254,7 +260,7 @@ function PairedButtons({
   return (
     <div className="flex w-full">
       {mkBtn(left, lPressed, setLPressed, "left")}
-      <div style={{ width: "1px", background: "rgba(255,255,255,0.07)", flexShrink: 0 }} />
+      <div style={{ width: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
       {mkBtn(right, rPressed, setRPressed, "right")}
     </div>
   );
@@ -300,16 +306,19 @@ function VerticalPairedButtons({
         className="flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed"
         style={{
           background: isActive
-            ? "rgba(255,255,255,0.05)"
-            : "rgba(255,255,255,0.02)",
-          borderLeft: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
-          borderRight: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
-          borderTop: side === "top" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
-          borderBottom: side === "bottom" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
+            ? "#fff3ea"
+            : "#ffffff",
+          borderLeft: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
+          borderRight: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
+          borderTop: side === "top" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
+          borderBottom: side === "bottom" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
           borderRadius: side === "top" ? "16px 16px 0 0" : "0 0 16px 16px",
           minHeight: "60px",
           padding: "10px 8px",
-          transition: "background 80ms ease",
+          boxShadow: isActive
+            ? "0 1px 6px rgba(249,115,22,0.15)"
+            : "0 1px 3px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.04)",
+          transition: "background 80ms ease, box-shadow 80ms ease",
         }}
       >
         <span style={{ color: "var(--tb-accent)", display: "flex" }}>
@@ -317,7 +326,7 @@ function VerticalPairedButtons({
         </span>
         <span
           className="text-[11px] leading-none text-center font-semibold tracking-wide"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          style={{ color: "var(--tb-muted)" }}
         >
           {t(labelKey)}
         </span>
@@ -328,7 +337,7 @@ function VerticalPairedButtons({
   return (
     <div className="flex flex-col flex-1">
       {mkBtn(top, tPressed, setTPressed, "top")}
-      <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", flexShrink: 0 }} />
+      <div style={{ height: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
       {mkBtn(bottom, bPressed, setRPressed, "bottom")}
     </div>
   );
@@ -346,12 +355,12 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
       className="flex items-start gap-3 px-3.5 py-3 rounded-xl text-[13px] font-medium shrink-0"
       style={{
         background: success
-          ? "rgba(74, 222, 128, 0.1)"
-          : "rgba(248, 113, 113, 0.1)",
+          ? "rgba(34, 197, 94, 0.08)"
+          : "rgba(239, 68, 68, 0.08)",
         color: success ? "var(--tb-success)" : "var(--tb-danger)",
         border: `1px solid ${success
-          ? "rgba(74, 222, 128, 0.25)"
-          : "rgba(248, 113, 113, 0.22)"}`,
+          ? "rgba(34, 197, 94, 0.3)"
+          : "rgba(239, 68, 68, 0.28)"}`,
       }}
     >
       <span className="shrink-0 mt-0.5">
@@ -460,9 +469,9 @@ export default function QuickCommands({ client, disabled }: Props) {
         <div
           className="mx-4 mt-3 px-3 py-2 rounded-xl text-[12px] text-center shrink-0"
           style={{
-            background: "rgba(248, 113, 113, 0.1)",
+            background: "rgba(239,68,68,0.08)",
             color: "var(--tb-danger)",
-            border: "1px solid rgba(248, 113, 113, 0.2)",
+            border: "1px solid rgba(239,68,68,0.2)",
           }}
         >
           {error}
@@ -473,8 +482,9 @@ export default function QuickCommands({ client, disabled }: Props) {
       <div
         className="flex shrink-0 overflow-x-auto scrollbar-none"
         style={{
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid var(--tb-border)",
           background: "var(--tb-surface)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
         }}
       >
         {TABS.map(({ id, label, Icon }) => (
@@ -484,7 +494,7 @@ export default function QuickCommands({ client, disabled }: Props) {
             onClick={() => handleTabClick(id)}
             className="flex-1 py-2.5 text-[12px] font-semibold whitespace-nowrap relative flex flex-col items-center gap-1 select-none"
             style={{
-              color: activeTab === id ? "var(--tb-accent)" : "rgba(255,255,255,0.3)",
+              color: activeTab === id ? "var(--tb-accent)" : "var(--tb-muted)",
               transition: "color 150ms ease",
             }}
           >
