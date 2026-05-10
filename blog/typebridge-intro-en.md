@@ -35,11 +35,26 @@ Type on your phone, hit send, and the text lands wherever your Mac cursor is. VS
 
 Type Mode works seamlessly with voice input: open your phone's built-in keyboard, tap the mic, speak, then hit send. The words appear at the Mac cursor. **No extra speech-to-text engine needed.** Mandarin Chinese comfortably hits 200+ characters per minute — about twice as fast as most people type.
 
+<p>
+	<img src="./screenshots/mobile-en-chat-text.png" width="32%" alt="Type mode text sending" />
+	<img src="./screenshots/mobile-en-chat-image.png" width="32%" alt="Type mode image sending" />
+	<img src="./screenshots/mobile-en-chat-rich.png" width="32%" alt="Type mode rich image plus text" />
+</p>
+
+*▲ Text, images, or both — they all land on your Mac. Type, hit send, done.*
+
 > A verification code shows up on your phone. Instead of reading it aloud and typing it in — tap send. It fills itself. Writing a weekly report? Just talk through it. Watch the lines appear in Notion.
 
 ### Trackpad Mode
 
 Your phone screen turns into a Mac trackpad. One finger moves the cursor, two fingers scroll, tap to click, two-finger tap to right-click.
+
+<p>
+	<img src="./screenshots/mobile-en-touchpad-main.png" width="49%" alt="Trackpad main surface" />
+	<img src="./screenshots/mobile-en-touchpad-settings.png" width="49%" alt="Trackpad settings sheet" />
+</p>
+
+*▲ The trackpad surface on the left, sensitivity and scroll direction tweaks on the right.*
 
 > Presenting slides from the front of the room — your phone is in your hand, advancing slides and moving the cursor. No need to walk back. Browsing YouTube from the couch? The phone is your remote.
 
@@ -47,42 +62,15 @@ Your phone screen turns into a Mac trackpad. One finger moves the cursor, two fi
 
 The third tab is a shortcut panel. Screenshot, undo, select all, copy, paste, arrow keys, page navigation — the commands you reach for every day, one tap away. They execute directly on your Mac. Keyboard stays untouched.
 
-> Briefing an AI assistant — describe the task aloud, hit send, and Cursor receives it. Reviewing a document? Scroll with one hand, keep your coffee in the other.
-
----
-
-## Mobile Modes: Multi-State Screenshots
-
-Below is a full walkthrough of all three mobile modes with multiple states: Type mode (text / image / rich text+image), Trackpad mode (main surface / settings sheet), and Shortcut mode (Screenshot / Edit & Input / Page & Cursor).
-
-### Type Mode (Text / Image / Rich)
-
-<p>
-	<img src="./screenshots/mobile-en-chat-text.png" width="32%" alt="Type mode text sending" />
-	<img src="./screenshots/mobile-en-chat-image.png" width="32%" alt="Type mode image sending" />
-	<img src="./screenshots/mobile-en-chat-rich.png" width="32%" alt="Type mode rich image plus text" />
-</p>
-
-*▲ Left to right: text sending state, image sending state, and combined image+text sending state.*
-
-### Trackpad Mode (Main / Settings)
-
-<p>
-	<img src="./screenshots/mobile-en-touchpad-main.png" width="49%" alt="Trackpad main surface" />
-	<img src="./screenshots/mobile-en-touchpad-settings.png" width="49%" alt="Trackpad settings sheet" />
-</p>
-
-*▲ Left: trackpad surface. Right: settings sheet (sensitivity and scroll direction).*
-
-### Shortcut Mode (All Three Groups)
-
 <p>
 	<img src="./screenshots/mobile-en-shortcut-screenshot.png" width="32%" alt="Shortcut screenshot group" />
 	<img src="./screenshots/mobile-en-shortcut-edit.png" width="32%" alt="Shortcut edit and input group" />
 	<img src="./screenshots/mobile-en-shortcut-nav.png" width="32%" alt="Shortcut page and cursor group" />
 </p>
 
-*▲ Left to right: Screenshot, Edit & Input, and Page & Cursor groups.*
+*▲ Screenshot, Edit & Input, Page & Cursor — three groups you can tap through. The shortcuts you use every day, right on your phone.*
+
+> Briefing an AI assistant — describe the task aloud, hit send, and Cursor receives it. Reviewing a document? Scroll with one hand, keep your coffee in the other.
 
 Same WiFi. End to end on your local network. Your words never leave the room.
 
