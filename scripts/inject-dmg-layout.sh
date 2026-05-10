@@ -5,7 +5,8 @@
 set -euxo pipefail
 
 VERSION="${VERSION:-0.1.0}"
-TXT_SRC="src-tauri/resources/首次启动前必读.txt"
+TXT_ZH_SRC="src-tauri/resources/首次启动前必读.txt"
+TXT_EN_SRC="src-tauri/resources/README - First Launch.txt"
 BG_PNG="src-tauri/icons/dmg-background.png"       # 760×540 (1x) — 传给 create-dmg
 BG_PNG_2X="src-tauri/icons/dmg-background@2x.png" # 1520×1080 (2x) — Retina 用
 
@@ -24,7 +25,8 @@ for arch in aarch64 x86_64; do
   rm -rf "$STAGING"
   mkdir -p "$STAGING"
   cp -r "$APP_PATH" "$STAGING/"
-  cp "$TXT_SRC" "$STAGING/"
+  cp "$TXT_ZH_SRC" "$STAGING/"
+  cp "$TXT_EN_SRC" "$STAGING/"
 
   # 卸载同名已挂载卷（避免 create-dmg 冲突）
   hdiutil detach "/Volumes/TypeBridge" 2>/dev/null || true
@@ -43,7 +45,8 @@ for arch in aarch64 x86_64; do
     --text-size 13 \
     --icon "TypeBridge.app" 205 175 \
     --app-drop-link 555 175 \
-    --icon "首次启动前必读.txt" 380 355 \
+    --icon "首次启动前必读.txt" 305 415 \
+    --icon "README - First Launch.txt" 455 415 \
     --hide-extension "TypeBridge.app" \
     --no-internet-enable \
     "$DMG_OUT" \
@@ -65,14 +68,20 @@ for arch in aarch64 x86_64; do
   # 基础校验
   hdiutil verify "$DMG_OUT"
 
-  # 验证 TXT 文件存在
+  # 验证两个 TXT 文件都存在
   hdiutil attach -nobrowse -readonly "$DMG_OUT" -mountpoint /tmp/dmg-check
   if [ ! -f "/tmp/dmg-check/首次启动前必读.txt" ]; then
     echo "ERROR: 首次启动前必读.txt not found in DMG for $arch"
     hdiutil detach /tmp/dmg-check -force
     exit 1
   fi
+  if [ ! -f "/tmp/dmg-check/README - First Launch.txt" ]; then
+    echo "ERROR: README - First Launch.txt not found in DMG for $arch"
+    hdiutil detach /tmp/dmg-check -force
+    exit 1
+  fi
   echo "✓ 首次启动前必读.txt 存在于 DMG 中"
+  echo "✓ README - First Launch.txt 存在于 DMG 中"
   hdiutil detach /tmp/dmg-check -force
 
   rm -rf "$STAGING"
