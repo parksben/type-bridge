@@ -127,8 +127,8 @@ const DICT = {
   "scenes.quickCommands.title": { zh: "快捷指令，一触即发", en: "Shortcuts at Your Fingertips" },
   "scenes.quickCommands.subtitle": { zh: "截屏、全选、复制粘贴，一触即达", en: "Screenshot, select all, copy-paste — one tap away." },
   "scenes.quickCommands.description": {
-    zh: "切到键盘模式，常用快捷键全在手边——Cmd+Shift+4 截屏、Cmd+A 全选、Cmd+C/V 复制粘贴、Cmd+Z 撤销。手机上点一下，电脑即刻响应。",
-    en: "Keyboard mode puts every daily shortcut on your phone. Cmd+Shift+4 to screenshot, Cmd+A to select all, Cmd+C/V to copy/paste, Cmd+Z to undo. One tap on your phone, instant action on your Mac.",
+    zh: "切到快捷键模式，常用快捷键全在手边——Cmd+Shift+4 截屏、Cmd+A 全选、Cmd+C/V 复制粘贴、Cmd+Z 撤销。手机上点一下，电脑即刻响应。",
+    en: "Switch to shortcut mode and keep every daily shortcut at your fingertips — Cmd+Shift+4 to screenshot, Cmd+A to select all, Cmd+C/V to copy/paste, Cmd+Z to undo. One tap on your phone, instant action on your Mac.",
   },
   "scenes.quickCommands.details": {
     zh: [
