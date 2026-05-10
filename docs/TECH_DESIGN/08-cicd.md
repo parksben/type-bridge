@@ -109,20 +109,23 @@ hdiutil convert /tmp/dmg-rw.dmg -format UDZO -imagekey zlib-level=9 -o /tmp/dmg-
 
 ### 24.5 检查更新（v0.7.x，关于 TypeBridge tab）
 
-桌面端「关于」tab 提供半自动更新链路：
+桌面端「关于」tab 提供半自动更新链路（非阻塞状态栏版）：
 
 ```
 AboutTab (前端)
   ├─ get_app_version  → "dev:latest" / "0.1.0"
   ├─ check_update     → fetch /api/latest-version → 比版本 → UpdateCheckResult
-  └─ apply_update     → 下载 .dmg → open .dmg → app.exit(0)
+  ├─ start_update_download  → 启动后台下载任务（立即返回，不阻塞 UI）
+  └─ cancel_update_download → 取消进行中的下载任务
 ```
 
 **Rust** ([src-tauri/src/about.rs](../../src-tauri/src/about.rs))：
 - `get_app_version`：`cfg!(debug_assertions)` 时返回字符串 `"dev:latest"`，否则 `env!("CARGO_PKG_VERSION")`。CI 在 [release.yml](../../.github/workflows/release.yml) 用 sed 改 `Cargo.toml` 的版本号，所以 release build 自然能拿到正确的 tag 版本
 - `check_update`：dev 直接短路返回 `is_dev=true`；release 走 `reqwest`（rustls，无 OpenSSL 依赖）拉 `https://typebridge.parksben.xyz/api/latest-version`，按 `cfg!(target_arch)` 选 `aarch64` / `x64` 下载链接
-- `apply_update`：流式下载到 `~/Downloads/{filename}.dmg`，每个数据块 emit `typebridge://download-progress` 事件（`{downloaded, total, percent}`）；下载完成后 emit percent=100 的终态事件 → `Command::new("open")` 挂载并显示 Finder 卷 → `app.exit(0)`。用户拖入「应用程序」覆盖旧版后手动重新启动
-- **下载进度 UI**：前端 `ConfirmInstallDialog` 点击确认后监听 `typebridge://download-progress` 事件，对话框切换为进度条面板（确定/不确定两种态）；`percent >= 100` 时切换至「正在打开安装包…」过渡状态
+- `start_update_download`：在 Rust 侧创建单实例后台任务（同一时刻仅允许一个下载），通过 `CancellationToken` 支持取消。任务内部流式下载到 `~/Downloads/{filename}.dmg`，并持续 emit `typebridge://update-download-state` 事件（phase + 进度 + 字节数 + 失败原因）
+- `cancel_update_download`：触发当前任务 token cancel；下载协程收到取消信号后停止写入并删除不完整文件，向前端发送 `cancelled` 事件
+- 下载完成后发 `opening` 事件，随后 `Command::new("open")` 挂载并显示 Finder 卷，再 `app.exit(0)`。用户拖入「应用程序」覆盖旧版后手动重新启动
+- **下载进度 UI**：前端不再使用独立 modal，而是在 About 页顶部渲染与其他 tab 同风格的状态栏；状态栏根据 `typebridge://update-download-state` 切换 `ready/downloading/failed/cancelled/opening`，并提供 `取消下载` 与 `重试下载`
 
 **官网 API** ([website/app/api/latest-version/route.ts](../../website/app/api/latest-version/route.ts))：
 - **v0.9+ 优化**：不再每次调 GitHub API。CI 完成 Release 后通过 `POST /api/publish`（带 `UPLOAD_SECRET` 鉴权）把 `{version, tag_name, name, notes, published_at, download_urls}` 写到 Netlify Blobs（key: `latest-release`）。`GET /api/latest-version` 直接从 Blobs 读，响应时间从 ~300ms 降到 ~50ms，且不受 GitHub rate limit 限制

@@ -6,11 +6,13 @@
 //! 2. 用户点「检查更新」→ invoke `check_update`
 //!    - dev 构建直接返回 `is_dev=true`，前端展示「已是最新版」
 //!    - release 构建 fetch 官网 `/api/latest-version` → 比版本号
-//! 3. 有新版 → 前端弹「确认更新」对话框 → invoke `apply_update`
-//!    - 下载新版 .dmg 到 `~/Downloads/`
-//!    - 调系统 `open <dmg>` 挂载并打开 Finder
-//!    - 调用 `app.exit(0)` 退出应用
-//! 4. 用户在 Finder 里把新版 .app 拖入「应用程序」文件夹覆盖旧版
+//! 3. 有新版 → 前端 About 页顶部状态栏展示「立即下载」
+//! 4. 用户点下载 → invoke `start_update_download`
+//!    - 后台流式下载新版 .dmg 到 `~/Downloads/`
+//!    - 过程中持续 emit `typebridge://update-download-state`
+//!    - 用户可随时 invoke `cancel_update_download` 取消
+//! 5. 下载完成后调系统 `open <dmg>` 挂载并打开 Finder，再 `app.exit(0)`
+//! 6. 用户在 Finder 里把新版 .app 拖入「应用程序」文件夹覆盖旧版
 //!
 //! # 为什么不全自动 relaunch
 //!
@@ -18,10 +20,14 @@
 //! ed25519 公私钥对 + CI 集成。当前 v0.7.x 优先打通链路，签名基建放后续版本。
 //! 见 docs/REQUIREMENTS.md §2.11.5。
 
-use std::path::PathBuf;
+use std::{
+    path::PathBuf,
+    sync::{Mutex, OnceLock},
+};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
+use tokio_util::sync::CancellationToken;
 
 const LATEST_VERSION_API: &str = "https://typebridge.parksben.xyz/api/latest-version";
 const NETWORK_TIMEOUT_SECS: u64 = 15;
@@ -155,23 +161,122 @@ fn parse_semver(s: &str) -> (u32, u32, u32) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// 命令：apply_update
+// 命令：start_update_download / cancel_update_download
 // ──────────────────────────────────────────────────────────────
 
-/// `typebridge://download-progress` 事件载荷。与 AboutTab.tsx 的
-/// `DownloadProgressEvent` 接口严格对齐。
+struct ActiveDownloadTask {
+    cancel_token: CancellationToken,
+}
+
+static UPDATE_DOWNLOAD_TASK: OnceLock<Mutex<Option<ActiveDownloadTask>>> = OnceLock::new();
+
+fn download_task_slot() -> &'static Mutex<Option<ActiveDownloadTask>> {
+    UPDATE_DOWNLOAD_TASK.get_or_init(|| Mutex::new(None))
+}
+
+fn clear_active_download_task() {
+    if let Ok(mut guard) = download_task_slot().lock() {
+        *guard = None;
+    }
+}
+
 #[derive(Clone, Serialize)]
-struct DownloadProgressPayload {
-    downloaded: u64,
-    total: Option<u64>,
-    percent: Option<f32>,
+#[serde(tag = "phase", rename_all = "kebab-case")]
+enum UpdateDownloadEvent {
+    Starting {
+        version: String,
+    },
+    Downloading {
+        version: String,
+        downloaded: u64,
+        total: Option<u64>,
+        percent: Option<f32>,
+    },
+    Opening {
+        version: String,
+        downloaded: u64,
+        total: Option<u64>,
+        percent: Option<f32>,
+    },
+    Failed {
+        version: String,
+        reason: String,
+    },
+    Cancelled {
+        version: String,
+    },
+}
+
+fn emit_update_download_state(app: &AppHandle, payload: UpdateDownloadEvent) {
+    let _ = app.emit("typebridge://update-download-state", payload);
 }
 
 #[tauri::command]
-pub async fn apply_update(app: AppHandle, download_url: String) -> Result<(), String> {
+pub fn start_update_download(
+    app: AppHandle,
+    download_url: String,
+    version: String,
+) -> Result<(), String> {
     if cfg!(debug_assertions) {
         return Err("dev 构建不支持自动更新".to_string());
     }
+
+    let cancel_token = CancellationToken::new();
+    {
+        let mut guard = download_task_slot()
+            .lock()
+            .map_err(|_| "下载任务状态锁定失败".to_string())?;
+        if guard.is_some() {
+            return Err("已有进行中的更新下载任务".to_string());
+        }
+        *guard = Some(ActiveDownloadTask {
+            cancel_token: cancel_token.clone(),
+        });
+    }
+
+    tauri::async_runtime::spawn(async move {
+        let result = run_update_download_task(&app, &download_url, &version, cancel_token).await;
+        if let Err(reason) = result {
+            emit_update_download_state(
+                &app,
+                UpdateDownloadEvent::Failed {
+                    version: version.clone(),
+                    reason,
+                },
+            );
+        }
+        clear_active_download_task();
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn cancel_update_download() -> Result<(), String> {
+    let guard = download_task_slot()
+        .lock()
+        .map_err(|_| "下载任务状态锁定失败".to_string())?;
+
+    if let Some(task) = guard.as_ref() {
+        task.cancel_token.cancel();
+        Ok(())
+    } else {
+        Err("当前没有进行中的更新下载任务".to_string())
+    }
+}
+
+async fn run_update_download_task(
+    app: &AppHandle,
+    download_url: &str,
+    version: &str,
+    cancel_token: CancellationToken,
+) -> Result<(), String> {
+    emit_update_download_state(
+        app,
+        UpdateDownloadEvent::Starting {
+            version: version.to_string(),
+        },
+    );
 
     // 1. 下载到 ~/Downloads/{filename}
     let downloads_dir = dirs::download_dir()
@@ -179,10 +284,33 @@ pub async fn apply_update(app: AppHandle, download_url: String) -> Result<(), St
     std::fs::create_dir_all(&downloads_dir)
         .map_err(|e| format!("创建 Downloads 目录失败：{}", e))?;
 
-    let filename = filename_from_url(&download_url);
+    let filename = filename_from_url(download_url);
     let target_path: PathBuf = downloads_dir.join(filename);
 
-    download_to_file(&app, &download_url, &target_path).await?;
+    let outcome = download_to_file(app, download_url, version, &target_path, &cancel_token).await?;
+    let (downloaded, total) = match outcome {
+        DownloadWriteOutcome::Cancelled => {
+            remove_partial_file(&target_path);
+            emit_update_download_state(
+                app,
+                UpdateDownloadEvent::Cancelled {
+                    version: version.to_string(),
+                },
+            );
+            return Ok(());
+        }
+        DownloadWriteOutcome::Completed { downloaded, total } => (downloaded, total),
+    };
+
+    emit_update_download_state(
+        app,
+        UpdateDownloadEvent::Opening {
+            version: version.to_string(),
+            downloaded,
+            total: total.or(Some(downloaded)),
+            percent: Some(100.0),
+        },
+    );
 
     // 2. 用系统 `open` 挂载 .dmg 并显示 Finder 卷
     std::process::Command::new("open")
@@ -198,6 +326,12 @@ pub async fn apply_update(app: AppHandle, download_url: String) -> Result<(), St
     Ok(())
 }
 
+fn remove_partial_file(target: &PathBuf) {
+    if target.exists() {
+        let _ = std::fs::remove_file(target);
+    }
+}
+
 fn filename_from_url(url: &str) -> String {
     url.rsplit('/')
         .next()
@@ -206,7 +340,18 @@ fn filename_from_url(url: &str) -> String {
         .to_string()
 }
 
-async fn download_to_file(app: &AppHandle, url: &str, target: &PathBuf) -> Result<(), String> {
+enum DownloadWriteOutcome {
+    Completed { downloaded: u64, total: Option<u64> },
+    Cancelled,
+}
+
+async fn download_to_file(
+    app: &AppHandle,
+    url: &str,
+    version: &str,
+    target: &PathBuf,
+    cancel_token: &CancellationToken,
+) -> Result<DownloadWriteOutcome, String> {
     use futures_util::StreamExt;
     use std::io::Write;
 
@@ -233,7 +378,17 @@ async fn download_to_file(app: &AppHandle, url: &str, target: &PathBuf) -> Resul
     let mut stream = resp.bytes_stream();
     let mut downloaded: u64 = 0;
 
-    while let Some(chunk) = stream.next().await {
+    loop {
+        let next_chunk = tokio::select! {
+            _ = cancel_token.cancelled() => {
+                return Ok(DownloadWriteOutcome::Cancelled);
+            }
+            item = stream.next() => item,
+        };
+
+        let Some(chunk) = next_chunk else {
+            break;
+        };
         let bytes = chunk.map_err(|e| format!("下载流中断：{}", e))?;
         downloaded += bytes.len() as u64;
         file.write_all(&bytes)
@@ -246,21 +401,16 @@ async fn download_to_file(app: &AppHandle, url: &str, target: &PathBuf) -> Resul
                 (downloaded as f32 / t as f32 * 100.0).min(99.9)
             }
         });
-        let _ = app.emit(
-            "typebridge://download-progress",
-            DownloadProgressPayload { downloaded, total, percent },
+        emit_update_download_state(
+            app,
+            UpdateDownloadEvent::Downloading {
+                version: version.to_string(),
+                downloaded,
+                total,
+                percent,
+            },
         );
     }
 
-    // 下载流结束 → 发送终态事件（percent=100），前端据此切换「正在打开安装包…」状态
-    let _ = app.emit(
-        "typebridge://download-progress",
-        DownloadProgressPayload {
-            downloaded,
-            total: total.or(Some(downloaded)),
-            percent: Some(100.0),
-        },
-    );
-
-    Ok(())
+    Ok(DownloadWriteOutcome::Completed { downloaded, total })
 }
