@@ -51,6 +51,11 @@
 | `image` | `{clientMessageId, data:base64, mime}` | `{success, reason?}` | |
 | `key` | `{clientMessageId, code}` | `{success, reason?}` | 单键，`code` 受 `ALLOWED_KEY_CODES` 白名单，入队，详见 §35.11 |
 | `key_combo` | `{clientMessageId, combo}` | `{success, reason?}` | 快捷键，`combo` 受 `ALLOWED_COMBOS` 白名单，**直接调 injector 不入队** |
+| `screenshot` | `{userToken, kind:"screen"\|"window"}` | `{success, reason?}` | 截图存剪贴板；需要屏幕录制权限，详见 §35.12 |
+| `mouse_move` | `{userToken, dx, dy}` | （无 ack） | 鼠标相对移动 |
+| `mouse_scroll` | `{userToken, dx, dy}` | （无 ack） | 双指滚动 |
+| `mouse_click` | `{userToken, button, action}` | （无 ack） | 鼠标按键 down/up |
+| `mouse_zoom` | `{userToken, delta}` | （无 ack） | 双指捏合缩放（Magnify 手势） |
 
 **服务端 → 客户端**（`socket.emit`）：
 
@@ -391,3 +396,29 @@ if io_for_idle.get_socket(b.socket_sid).is_some() {
 ```
 
 **不再单纯依赖 `last_active_ms`**（消息活跃时间）。原因：手机锁屏/后台时不发消息，但 Socket.IO Engine.IO 会持续 ping/pong 保活。纯时间戳判断会误踢静默连接。`io.get_socket(sid).is_some()` 通过 socketioxide 直接查询底层 socket 是否还存在于内存，准确反映连接状态。
+
+### §35.12 截图功能（screenshot event）
+
+#### 35.12.1 概述
+
+手机端"快捷键"面板的截图 Tab 提供三个按钮：截取当前窗口、截取当前屏幕、粘贴截图（触发 Cmd+V）。截图结果存入剪贴板，用户再点"粘贴截图"将其注入到桌面焦点输入框。
+
+#### 35.12.2 权限要求（macOS 屏幕录制）
+
+macOS 10.15（Catalina）起，截图需要**屏幕录制权限**（TCC `kTCCServiceScreenCapture`）。未授权时 `screencapture` 产出的图像只有桌面壁纸，无任何窗口内容。
+
+Rust 侧在每次截图前调用 `CGPreflightScreenCaptureAccess()`：
+- 返回 `true` → 有权限，继续截图
+- 返回 `false` → 调 `CGRequestScreenCaptureAccess()`（触发系统引导弹窗），并向手机返回 `{success:false, reason:"需要屏幕录制权限…"}` 提示用户前往系统设置授权
+
+#### 35.12.3 窗口 ID 获取（screenshot_window 实现）
+
+旧实现问题：osascript 通过 `frontmost is true` 查找前台进程，有时会匹配到 TypeBridge 自身（尤其是 TypeBridge 主窗口处于可见状态时），导致截取到空白的 TypeBridge 窗口。
+
+新实现流程：
+1. 在 Rust 层用 `NSWorkspace::sharedWorkspace().frontmostApplication()` 获取前台 app 的 PID
+2. 若 PID == 本进程（TypeBridge 自身）→ 回退到全屏截图
+3. 否则将 PID 传给 osascript，用 `first process whose unix id is {pid}` 精确查找，再取 `id of first window`（CGWindowID）
+4. 以 `screencapture -c -x -l {windowID}` 截取该窗口存剪贴板；失败时回退到全屏截图
+
+相比旧方案，新方案用 NSWorkspace 替代 osascript 做前台进程识别，避免了 `frontmost` 状态在两次 IPC 调用之间可能发生变化的竞态，也明确排除了 TypeBridge 自身干扰。
