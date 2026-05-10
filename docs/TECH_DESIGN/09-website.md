@@ -44,7 +44,7 @@ website/
 │       ├── theme-toggle.tsx
 │       ├── lang-toggle.tsx         ← 中英文切换按钮
 │       ├── hero.tsx                ← 升级版 HeroBanner（4 端 → 桥接 → 桌面）
-│       ├── scenes.tsx              ← 5 场景 pill tab 轮播
+│       ├── scenes.tsx              ← 4 场景 pill tab 轮播
 │       ├── flow.tsx                ← 左→右 SVG 流程图
 │       ├── download.tsx            ← 动态版本号 + 双架构下载卡片
 │       └── footer.tsx
