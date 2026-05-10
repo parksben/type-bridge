@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@netlify/blobs";
-import { generateBadgeSvg, formatCount } from "../../lib/badge";
+import { generateBadgeSvg, formatCount } from "../../../lib/badge";
 
 // 直接返回渲染好的 SVG badge，无需 shields.io 中转。
 // 1 小时 ISR 缓存，避免每次请求都读 Blobs。
