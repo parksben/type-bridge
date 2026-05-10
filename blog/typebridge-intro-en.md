@@ -21,7 +21,7 @@ TypeBridge is a macOS desktop app. In one sentence: **it turns your iPhone or An
 No Bluetooth pairing. No shared Apple ID. No cable. Just open the app, scan a QR code with your phone, and you're connected.
 
 ![Screenshot 1: TypeBridge desktop main window](./screenshots/1-app-main-window-en.png)
-*▲ Fig.1 | TypeBridge desktop main window (WebChat connection tab, scan to connect your phone)*
+*▲ Desktop main window. Scan with your phone to control your Mac.*
 
 Type on your phone — the text lands wherever your Mac cursor is. Use your phone screen as a trackpad — one finger moves, two fingers scroll. And the best part: tap the microphone on your phone's keyboard, speak, and your words appear on the Mac.
 
