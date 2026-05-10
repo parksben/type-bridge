@@ -6,7 +6,8 @@ set -euxo pipefail
 
 VERSION="${VERSION:-0.1.0}"
 TXT_SRC="src-tauri/resources/首次启动前必读.txt"
-BG_PNG="src-tauri/icons/dmg-background.png"
+BG_PNG="src-tauri/icons/dmg-background.png"       # 760×540 (1x) — 传给 create-dmg
+BG_PNG_2X="src-tauri/icons/dmg-background@2x.png" # 1520×1080 (2x) — Retina 用
 
 for arch in aarch64 x86_64; do
   case "$arch" in
@@ -49,6 +50,17 @@ for arch in aarch64 x86_64; do
     "$STAGING/" || { CODE=$?; [ "$CODE" -eq 2 ] || exit "$CODE"; }
 
   echo "✓ 创建完成: $DMG_OUT ($(ls -lh "$DMG_OUT" | awk '{print $5}'))"
+
+  # 注入 @2x 背景图（Retina 显示器自动选用）
+  # create-dmg 已写好 DS_Store，只需把 2x 文件加进 .background/ 即可
+  RW_DMG="/tmp/dmg-rw-${arch}.dmg"
+  hdiutil convert "$DMG_OUT" -format UDRW -o "$RW_DMG" -ov
+  hdiutil attach -nobrowse "$RW_DMG" -mountpoint /tmp/dmg-inject
+  cp "$BG_PNG_2X" /tmp/dmg-inject/.background/dmg-background@2x.png
+  hdiutil detach /tmp/dmg-inject -force
+  hdiutil convert "$RW_DMG" -format UDZO -o "$DMG_OUT" -ov
+  rm -f "$RW_DMG"
+  echo "✓ 注入 @2x 背景图完成"
 
   # 基础校验
   hdiutil verify "$DMG_OUT"
