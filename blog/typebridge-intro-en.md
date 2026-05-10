@@ -2,6 +2,8 @@
 
 > Open the app. Scan a code. Your phone just became a wireless keyboard and trackpad for your Mac.
 
+Website: [typebridge.parksben.xyz](https://typebridge.parksben.xyz) · GitHub: [parksben/type-bridge](https://github.com/parksben/type-bridge)
+
 ---
 
 Ever been here?
@@ -49,33 +51,40 @@ The third tab is a shortcut panel. Screenshot, undo, select all, copy, paste, ar
 
 ---
 
-## Speak into Your Phone. Words on Your Mac.
+## Mobile Modes: Multi-State Screenshots
 
-This is my favorite part.
+Below is a full walkthrough of all three mobile modes with multiple states: Type mode (text / image / rich text+image), Trackpad mode (main surface / settings sheet), and Shortcut mode (Screenshot / Edit & Input / Page & Cursor).
 
-You're on TypeBridge's WebChat typing page. Tap the mic on your phone's keyboard and say: "Write a user growth analysis report, focusing on..."
+### Type Mode (Text / Image / Rich)
 
-Hit send. On your Mac — no matter which app is frontmost, ChatGPT in the browser, Cursor, Feishu Docs — the words start filling in at the blinking cursor. One line after another.
+<p>
+	<img src="./screenshots/mobile-en-chat-text.png" width="32%" alt="Type mode text sending" />
+	<img src="./screenshots/mobile-en-chat-image.png" width="32%" alt="Type mode image sending" />
+	<img src="./screenshots/mobile-en-chat-rich.png" width="32%" alt="Type mode rich image plus text" />
+</p>
 
-![Screenshot 2: Mobile WebChat chat page](./screenshots/2-mobile-webchat-chat-en.png)
-*▲ Fig.2 | Mobile WebChat chat page (typing mode, showing message sending and injection status)*
+*▲ Left to right: text sending state, image sending state, and combined image+text sending state.*
 
-**Zero cloud dependency for voice.** The chain is dead simple: your phone's built-in speech recognition → TypeBridge over your LAN → clipboard + Cmd+V into the active input field on your Mac.
+### Trackpad Mode (Main / Settings)
+
+<p>
+	<img src="./screenshots/mobile-en-touchpad-main.png" width="49%" alt="Trackpad main surface" />
+	<img src="./screenshots/mobile-en-touchpad-settings.png" width="49%" alt="Trackpad settings sheet" />
+</p>
+
+*▲ Left: trackpad surface. Right: settings sheet (sensitivity and scroll direction).*
+
+### Shortcut Mode (All Three Groups)
+
+<p>
+	<img src="./screenshots/mobile-en-shortcut-screenshot.png" width="32%" alt="Shortcut screenshot group" />
+	<img src="./screenshots/mobile-en-shortcut-edit.png" width="32%" alt="Shortcut edit and input group" />
+	<img src="./screenshots/mobile-en-shortcut-nav.png" width="32%" alt="Shortcut page and cursor group" />
+</p>
+
+*▲ Left to right: Screenshot, Edit & Input, and Page & Cursor groups.*
 
 Same WiFi. End to end on your local network. Your words never leave the room.
-
----
-
-## Shortcut Panel
-
-The "Shortcut" tab has three sections: **Screenshot**, **Edit & Input**, and **Page & Cursor**.
-
-Screenshots — tap the Screenshot tab on your phone, choose full screen or current window, and your Mac captures it. Select all, copy, paste, undo, redo — document editing in a few taps. Arrow keys, Home/End, page navigation — browse code and docs hands-free.
-
-![Screenshot 3: Mobile shortcut panel](./screenshots/3-mobile-shortcut-panel-en.png)
-*▲ Fig.3 | Mobile WebChat "Shortcut" tab (Screenshot / Edit & Input / Page & Cursor)*
-
-> It moves the shortcuts you actually use every day from your keyboard to your phone. That's it.
 
 ---
 
