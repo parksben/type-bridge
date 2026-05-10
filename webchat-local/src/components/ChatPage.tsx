@@ -10,16 +10,26 @@ import { t } from "@/i18n";
 
 type Props = {
   client: WebChatClient;
+  initialMessages?: ChatMessage[];
+  initialMode?: PageMode;
+  demoTouchpadSettings?: boolean;
+  demoKeyboardTab?: "screenshot" | "edit" | "nav";
 };
 
 type WifiStatus = "connected" | "reconnecting" | "disconnected";
 type PageMode = "chat" | "touchpad" | "keyboard";
 
-export default function ChatPage({ client }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export default function ChatPage({
+  client,
+  initialMessages,
+  initialMode,
+  demoTouchpadSettings = false,
+  demoKeyboardTab = "screenshot",
+}: Props) {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => initialMessages ?? []);
   const [wifi, setWifi] = useState<WifiStatus>("connected");
   const [imageError, setImageError] = useState<string | null>(null);
-  const [mode, setMode] = useState<PageMode>("chat");
+  const [mode, setMode] = useState<PageMode>(initialMode ?? "chat");
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -202,13 +212,21 @@ export default function ChatPage({ client }: Props) {
 
       {/* ── Touchpad mode ─────────────────────────────────── */}
       {mode === "touchpad" && (
-        <TouchPad client={client} disabled={wifi === "disconnected"} />
+        <TouchPad
+          client={client}
+          disabled={wifi === "disconnected"}
+          initialShowSettings={demoTouchpadSettings}
+        />
       )}
 
       {/* ── Keyboard (QuickCommands) mode ─────────────────── */}
       {mode === "keyboard" && (
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <QuickCommands client={client} disabled={wifi === "disconnected"} />
+          <QuickCommands
+            client={client}
+            disabled={wifi === "disconnected"}
+            initialTab={demoKeyboardTab}
+          />
         </div>
       )}
     </main>

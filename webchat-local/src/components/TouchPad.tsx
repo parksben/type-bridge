@@ -6,6 +6,7 @@ import { t } from "@/i18n";
 type Props = {
   client: WebChatClient;
   disabled: boolean;
+  initialShowSettings?: boolean;
 };
 
 type TouchData = { x: number; y: number };
@@ -35,10 +36,10 @@ function loadScrollReversed(): boolean {
   }
 }
 
-export default function TouchPad({ client, disabled }: Props) {
+export default function TouchPad({ client, disabled, initialShowSettings = false }: Props) {
   const [sensitivity, setSensitivity] = useState<number>(loadSensitivity);
   const [scrollReversed, setScrollReversed] = useState<boolean>(loadScrollReversed);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(initialShowSettings);
   const [landscape, setLandscape] = useState(false);
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);

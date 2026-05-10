@@ -35,6 +35,7 @@ import { t, type TKey } from "@/i18n";
 type Props = {
   client: WebChatClient;
   disabled: boolean;
+  initialTab?: TabId;
 };
 
 type CmdSpec =
@@ -377,8 +378,8 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
 
 const TAB_IDS: TabId[] = ["screenshot", "edit", "nav"];
 
-export default function QuickCommands({ client, disabled }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>("screenshot");
+export default function QuickCommands({ client, disabled, initialTab = "screenshot" }: Props) {
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [error, setError] = useState<string | null>(null);
   const [screenshotFeedback, setScreenshotFeedback] = useState<ScreenshotFeedback>(null);
   const isProgrammaticScroll = useRef(false);
