@@ -225,8 +225,6 @@ loading → 读 URL ?s=<sessionId> 并 UA 检查
 - `QuickCommands`：Tab 栏橙色光晕指示线，所有按钮使用 `.keycap` 或半透明深色卡片，分割线改为渐变线
 - `ChatPage` Header：Tab 切换器改为橙色玻璃高亮（active 态 `rgba(249,115,22,0.18)` 底 + 橙色文字 + 光晕）
 
-**博客截图同步规则**：`blog/typebridge-intro-zh.md` / `blog/typebridge-intro-en.md` 的手机端 WebChat 截图资源必须随上述 UI 变更同步更新；如果图片消息示例过于像测试素材，应替换为更有内容感的真实图片后重新截取。
-
 ### 35.7 Tauri 集成
 
 **tauri.conf.json**：
