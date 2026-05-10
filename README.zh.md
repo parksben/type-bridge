@@ -74,7 +74,7 @@ macOS 13+（Apple Silicon 或 Intel）
 | 依赖 | 版本 |
 |---|---|
 | Node.js | 20+ |
-| Rust | stable (1.75+) |
+| Rust | stable (1.95+) |
 | Go | 1.21+ |
 | Xcode Command Line Tools | 必须安装 |
 
