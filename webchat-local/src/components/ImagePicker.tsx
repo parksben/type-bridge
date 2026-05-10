@@ -1,24 +1,20 @@
 import { useRef } from "react";
-import { Image as ImageIcon, X } from "lucide-react";
+import { Image as ImageIcon } from "lucide-react";
 import { compressImage, type CompressResult } from "@/lib/image";
 import { t } from "@/i18n";
 
 type Props = {
-  /** 已选但还没发送的图片（展示预览） */
-  staged: { previewUrl: string; compressed: CompressResult } | null;
   onPicked: (data: { previewUrl: string; compressed: CompressResult }) => void;
-  onCleared: () => void;
   onError: (message: string) => void;
 };
 
-/// 图片选择器：点击按钮 → 打开系统 picker（相机 or 相册）→ 压缩 → 展示预览
-export default function ImagePicker({ staged, onPicked, onCleared, onError }: Props) {
+/// 图片选择器：点击按钮 → 打开系统 picker → 压缩 → 回调
+export default function ImagePicker({ onPicked, onError }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
     try {
       const compressed = await compressImage(file);
-      // 重建一个 Blob 用于预览（避免占用太多内存）
       const bin = atob(compressed.base64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -30,32 +26,6 @@ export default function ImagePicker({ staged, onPicked, onCleared, onError }: Pr
     }
   }
 
-  if (staged) {
-    return (
-      <div
-        className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-        style={{ background: "var(--tb-surface)", border: "1px solid var(--tb-border)" }}
-      >
-        <img
-          src={staged.previewUrl}
-          alt=""
-          className="w-10 h-10 object-cover rounded-md"
-        />
-        <button
-          type="button"
-          onClick={() => {
-            URL.revokeObjectURL(staged.previewUrl);
-            onCleared();
-          }}
-          aria-label={t("composer.imageRemoveAria")}
-          className="text-[var(--tb-muted)] p-1 -m-1"
-        >
-          <X size={14} strokeWidth={2} />
-        </button>
-      </div>
-    );
-  }
-
   return (
     <>
       <input
@@ -65,7 +35,7 @@ export default function ImagePicker({ staged, onPicked, onCleared, onError }: Pr
         style={{ display: "none" }}
         onChange={(e) => {
           const file = e.target.files?.[0];
-          e.target.value = ""; // 允许连续选同一张
+          e.target.value = "";
           if (file) void handleFile(file);
         }}
       />

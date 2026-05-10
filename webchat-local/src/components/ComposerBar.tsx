@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, X } from "lucide-react";
 import ImagePicker from "./ImagePicker";
 import type { CompressResult } from "@/lib/image";
 import { t } from "@/i18n";
 
-type StagedImage = { previewUrl: string; compressed: CompressResult };
+type StagedImage = { id: string; previewUrl: string; compressed: CompressResult };
 
 type Props = {
   onSendText: (text: string) => void;
@@ -14,6 +14,9 @@ type Props = {
   disabled: boolean;
 };
 
+let _idCounter = 0;
+function nextId() { return String(++_idCounter); }
+
 export default function ComposerBar({
   onSendText,
   onSendTextAndEnter,
@@ -22,7 +25,7 @@ export default function ComposerBar({
   disabled,
 }: Props) {
   const [text, setText] = useState("");
-  const [staged, setStaged] = useState<StagedImage | null>(null);
+  const [staged, setStaged] = useState<StagedImage[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -33,16 +36,37 @@ export default function ComposerBar({
     taRef.current.style.height = `${Math.min(120, taRef.current.scrollHeight)}px`;
   }, [text]);
 
-  function handleSendPress() {
+  function addImage(data: { previewUrl: string; compressed: CompressResult }) {
+    setStaged((prev) => [...prev, { id: nextId(), ...data }]);
+  }
+
+  function removeImage(id: string) {
+    setStaged((prev) => {
+      const item = prev.find((s) => s.id === id);
+      if (item) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((s) => s.id !== id);
+    });
+  }
+
+  async function handleSendPress() {
     if (disabled) return;
-    if (staged) {
-      onSendImage(staged.compressed, staged.previewUrl);
-      setStaged(null);
-      return;
+    const hasImages = staged.length > 0;
+    const hasText = text.trim().length > 0;
+    if (!hasImages && !hasText) return;
+
+    // 先发所有图片
+    if (hasImages) {
+      const toSend = [...staged];
+      setStaged([]);
+      for (const img of toSend) {
+        onSendImage(img.compressed, img.previewUrl);
+      }
     }
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setShowConfirm(true);
+
+    // 有文字再弹确认
+    if (hasText) {
+      setShowConfirm(true);
+    }
   }
 
   function confirmTextOnly() {
@@ -57,7 +81,7 @@ export default function ComposerBar({
     if (trimmed) { onSendTextAndEnter(trimmed); setText(""); }
   }
 
-  const canSend = !disabled && (staged !== null || text.trim().length > 0);
+  const canSend = !disabled && (staged.length > 0 || text.trim().length > 0);
 
   return (
     <>
@@ -73,15 +97,12 @@ export default function ComposerBar({
             style={{ background: "var(--tb-surface)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Title */}
             <div
               className="px-5 py-3.5 text-center text-[13px] font-medium"
               style={{ color: "var(--tb-muted)", borderBottom: "1px solid var(--tb-border)" }}
             >
               {t("chat.sendConfirmTitle")}
             </div>
-
-            {/* 仅发送文本 */}
             <button
               type="button"
               onClick={confirmTextOnly}
@@ -90,8 +111,6 @@ export default function ComposerBar({
             >
               {t("chat.sendTextOnly")}
             </button>
-
-            {/* 发送并提交 */}
             <button
               type="button"
               onClick={confirmTextAndEnter}
@@ -100,8 +119,6 @@ export default function ComposerBar({
             >
               {t("chat.sendTextAndEnter")}
             </button>
-
-            {/* 取消 */}
             <button
               type="button"
               onClick={() => setShowConfirm(false)}
@@ -116,17 +133,46 @@ export default function ComposerBar({
 
       {/* ── Input bar ──────────────────────────────────────── */}
       <div
-        className="border-t safe-area-bottom"
+        className="border-t safe-area-bottom shrink-0"
         style={{
           background: "var(--tb-surface)",
           borderColor: "var(--tb-border)",
         }}
       >
+        {/* ── Attachments strip（仅有图片时显示）──────────── */}
+        {staged.length > 0 && (
+          <div
+            className="flex gap-2 px-3 pt-2.5 pb-1 overflow-x-auto scrollbar-none"
+          >
+            {staged.map((img) => (
+              <div key={img.id} className="relative shrink-0">
+                <img
+                  src={img.previewUrl}
+                  alt=""
+                  className="w-14 h-14 object-cover rounded-xl"
+                  style={{ border: "1px solid var(--tb-border)" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(img.id)}
+                  aria-label={t("composer.imageRemoveAria")}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "var(--tb-text)",
+                    color: "var(--tb-surface)",
+                  }}
+                >
+                  <X size={11} strokeWidth={2.5} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Input row ──────────────────────────────────── */}
         <div className="flex items-end gap-2 px-3 py-2.5">
           <ImagePicker
-            staged={staged}
-            onPicked={(d) => setStaged(d)}
-            onCleared={() => setStaged(null)}
+            onPicked={addImage}
             onError={onImageError}
           />
 
@@ -141,13 +187,12 @@ export default function ComposerBar({
               ref={taRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={staged ? t("composer.placeholderImageReady") : t("composer.placeholder")}
+              placeholder={t("composer.placeholder")}
               rows={1}
-              disabled={!!staged}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey && !("ontouchstart" in window)) {
                   e.preventDefault();
-                  handleSendPress();
+                  void handleSendPress();
                 }
               }}
               className="w-full bg-transparent outline-none resize-none text-[15px] leading-snug"
@@ -156,22 +201,20 @@ export default function ComposerBar({
             />
           </div>
 
-          {!staged && (
-            <button
-              type="button"
-              onClick={handleSendPress}
-              disabled={!canSend}
-              aria-label={t("composer.sendAria")}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-              style={{
-                background: canSend ? "var(--tb-accent)" : "var(--tb-bg)",
-                color: canSend ? "white" : "var(--tb-muted)",
-                border: canSend ? "none" : "1px solid var(--tb-border)",
-              }}
-            >
-              <Send size={17} strokeWidth={2.2} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => void handleSendPress()}
+            disabled={!canSend}
+            aria-label={t("composer.sendAria")}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            style={{
+              background: canSend ? "var(--tb-accent)" : "var(--tb-bg)",
+              color: canSend ? "white" : "var(--tb-muted)",
+              border: canSend ? "none" : "1px solid var(--tb-border)",
+            }}
+          >
+            <Send size={17} strokeWidth={2.2} />
+          </button>
         </div>
       </div>
     </>
