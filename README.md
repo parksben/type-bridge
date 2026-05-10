@@ -1,144 +1,134 @@
 <div align="center">
   <img src="src/assets/icons/typebridge.png" alt="TypeBridge Logo" width="96" height="96" />
 <h1>TypeBridge</h1>
-<p><strong>手机即键鼠</strong></p>
+<p><strong>Phone as Keyboard &amp; Mouse</strong></p>
 </div>
 
 <p align="center">
-  <a href="https://typebridge.parksben.xyz"><strong>官网</strong></a>
+  <a href="https://typebridge.parksben.xyz"><strong>Website</strong></a>
   &nbsp;·&nbsp;
-  <a href="https://typebridge.parksben.xyz/#download"><strong>下载</strong></a>
+  <a href="https://typebridge.parksben.xyz/#download"><strong>Download</strong></a>
   &nbsp;·&nbsp;
-  <a href="README.en.md">English</a>
+  <a href="README.zh.md">中文</a>
 </p>
 
 <p align="center">
-  <img src="public/readme-hero-concept.png" alt="TypeBridge 手机即键鼠概念图" />
+  <img src="public/readme-hero-concept.png" alt="TypeBridge phone-as-keyboard-and-mouse concept graphic" />
 </p>
 
 ---
 
-## 👋 TypeBridge 是什么？
+## 👋 What is TypeBridge?
 
-TypeBridge 是一款 macOS 菜单栏应用。打开 App、扫个码，手机立刻变成 Mac 的无线键盘和触控板——打字、控鼠标、语音输入，一部手机全搞定。
+TypeBridge is a macOS menu bar app. Open the app, scan a code — your phone instantly becomes a wireless keyboard and trackpad for your Mac. Type, control the cursor, or use your voice, all from one device.
 
-你也可以通过飞书、钉钉、企业微信机器人发送消息，消息会自动注入桌面当前聚焦的输入框。
+You can also send messages through Feishu, DingTalk, or WeCom bots — they'll land right where your cursor is on the desktop.
 
-## 🧩 它解决什么问题？
+## 🧩 Why does this exist?
 
-演示 PPT 时站在远处想遥控电脑？躺沙发刷网页不想起身？用 AI 写代码、写文档时在手机和电脑之间来回传文字？
+Presenting slides from across the room? Browsing from the couch and don't want to get up? Tired of copying text back and forth between your phone and AI coding tools?
 
-TypeBridge 做的事很简单：**把手机变成 Mac 的无线键盘和触控板**。打字、控制光标、语音输入，一条扫码的事儿。
+TypeBridge does one thing well: **turn your phone into a wireless keyboard and trackpad for your Mac**. Type, move the cursor, use your voice — just scan a code and you're set.
 
-## ✨ 主要能力
+## ✨ Highlights
 
-| 能力 | |
+| Feature | |
 |---|---|
-| **触控板模式** | 单指移动光标，双指滚动页面，点按左键右键。不用蓝牙、不用配对，扫码就能用。 |
-| **文字输入** | 手机上打字，电脑上出字。光标在哪，字就落在哪。支持微信/飞书/钉钉/企微输入法的语音转文字。 |
-| **快捷指令** | 一键发送方向键、Cmd+Z/X/C/V、Enter、Escape 等常用快捷键，省去够键盘的麻烦。 |
-| **内置 WebChat** | 不想配 IM 机器人时，启动局域网 WebChat，手机扫码输入 OTP 即连。不走云端，消息只在同一局域网流转。 |
-| **IM 机器人接入** | 飞书、钉钉、企业微信三个渠道，发消息自动注入当前聚焦输入框。多条消息按 FIFO 顺序处理，不会抢焦点打架。 |
-| **通用粘贴策略** | 通过剪贴板 + `Cmd+V` 注入，VS Code、Terminal、浏览器、Obsidian、Slack 等常见应用都能用。 |
-| **图片也能传** | IM 里发来的图片写入系统剪贴板，再粘贴到目标应用。 |
-| **可选自动提交** | 粘贴后可以自动按 `Enter`，也可以换成你自己的提交按键。适合聊天、终端、AI 对话框。 |
-| **应用更新更顺滑** | 关于页顶部内嵌更新状态栏，实时显示下载进度，支持取消与失败后重试，不阻塞继续使用。 |
+| **Trackpad mode** | Move the cursor with one finger, scroll with two, tap to click. No Bluetooth. No pairing. Scan and go. |
+| **Text input** | Type on your phone, text appears on your Mac — wherever the cursor is. Voice-to-text works too, using your phone's built-in input method. |
+| **Quick commands** | One-tap shortcuts: arrow keys, Cmd+Z/X/C/V, Enter, Escape, and more. No need to reach for the keyboard. |
+| **Built-in WebChat** | No bot setup needed. Start a local WebChat session, scan the QR code, enter the OTP, and you're connected. Traffic stays on your LAN. |
+| **IM bot support** | Feishu, DingTalk, and WeCom bots feed into the same FIFO queue. Messages are handled one at a time — no focus conflicts. |
+| **Works by pasting** | TypeBridge writes to the clipboard and simulates `Cmd+V`, keeping it compatible with VS Code, Terminal, browsers, Obsidian, Slack, and more. |
+| **Image support** | Images sent through IM channels are injected via the system clipboard. |
+| **Optional auto-submit** | After pasting, TypeBridge can press `Enter` or a custom key. Handy for chat windows, terminals, and AI assistants. |
 
-## 🔄 使用方式
+## 🔄 How it works
 
-1. 在桌面端启动 TypeBridge，启动 WebChat 会话。
-2. 手机扫码、输入 OTP，进入打字或触控板模式。
-3. 打字 / 语音 / 控制光标，桌面端即时响应。
-4. 如果开启了自动提交，粘贴后自动补 `Enter` 或自定义按键。
-5. 也可以用飞书、钉钉、企微机器人发消息，消息写入同一 FIFO 队列串行注入。
+1. Launch TypeBridge on your Mac and start a WebChat session.
+2. Scan the QR code on your phone, enter the OTP, and switch to typing or trackpad mode.
+3. Type, use voice input, or control the cursor — your Mac responds instantly.
+4. With auto-submit enabled, TypeBridge sends `Enter` or your configured key after each paste.
+5. You can also use Feishu, DingTalk, or WeCom bots — messages go into the same FIFO queue.
 
-## 📡 支持渠道
+## 📡 Supported channels
 
-| 渠道 | 需要什么 | 适用场景 |
+| Channel | What you need | Best for |
 |---|---|---|
-| **WebChat** | 无需账号。启动会话，扫码即连。 | 个人使用、快速试用、离线场景 |
-| **飞书** | 自建应用（App ID + Secret） | 已在用飞书的团队 |
-| **钉钉** | 企业内部应用（Client ID + Secret，Stream 模式） | 已在用钉钉的团队 |
-| **企业微信** | 智能机器人（Bot ID + Secret） | 已在用企业微信的团队 |
+| **WebChat** | No account. Start a session and scan the QR code. | Personal use, quick trials, offline workflows |
+| **Feishu** | Self-built app (App ID + Secret) | Teams already using Feishu |
+| **DingTalk** | Internal app (Client ID + Secret, Stream Mode) | Teams already using DingTalk |
+| **WeCom** | Smart Bot (Bot ID + Secret) | Teams already using WeCom |
 
-## 🖥️ 系统要求
+## 🖥️ System requirements
 
-macOS 13+（Apple Silicon 或 Intel）
+macOS 13+ (Apple Silicon or Intel)
 
-首次启动会申请**辅助功能**权限。它只用于向前台应用发送 `Cmd+V` 和提交按键；TypeBridge 不会读取或监控屏幕内容。
+On first launch, TypeBridge asks for **Accessibility** permission. It is used to send `Cmd+V` and optional submit keys to the frontmost app; TypeBridge does not read or monitor your screen.
 
-## 🛠️ 开发
+## 🛠️ Development
 
-### 环境要求
+### Prerequisites
 
-| 依赖 | 版本 |
+| Dependency | Version |
 |---|---|
 | Node.js | 20+ |
-| Rust | stable (1.75+) |
+| Rust | stable (1.95+) |
 | Go | 1.21+ |
-| Xcode Command Line Tools | 必须安装 |
+| Xcode Command Line Tools | required |
 
-> 📖 **首次搭建**请阅读 [docs/DEV_SETUP.md](docs/DEV_SETUP.md)，包含完整的环境初始化步骤、常见报错解法和镜像配置。
-
-### 快速开始
+### Quick Start
 
 ```bash
-# 1. 安装 npm 依赖（根目录 + webchat-local 子项目）
-npm install && cd webchat-local && npm install && cd ..
+npm install
 
-# 2. 编译 Go sidecar（三个渠道，aarch64）
-mkdir -p src-tauri/binaries
+# Build Go sidecars (aarch64)
 for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
   (cd "$bridge" && GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
-    go build -ldflags '-s -w' \
-      -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
+    go build -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
 done
 
-# 3. 构建 webchat-local 静态资源（tauri dev 不会自动触发）
-cd webchat-local && npm run build && cd ..
-
-# 4. 启动开发模式（首次约 5-10 分钟冷编译，之后秒级增量）
+# Start dev mode
 npm run tauri dev
 ```
 
-### 项目结构
+### Project Layout
 
 ```
 type-bridge/
-├── src/                     前端（Vite + Tailwind + Zustand）
-├── src-tauri/               Tauri / Rust 后端
+├── src/                     React frontend (Vite + Tailwind + Zustand)
+├── src-tauri/               Tauri / Rust backend
 │   └── src/
-│       ├── injector.rs      文本注入（CGEventPost + NSPasteboard）
-│       ├── sidecar.rs       Go sidecar 进程管理
-│       ├── webchat.rs       内置局域网 WebChat 服务宿主
-│       ├── queue.rs         FIFO 注入队列 + 反馈
+│       ├── injector.rs      Text injection via CGEventPost + NSPasteboard
+│       ├── sidecar.rs       Go sidecar process management
+│       ├── webchat.rs       Built-in LAN WebChat server host
+│       ├── queue.rs         FIFO injection queue + feedback
 │       └── ...
-├── feishu-bridge/           飞书 Go sidecar（长连接 WebSocket）
-├── dingtalk-bridge/         钉钉 Go sidecar（Stream 模式）
-├── wecom-bridge/            企业微信 Go sidecar（WSS + AES 图片解密）
-├── website/                 官网（Next.js，单页落地页）
-├── webchat-local/           WebChat 手机端 SPA（Vite + React + TS）
+├── feishu-bridge/           Feishu Go sidecar (long-connection WebSocket)
+├── dingtalk-bridge/         DingTalk Go sidecar (Stream Mode)
+├── wecom-bridge/            WeCom Go sidecar (WSS + AES image decrypt)
+├── website/                 Product site (Next.js, single-page landing)
+├── webchat-local/           WebChat mobile SPA (Vite + React + TS)
 ```
 
-### 开发时注意
+### Development notes
 
-- **Go sidecar 需手动重新编译** — `tauri dev` 不会自动编译 Go。修改 `.go` 文件后需手动 `go build` 对应 bridge，然后重启 `tauri dev`。
-- **webchat-local 需手动重新构建** — `tauri dev` 不会触发 `webchat-local` 的 Vite 构建。修改 `webchat-local/` 源码后需手动 `cd webchat-local && npm run build`。
-- **前端 HMR** 对 `src/` 的修改自动生效。
-- **Rust 修改** 会被 `tauri dev` 自动检测（cargo 增量编译）。
+- **Go sidecars require manual rebuild** — `tauri dev` does not recompile Go. After editing `.go` files, run `go build` for the affected bridge, then restart `tauri dev`.
+- **Frontend HMR** works automatically for `src/` changes.
+- **Rust changes** are picked up automatically by `tauri dev` (cargo rebuild).
 
-### 构建与打包
+### Build & Package
 
 ```bash
-# 单架构
+# Single arch
 npm run tauri build -- --target aarch64-apple-darwin
 
-# 双架构
+# Both archs
 ./scripts/build-all.sh
 ```
 
-产物：`src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
+Output: `src-tauri/target/{arch}/release/bundle/dmg/TypeBridge_*.dmg`
 
-## 📄 许可证
+## 📄 License
 
 [MIT](LICENSE)
