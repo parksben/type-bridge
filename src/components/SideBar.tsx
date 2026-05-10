@@ -1,4 +1,4 @@
-import { History, Info, Plug, Terminal, Zap, LucideIcon } from "lucide-react";
+import { History, Info, Link, Plug, Terminal, Zap, LucideIcon } from "lucide-react";
 import { useAppStore, TabId } from "../store";
 import { useI18n, type TKey } from "../i18n";
 interface TabDef {
@@ -11,6 +11,7 @@ interface TabDef {
 // 关于 TypeBridge 不在这里 — 它作为弱化的 footer entry 独立渲染（小一号、灰一些）
 const TABS: TabDef[] = [
   { id: "connection", labelKey: "sidebar.connection", icon: Plug },
+  { id: "link", labelKey: "sidebar.link", icon: Link },
   { id: "input", labelKey: "sidebar.input", icon: Zap },
   { id: "history", labelKey: "sidebar.history", icon: History },
   { id: "logs", labelKey: "sidebar.logs", icon: Terminal },

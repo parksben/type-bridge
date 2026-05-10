@@ -141,19 +141,22 @@
 
 ## 十二、UI Tab 架构
 
-### 12.1 单主窗口 + 左侧 4-tab SideBar + ConnectionHub
+### 12.1 单主窗口 + 左侧 5-tab SideBar + ConnectionHub / LinkAppsHub
 
-不引入路由库，用 Zustand 存 `activeTab` 枚举，主入口组件 switch。v0.5 布局从"顶部水平 TabBar + 内容区"改为"左侧竖向 SideBar + 右侧内容区"；v0.6+ 再次收敛——将服务配置下原来的 3 个独立 tab（飞书 / 钉钉 / 企微）合并为**单一 sidebar tab + 内容页顶部横向子 tab**。
+不引入路由库，用 Zustand 存 `activeTab` 枚举，主入口组件 switch。v0.5 布局从"顶部水平 TabBar + 内容区"改为"左侧竖向 SideBar + 右侧内容区"；v0.6+ 再次收敛——将服务配置下原来的 3 个独立 tab 合并；v0.8 进一步将原 ConnectionHub 拆分为两个独立 sidebar tab：
+- **connection**（连接 TypeBridge）：仅 WebChat 扫码配对，无顶部渠道子 tab
+- **link**（连接应用 / Link Chat Apps）：飞书 / 钉钉 / 企微三个 IM 渠道，顶部横向子 tab，介绍文案置于 tab 上方
 
 ```ts
 type TabId =
-  | "connection"  // 连接 TypeBridge（Hub：内容页再分 WebChat/飞书/钉钉/企微）
+  | "connection"  // 连接 TypeBridge（纯 WebChat 页，无子 tab）
+  | "link"        // 连接应用（飞书/钉钉/企微，顶部横向子 tab）
   | "input"       // 输入设置
   | "history"     // 历史消息
   | "logs";       // 系统日志
 
-// 仅 connection tab 用：内容页横向子 tab 的当前选中
-type ConnectionChannel = ChannelId;  // "feishu" | "dingtalk" | "wecom"
+// 仅 link tab 用：IM 渠道内容页横向子 tab 的当前选中
+type IMChannel = "feishu" | "dingtalk" | "wecom";
 ```
 
 ```tsx
@@ -162,9 +165,10 @@ function MainWindow() {
   const tab = useAppStore(s => s.activeTab);
   return (
     <div className="h-screen flex flex-row">
-      <SideBar />                                     {/* 左侧 ~150px */}
+      <SideBar />                                       {/* 左侧 ~150px */}
       <div className="flex-1 overflow-hidden">
-        {tab === 'connection' && <ConnectionHub />}   {/* v0.6+ 新 Hub 组件 */}
+        {tab === 'connection' && <ConnectionHub />}     {/* WebChat 专属页 */}
+        {tab === 'link'       && <LinkAppsHub />}       {/* IM 渠道 Hub */}
         {tab === 'input'      && <InputSettingsTab />}
         {tab === 'history'    && <HistoryTab />}
         {tab === 'logs'       && <SystemLogTab />}
@@ -174,16 +178,16 @@ function MainWindow() {
 }
 ```
 
-SideBar 退化为**纯平铺 4 tab**，不再有板块标签头 / 缩进层级——所有"板块"概念移到 ConnectionHub 内部的横向子 tab。
-
 ### 12.2 组件拆分
 
 - `src/components/MainWindow.tsx` — 壳
-- `src/components/SideBar.tsx` — 左侧平铺 4 tab + 底部连接状态
-- `src/components/ConnectionHub.tsx` — **v0.6+ 新增**：连接 TypeBridge 壳（一句话说明 + 横向子 tab + 渠道面板）
+- `src/components/SideBar.tsx` — 左侧平铺 5 tab + 底部连接状态
+- `src/components/ConnectionHub.tsx` — 连接 TypeBridge 壳（WebChat 页，无渠道子 tab）
+- `src/components/LinkAppsHub.tsx` — **v0.8 新增**：连接应用壳（介绍文案 + 横向子 tab + IM 渠道面板）
 - `src/components/tabs/ConnectionTab.tsx` — 连接飞书 Bot 面板
 - `src/components/tabs/DingTalkConnectionTab.tsx` — 连接钉钉 Bot 面板
 - `src/components/tabs/ComingSoonTab.tsx` — 占位，v0.6 仅企微使用（P3 落地后删除）
+- `src/components/tabs/WebChatConnectionTab.tsx` — WebChat 扫码面板
 - `src/components/tabs/HistoryTab.tsx` — 历史消息
 - `src/components/tabs/SystemLogTab.tsx` — 系统日志
 - `src/components/tabs/InputSettingsTab.tsx` — 输入设置
@@ -202,36 +206,51 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: "connection", label: "连接 TypeBridge", icon: Plug },
-  { id: "input",      label: "输入设置",   icon: Settings2 },
-  { id: "history",    label: "历史消息",   icon: History   },
-  { id: "logs",       label: "系统日志",   icon: Terminal  },
+  { id: "link",       label: "连接应用",        icon: Link },
+  { id: "input",      label: "输入设置",        icon: Settings2 },
+  { id: "history",    label: "历史消息",        icon: History   },
+  { id: "logs",       label: "系统日志",        icon: Terminal  },
 ];
 ```
 
-active tab：3px accent 色左竖条 + `surface-2` 背景。不再需要 section label / indented 逻辑。
+active tab：3px accent 色左竖条 + `surface-2` 背景。
 
-### 12.4 ConnectionHub 布局
+### 12.4 ConnectionHub 布局（WebChat 专属）
 
-内容区自上而下三段：
+内容区仅 WebChat 面板，无顶部渠道子 tab：
 
 ```
 ┌────────────────────────────────────────────┐
-│ ⓘ 通过内置 WebChat 或 IM 应用机器人连接 TypeBridge 进行输入  │  ← intro（surface-2 底 + Info icon）
+│ ⓘ 扫码配对，手机变身桌面鼠标键盘           │  ← intro banner（surface-2 底 + Info icon）
+├────────────────────────────────────────────┤
+│                                            │
+│ <WebChat 扫码配对面板>                      │
+│                                            │
+└────────────────────────────────────────────┘
+```
+
+### 12.4b LinkAppsHub 布局（IM 渠道）
+
+内容区自上而下三段，介绍文案在横向子 tab 上方：
+
+```
+┌────────────────────────────────────────────┐
+│ ⓘ 给机器人发消息，自动写入桌面当前聚焦输入框 │  ← intro（surface-2 底 + Info icon，tab 上方）
 ├────────────────────────────────────────────┤
 │  飞书  │  钉钉  │  企微                    │  ← 横向子 tab
 │  ━━━━                                      │     active 用 2px accent 下划线
 ├────────────────────────────────────────────┤
 │                                            │
-│ <当前渠道的配置面板，内部独立滚动>          │
+│ <当前渠道的配置面板，内部独立滚动>           │
 │                                            │
 └────────────────────────────────────────────┘
 ```
 
-子 tab 选中状态存 Zustand `activeConnectionChannel`——切走 sidebar tab 再回来保留选中渠道；默认飞书。
+子 tab 选中状态存 Zustand `activeConnectionChannel`（仅 IM 渠道：feishu/dingtalk/wecom）——切走 sidebar tab 再回来保留选中渠道；默认飞书。
 
 ### 12.5 引导 banner（连接飞书 Bot 面板内部）
 
-ConnectionTab 自身内部第一行继续保留「还没有自建应用？先到飞书开发者后台创建一个」的飞书专属引导 banner；它与 ConnectionHub 顶部的一句话说明**不冲突**——后者是跨渠道的通用说明（"IM → 输入桥接"），前者是渠道特定的上手引导。
+ConnectionTab 自身内部第一行继续保留「还没有自建应用？先到飞书开发者后台创建一个」的飞书专属引导 banner；它与 LinkAppsHub 顶部的一句话说明**不冲突**——后者是跨渠道的通用说明（"IM → 输入桥接"），前者是渠道特定的上手引导。
 
 ### 12.6 ComingSoonTab 占位组件
 
@@ -241,18 +260,13 @@ interface Props { platform: "dingtalk" | "wecom"; }
 
 v0.6 仅企微（wecom）使用。钉钉在 P1 已落地；wecom 在 P3 落地后该组件可删除。
 
-### 12.7 v0.6 重构点（相对 v0.5）
+### 12.7 v0.8 重构点（相对 v0.6/v0.7）
 
-**SideBar 平铺化**：4 板块（其中服务配置下辖 3 子 tab）→ 4 单 tab。TabId enum 从 6 项减少到 4 项。
+**ConnectionHub 拆分**：原 ConnectionHub（WebChat + IM 四渠道混合横向子 tab）拆为：
+1. `ConnectionHub`（连接 TypeBridge）：纯 WebChat，无子 tab，去除介绍文案条
+2. `LinkAppsHub`（连接应用）：仅 IM 三渠道（飞书/钉钉/企微），介绍文案移至横向子 tab 上方
 
-**ConnectionHub 新建**：把三个渠道的配置面板统一挂在一个 sidebar tab 下，横向子 tab 切换。好处：
-1. sidebar 更简洁（一眼看完 4 项，不用视觉解析缩进层级）
-2. 跨渠道对比体验（切 tab 无需跳板块，一键看完三家）
-3. 为未来加"通用渠道设置"留扩展位
-
-**移除的东西**：
-- `SideBar.tsx` 里的 `SECTIONS: Section[]` 数据结构 + section label 渲染逻辑
-- `MainWindow.tsx` 里的 `connection-dingtalk` / `connection-wecom` TabId 路由
+**SideBar 新增 link tab**：TabId enum 从 5 项变为 6 项（含 about），sidebar 主 tab 从 4 项增至 5 项。
 
 ### 12.8 路由兼容
 

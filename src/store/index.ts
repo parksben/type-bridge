@@ -62,7 +62,8 @@ export interface HistoryMessage {
 }
 
 export type TabId =
-  | "connection"  // 连接 TypeBridge（内容页再用横向子 tab 切渠道）
+  | "connection"  // 连接 TypeBridge（纯 WebChat 页，无子 tab）
+  | "link"        // 连接应用（飞书/钉钉/企微 IM 渠道，顶部横向子 tab）
   | "input"       // 输入设置
   | "history"     // 历史消息
   | "logs"        // 系统日志
@@ -173,7 +174,7 @@ export const useAppStore = create<AppStore>((set) => ({
   history: [],
   hiddenHistoryIds: new Set(),
   activeTab: "connection",
-  activeConnectionChannel: "webchat",
+  activeConnectionChannel: "feishu",
   language: readLangHint(),
   theme: readThemeHint(),
   latestVersionInfo: null,
