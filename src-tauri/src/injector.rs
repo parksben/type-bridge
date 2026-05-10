@@ -46,6 +46,29 @@ extern "C" {
     // 屏幕录制权限（macOS 10.15+）
     fn CGPreflightScreenCaptureAccess() -> bool;
     fn CGRequestScreenCaptureAccess() -> bool;
+    // 窗口列表（截取指定窗口用）
+    fn CGWindowListCopyWindowInfo(option: u32, relative_to_window: u32) -> *const std::ffi::c_void;
+}
+
+// CoreFoundation 类型操作（供 get_frontmost_window_id 使用）
+#[link(name = "CoreFoundation", kind = "framework")]
+extern "C" {
+    fn CFArrayGetCount(arr: *const std::ffi::c_void) -> isize;
+    fn CFArrayGetValueAtIndex(arr: *const std::ffi::c_void, idx: isize) -> *const std::ffi::c_void;
+    fn CFDictionaryGetValue(
+        dict: *const std::ffi::c_void,
+        key: *const std::ffi::c_void,
+    ) -> *const std::ffi::c_void;
+    fn CFNumberGetValue(
+        number: *const std::ffi::c_void,
+        the_type: u32,
+        value_ptr: *mut std::ffi::c_void,
+    ) -> u8;
+    fn CFStringCreateWithCString(
+        allocator: *const std::ffi::c_void,
+        c_str: *const std::ffi::c_char,
+        encoding: u32,
+    ) -> *const std::ffi::c_void;
 }
 
 /// macOS CGPoint（与 C ABI 一致：两个 f64）
@@ -500,8 +523,6 @@ fn screenshot_screen_inner() -> Result<(), String> {
 fn screenshot_window() -> Result<(), String> {
     ensure_screen_recording_permission()?;
 
-    // 通过 NSWorkspace 在 Rust 层获取前台应用 PID，避免依赖 osascript 的
-    // `frontmost is true` 查询（后者有时会把 TypeBridge 自身当作前台进程）。
     let my_pid = std::process::id() as i32;
     let target_pid = unsafe {
         use objc2_app_kit::NSWorkspace;
@@ -511,47 +532,92 @@ fn screenshot_window() -> Result<(), String> {
 
     let target_pid = match target_pid {
         Some(pid) if pid != my_pid => pid,
-        Some(_) => {
-            // TypeBridge 自身是前台应用，回退到全屏截图
-            return screenshot_screen_inner();
-        }
-        None => return screenshot_screen_inner(),
+        _ => return screenshot_screen_inner(),
     };
 
-    // 用 PID（unix id）精确查找该进程的第一个窗口 ID（CGWindowID），
-    // 比 `frontmost is true` 更准确——不受 TypeBridge 窗口状态干扰。
-    let script = format!(
-        "tell application \"System Events\" to id of first window of \
-         (first process whose unix id is {})",
-        target_pid
-    );
-
-    let window_id = std::process::Command::new("osascript")
-        .args(["-e", &script])
-        .output()
-        .ok()
-        .and_then(|o| {
-            if o.status.success() {
-                let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                if s.is_empty() { None } else { Some(s) }
-            } else {
-                None
-            }
-        });
-
-    match window_id {
+    // screencapture -l 需要真实的 CGWindowID（系统级窗口 ID）。
+    // 旧实现用 osascript `id of window` 返回的是 AppleScript 访问层 ID，
+    // 与 CGWindowID 完全不同，导致 screencapture 无法匹配窗口而回退到全屏。
+    // 改为直接调 CGWindowListCopyWindowInfo 获取正确的 CGWindowID。
+    match get_frontmost_window_id(target_pid) {
         Some(wid) => {
+            let wid_str = wid.to_string();
             let status = std::process::Command::new("screencapture")
-                .args(["-c", "-x", "-l", &wid])
+                .args(["-c", "-x", "-l", &wid_str])
                 .status()
                 .map_err(|e| format!("screencapture launch failed: {e}"))?;
             if status.success() {
                 Ok(())
             } else {
-                // 带 window id 失败（如窗口已消失），回退到全屏
                 screenshot_screen_inner()
             }
         }
         None => screenshot_screen_inner(),
+    }
+}
+
+/// CGWindowListCopyWindowInfo 枚举屏幕上的窗口（按 Z-order ，最顶层在前），
+/// 返回目标进程第一个普通窗口（kCGWindowLayer == 0）的 CGWindowID。
+fn get_frontmost_window_id(target_pid: i32) -> Option<u32> {
+    // kCGWindowListOptionOnScreenOnly = 1, kCGWindowListExcludeDesktopElements = 1<<4
+    const CG_OPTION: u32 = 1 | (1 << 4);
+    const CG_NULL_WINDOW: u32 = 0;
+    // kCFNumberSInt32Type = 3
+    const CF_SINT32: u32 = 3;
+    // kCFStringEncodingUTF8 = 0x08000100
+    const CF_UTF8: u32 = 0x0800_0100;
+
+    unsafe {
+        let windows = CGWindowListCopyWindowInfo(CG_OPTION, CG_NULL_WINDOW);
+        if windows.is_null() {
+            return None;
+        }
+
+        let k_pid   = std::ffi::CString::new("kCGWindowOwnerPID").unwrap();
+        let k_layer = std::ffi::CString::new("kCGWindowLayer").unwrap();
+        let k_wnum  = std::ffi::CString::new("kCGWindowNumber").unwrap();
+
+        let key_pid   = CFStringCreateWithCString(std::ptr::null(), k_pid.as_ptr(),   CF_UTF8);
+        let key_layer = CFStringCreateWithCString(std::ptr::null(), k_layer.as_ptr(), CF_UTF8);
+        let key_wnum  = CFStringCreateWithCString(std::ptr::null(), k_wnum.as_ptr(),  CF_UTF8);
+
+        let count = CFArrayGetCount(windows);
+        let mut result: Option<u32> = None;
+
+        for i in 0..count {
+            let dict = CFArrayGetValueAtIndex(windows, i);
+            if dict.is_null() { continue; }
+
+            // 匹配 PID
+            let v_pid = CFDictionaryGetValue(dict, key_pid);
+            if v_pid.is_null() { continue; }
+            let mut pid: i32 = 0;
+            if CFNumberGetValue(v_pid, CF_SINT32, &mut pid as *mut i32 as *mut _) == 0 { continue; }
+            if pid != target_pid { continue; }
+
+            // 只取普通窗口（layer 0；菜单 / 状态栏 / HUD 等 layer != 0）
+            let v_layer = CFDictionaryGetValue(dict, key_layer);
+            if !v_layer.is_null() {
+                let mut layer: i32 = 0;
+                CFNumberGetValue(v_layer, CF_SINT32, &mut layer as *mut i32 as *mut _);
+                if layer != 0 { continue; }
+            }
+
+            // 读取 CGWindowID
+            let v_wnum = CFDictionaryGetValue(dict, key_wnum);
+            if v_wnum.is_null() { continue; }
+            let mut wid: i32 = 0;
+            if CFNumberGetValue(v_wnum, CF_SINT32, &mut wid as *mut i32 as *mut _) != 0 {
+                result = Some(wid as u32);
+                break;
+            }
+        }
+
+        CFRelease(key_pid   as *mut _);
+        CFRelease(key_layer as *mut _);
+        CFRelease(key_wnum  as *mut _);
+        CFRelease(windows   as *mut _);
+
+        result
     }
 }
