@@ -18,7 +18,7 @@ TypeBridge is a macOS desktop app. One sentence: **it turns your iPhone or Andro
 
 No Bluetooth pairing. No shared Apple ID. Not even a cable. Open the app, scan a QR code with your phone, and you are connected.
 
-![Screenshot 1: TypeBridge desktop main window](./screenshots/1-app-main-window.png)
+![Screenshot 1: TypeBridge desktop main window](./screenshots/1-app-main-window-en.png)
 *▲ Fig.1 | TypeBridge desktop main window (WebChat connection tab, scan to connect your phone)*
 
 Type on your phone — text lands at your Mac's cursor. Use your phone screen as a trackpad — one finger moves, two fingers scroll. Best of all: tap the microphone on your phone's keyboard, speak, and your words appear on your Mac.
@@ -57,7 +57,7 @@ You are on TypeBridge's WebChat typing page. Tap the mic on your phone's keyboar
 
 Tap send. On your Mac — no matter which app is in front, ChatGPT in the browser, Cursor, or Feishu Docs — at the blinking cursor, the words start filling in. Line by line.
 
-![Screenshot 2: Mobile WebChat chat page](./screenshots/2-mobile-webchat-chat.png)
+![Screenshot 2: Mobile WebChat chat page](./screenshots/2-mobile-webchat-chat-en.png)
 *▲ Fig.2 | Mobile WebChat chat page (typing mode, showing message sending and injection status)*
 
 **Zero cloud dependency for voice.** The entire chain: your phone's local speech recognition → TypeBridge over your LAN → clipboard + Cmd+V injection into the active input field on your Mac.
@@ -72,7 +72,7 @@ The "Shortcut" tab packs three categories: **Screenshot**, **Edit & Input**, and
 
 Screenshots — tap the Screenshot tab on your phone, choose full screen or current window, and your Mac captures it instantly. Select all, copy, paste, undo, redo — document editing in a few taps. Arrow keys, Home/End, page navigation — browse code and docs without touching the keyboard.
 
-![Screenshot 3: Mobile shortcut panel](./screenshots/3-mobile-shortcut-panel.png)
+![Screenshot 3: Mobile shortcut panel](./screenshots/3-mobile-shortcut-panel-en.png)
 *▲ Fig.3 | Mobile WebChat "Shortcut" tab (Screenshot / Edit & Input / Page & Cursor categories)*
 
 > Put another way: it moves the dozen commands you reach for every day from your keyboard to your phone.
