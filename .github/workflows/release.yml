@@ -83,6 +83,9 @@ jobs:
           done
           ls -la src-tauri/binaries/
 
+      - name: Install create-dmg
+        run: brew install create-dmg
+
       - name: Install npm dependencies
         run: npm ci
 
@@ -92,10 +95,10 @@ jobs:
       - name: Build Tauri (x86_64)
         run: npm run tauri build -- --target x86_64-apple-darwin
 
-      - name: Inject DMG icon layout (safe fallback)
+      - name: Create DMGs with background and icon layout
         run: bash scripts/inject-dmg-layout.sh
         env:
-          TYPEBRIDGE_DMG_VIEW_MODE: background
+          VERSION: ${{ steps.version.outputs.VERSION }}
 
       - name: Collect artifacts
         run: |
