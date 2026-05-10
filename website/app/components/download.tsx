@@ -146,7 +146,7 @@ function SectionHeader({
   );
 }
 
-/** Parallel section #1 — Gatekeeper bypass (unsigned app) */
+/** Gatekeeper bypass notice — CLI-only (unsigned app) */
 function GatekeeperNotice() {
   const { t } = useT();
   const [copied, setCopied] = useState(false);
@@ -165,69 +165,38 @@ function GatekeeperNotice() {
         {renderMarked(t("download.gatekeeperDesc"), "gk")}
       </SectionHeader>
 
-      {/* Two method boxes */}
-      <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Method A — GUI */}
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-2)]/50 p-4">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-gradient px-1.5 text-[10px] font-bold text-white">
-              A
-            </span>
-            <p className="text-[13px] font-semibold text-[var(--text)]">
-              {t("download.methodA.title")}
-            </p>
-          </div>
-          <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
-            {renderMarked(t("download.methodA.desc"), "ma")}
-          </p>
+      {/* Command block — indented to align with text content */}
+      <div className="relative ml-12 mt-3">
+        <div className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2.5 pr-16 font-mono text-[11.5px] leading-relaxed text-[var(--text)]">
+          <Terminal
+            size={13}
+            strokeWidth={1.8}
+            className="mt-0.5 shrink-0 text-[var(--subtle)]"
+          />
+          <code className="min-w-0 flex-1 break-all">{QUARANTINE_CMD}</code>
         </div>
-
-        {/* Method B — CLI */}
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-2)]/50 p-4">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-gradient px-1.5 text-[10px] font-bold text-white">
-              B
-            </span>
-            <p className="text-[13px] font-semibold text-[var(--text)]">
-              {t("download.methodB.title")}
-            </p>
-          </div>
-          <p className="mt-2 text-[12px] leading-relaxed text-[var(--muted)]">
-            {t("download.methodB.desc")}
-          </p>
-          <div className="relative mt-3">
-            <div className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)]/80 px-3 py-2.5 pr-16 font-mono text-[11.5px] leading-relaxed text-[var(--text)]">
-              <Terminal
-                size={13}
-                strokeWidth={1.8}
-                className="mt-0.5 shrink-0 text-[var(--subtle)]"
+        <button
+          type="button"
+          onClick={copyCmd}
+          className="absolute right-1.5 top-1.5 inline-flex h-7 items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] font-medium text-[var(--muted)] shadow-sm transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
+          aria-label={copied ? t("download.copiedButton") : t("download.copyButton")}
+        >
+          {copied ? (
+            <>
+              <Check
+                size={12}
+                strokeWidth={2.4}
+                className="text-[var(--accent)]"
               />
-              <code className="min-w-0 flex-1 break-all">{QUARANTINE_CMD}</code>
-            </div>
-            <button
-              type="button"
-              onClick={copyCmd}
-              className="absolute right-1.5 top-1.5 inline-flex h-7 items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] font-medium text-[var(--muted)] shadow-sm transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
-              aria-label={copied ? t("download.copiedButton") : t("download.copyButton")}
-            >
-              {copied ? (
-                <>
-                  <Check
-                    size={12}
-                    strokeWidth={2.4}
-                    className="text-[var(--accent)]"
-                  />
-                  {t("download.copiedButton")}
-                </>
-              ) : (
-                <>
-                  <Copy size={12} strokeWidth={2} />
-                  {t("download.copyButton")}
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+              {t("download.copiedButton")}
+            </>
+          ) : (
+            <>
+              <Copy size={12} strokeWidth={2} />
+              {t("download.copyButton")}
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

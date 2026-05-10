@@ -171,18 +171,8 @@ const DICT = {
   "download.intelChip": { zh: "x86_64", en: "x86_64" },
   "download.gatekeeperTitle": { zh: "首次安装须知", en: "First-Time Install Note" },
   "download.gatekeeperDesc": {
-    zh: "应用目前**未经过 Apple 公证**，macOS 可能阻止首次打开。任选一种方法即可正常使用：",
-    en: "This app is **not notarized by Apple**. macOS may block it on first launch. Pick either method below to proceed:",
-  },
-  "download.methodA.title": { zh: "系统设置里点「仍要打开」", en: "Click \"Open Anyway\" in System Settings" },
-  "download.methodA.desc": {
-    zh: "进入**系统设置 > 隐私与安全性**，找到被拦截的 TypeBridge，点击**「仍要打开」**。",
-    en: "Open **System Settings > Privacy & Security**, find the blocked TypeBridge entry, and click **\"Open Anyway\"**.",
-  },
-  "download.methodB.title": { zh: "终端执行一行命令", en: "Run a Terminal Command" },
-  "download.methodB.desc": {
-    zh: "拖入应用程序文件夹后，在终端粘贴下面这行，移除隔离标记：",
-    en: "After dragging to Applications, paste this line in Terminal to remove the quarantine flag:",
+    zh: "应用目前**未经过 Apple 公证**，macOS 可能阻止首次打开。将应用拖入程序坞后，在终端执行以下命令移除隔离标记：",
+    en: "This app is **not notarized by Apple**. macOS may block it on first launch. After dragging to Applications, run this command in Terminal to remove the quarantine flag:",
   },
   "download.copyButton": { zh: "复制", en: "Copy" },
   "download.copiedButton": { zh: "已复制", en: "Copied" },
