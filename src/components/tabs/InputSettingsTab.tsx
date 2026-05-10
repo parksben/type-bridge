@@ -55,42 +55,49 @@ export default function InputSettingsTab() {
         <span>{t("inputSettings.intro")}</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto thin-scroll px-10 py-8">
-        <div className="max-w-md mx-auto flex flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-            <Zap size={12} strokeWidth={1.75} />
-            {t("inputSettings.autoSubmitGroup")}
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex flex-col">
-              <span className="text-[13px] text-text">{t("inputSettings.autoSubmitTitle")}</span>
-              <span className="text-[11px] text-subtle mt-0.5">
-                {t("inputSettings.autoSubmitDesc")}
-              </span>
+      <div className="flex-1 overflow-y-auto thin-scroll">
+        <div className="flex flex-col gap-0">
+          {/* 自动提交行 */}
+          <div
+            className="flex items-center justify-between px-6 py-4 border-b transition-colors hover:bg-surface-2"
+            style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+          >
+            <div className="flex flex-col gap-1.5 flex-1">
+              <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+                <Zap size={12} strokeWidth={1.75} />
+                {t("inputSettings.autoSubmitGroup")}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[13px] text-text">{t("inputSettings.autoSubmitTitle")}</span>
+                <span className="text-[11px] text-subtle mt-0.5">
+                  {t("inputSettings.autoSubmitDesc")}
+                </span>
+              </div>
             </div>
             <button
-              className="tb-toggle"
+              className="tb-toggle ml-4"
               data-on={autoSubmit}
               onClick={() => setAutoSubmit(!autoSubmit)}
               aria-label={t("inputSettings.toggleAria")}
             />
           </div>
-        </div>
 
-        <div className="h-px bg-border my-1" />
-
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
-            <Keyboard size={12} strokeWidth={1.75} />
-            {t("inputSettings.submitKeyGroup")}
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex flex-col">
-              <span className="text-[13px] text-text">{t("inputSettings.submitKeyTitle")}</span>
-              <span className="text-[11px] text-subtle mt-0.5">
-                {t("inputSettings.submitKeyDesc")}
-              </span>
+          {/* 提交按键行 */}
+          <div
+            className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-surface-2"
+            style={{ background: "var(--surface)" }}
+          >
+            <div className="flex flex-col gap-1.5 flex-1">
+              <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+                <Keyboard size={12} strokeWidth={1.75} />
+                {t("inputSettings.submitKeyGroup")}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[13px] text-text">{t("inputSettings.submitKeyTitle")}</span>
+                <span className="text-[11px] text-subtle mt-0.5">
+                  {t("inputSettings.submitKeyDesc")}
+                </span>
+              </div>
             </div>
             <KeyBindInput
               value={submitKey}
@@ -98,7 +105,6 @@ export default function InputSettingsTab() {
               disabled={!autoSubmit}
             />
           </div>
-        </div>
         </div>
       </div>
     </div>
