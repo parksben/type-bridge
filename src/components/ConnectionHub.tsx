@@ -31,7 +31,7 @@ export default function ConnectionHub() {
     <div className="h-full flex flex-col">
       {/* 横向渠道子 tab */}
       <div
-        className="flex items-center px-6"
+        className="flex justify-center items-center"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         {CHANNELS.map((ch) => {
@@ -39,9 +39,10 @@ export default function ConnectionHub() {
           const connected = channelConnected[ch] === true;
           return (
             <button
+              type="button"
               key={ch}
               onClick={() => setActiveConnectionChannel(ch)}
-              className={`relative flex items-center gap-1.5 px-3 h-10 text-[13px] transition-colors ${
+              className={`relative flex items-center gap-2 px-5 h-12 text-[14px] transition-colors ${
                 active ? "text-text" : "text-muted hover:text-text"
               }`}
             >
@@ -56,14 +57,14 @@ export default function ConnectionHub() {
                 className="inline-flex items-center"
                 style={{ color: CHANNEL_BRAND_COLOR[ch] }}
               >
-                <ChannelIcon channel={ch} size={13} />
+                <ChannelIcon channel={ch} size={15} />
               </span>
-              <span className={active ? "font-medium" : ""}>
+              <span className={active ? "font-semibold" : ""}>
                 {t(`channel.${ch}` as any)}
               </span>
               {active && (
                 <span
-                  className="absolute left-2 right-2 bottom-0 h-[2px] rounded-t-sm"
+                  className="absolute left-3 right-3 bottom-0 h-[2px] rounded-t-sm"
                   style={{ background: "var(--accent)" }}
                 />
               )}
@@ -74,14 +75,14 @@ export default function ConnectionHub() {
 
       {/* intro 说明 banner，置于 tab 下方全宽 */}
       <div
-        className="flex items-center gap-2 px-6 py-3 text-[12.5px] shrink-0"
+        className="flex items-center gap-2 px-6 py-2 text-[12px] shrink-0"
         style={{
           background: "var(--surface-2)",
           borderBottom: "1px solid var(--border)",
           color: "var(--muted)",
         }}
       >
-        <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
+        <Info size={12} strokeWidth={1.75} className="text-accent shrink-0" />
         <span>
           {activeConnectionChannel === "webchat"
             ? t("connectionHub.introWebchat")
