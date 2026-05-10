@@ -53,32 +53,24 @@ export default function ComposerBar({
     const hasImages = staged.length > 0;
     const hasText = text.trim().length > 0;
     if (!hasImages && !hasText) return;
-
-    // 先发所有图片
-    if (hasImages) {
-      const toSend = [...staged];
-      setStaged([]);
-      for (const img of toSend) {
-        onSendImage(img.compressed, img.previewUrl);
-      }
-    }
-
-    // 有文字再弹确认
-    if (hasText) {
-      setShowConfirm(true);
-    }
+    // 无论发什么内容，都先弹确认弹层
+    setShowConfirm(true);
   }
 
-  function confirmTextOnly() {
+  function confirmSend(submit: boolean) {
     setShowConfirm(false);
+    const toSend = [...staged];
     const trimmed = text.trim();
-    if (trimmed) { onSendText(trimmed); setText(""); }
-  }
-
-  function confirmTextAndEnter() {
-    setShowConfirm(false);
-    const trimmed = text.trim();
-    if (trimmed) { onSendTextAndEnter(trimmed); setText(""); }
+    setStaged([]);
+    setText("");
+    // 先发所有图片（fire-and-forget），再发文字
+    for (const img of toSend) {
+      onSendImage(img.compressed, img.previewUrl);
+    }
+    if (trimmed) {
+      if (submit) { onSendTextAndEnter(trimmed); }
+      else { onSendText(trimmed); }
+    }
   }
 
   const canSend = !disabled && (staged.length > 0 || text.trim().length > 0);
@@ -105,7 +97,7 @@ export default function ComposerBar({
             </div>
             <button
               type="button"
-              onClick={confirmTextOnly}
+              onClick={() => confirmSend(false)}
               className="w-full px-5 py-4 text-[16px] text-center transition-colors active:opacity-60"
               style={{ color: "var(--tb-accent)", borderBottom: "1px solid var(--tb-border)" }}
             >
@@ -113,7 +105,7 @@ export default function ComposerBar({
             </button>
             <button
               type="button"
-              onClick={confirmTextAndEnter}
+              onClick={() => confirmSend(true)}
               className="w-full px-5 py-4 text-[16px] font-semibold text-center transition-colors active:opacity-60"
               style={{ color: "var(--tb-accent)", borderBottom: "1px solid var(--tb-border)" }}
             >
