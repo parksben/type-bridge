@@ -48,6 +48,18 @@ extern "C" {
     fn CGRequestScreenCaptureAccess() -> bool;
     // 窗口列表（截取指定窗口用）
     fn CGWindowListCopyWindowInfo(option: u32, relative_to_window: u32) -> *const std::ffi::c_void;
+    // 多屏支持：找到光标所在屏幕
+    fn CGGetDisplaysWithPoint(
+        point: CGPoint,
+        max_displays: u32,
+        displays: *mut u32,
+        matching_display_count: *mut u32,
+    ) -> u32;
+    fn CGGetActiveDisplayList(
+        max_displays: u32,
+        active_displays: *mut u32,
+        display_count: *mut u32,
+    ) -> u32;
 }
 
 // CoreFoundation 类型操作（供 get_frontmost_window_id 使用）
@@ -507,16 +519,56 @@ fn screenshot_screen() -> Result<(), String> {
 }
 
 /// 不做权限检查的全屏截图（作为 fallback 被内部调用）。
+/// 截取光标当前所在的屏幕，通过 screencapture -D <index> 指定。
 fn screenshot_screen_inner() -> Result<(), String> {
-    // screencapture -c: 存剪贴板；-x: 无声
+    let display_idx = get_cursor_display_index();
+    let d = display_idx.to_string();
+    // screencapture -c: 存剪贴板；-x: 无声；-D n: 截取第 n 号屏幕（1-based）
     let status = std::process::Command::new("screencapture")
-        .args(["-c", "-x"])
+        .args(["-c", "-x", "-D", &d])
         .status()
         .map_err(|e| format!("screencapture launch failed: {e}"))?;
     if status.success() {
         Ok(())
     } else {
         Err(format!("screencapture exited with: {status}"))
+    }
+}
+
+/// 获取光标当前所在屏幕的 1-based 索引（用于 screencapture -D）。
+/// 如果查询失败则返回 1（主屏）。
+fn get_cursor_display_index() -> u32 {
+    const MAX_DISPLAYS: u32 = 32;
+    unsafe {
+        // 获取光标坐标
+        let ev = CGEventCreate(std::ptr::null_mut());
+        if ev.is_null() { return 1; }
+        let cursor = CGEventGetLocation(ev);
+        CFRelease(ev);
+
+        // 找到光标所在的 display ID
+        let mut display_id: u32 = 0;
+        let mut match_count: u32 = 0;
+        if CGGetDisplaysWithPoint(cursor, 1, &mut display_id, &mut match_count) != 0
+            || match_count == 0
+        {
+            return 1;
+        }
+
+        // 获取所有活跃屏幕的有序列表
+        let mut displays = [0u32; MAX_DISPLAYS as usize];
+        let mut display_count: u32 = 0;
+        if CGGetActiveDisplayList(MAX_DISPLAYS, displays.as_mut_ptr(), &mut display_count) != 0 {
+            return 1;
+        }
+
+        // 返回 1-based 索引
+        for i in 0..display_count as usize {
+            if displays[i] == display_id {
+                return (i + 1) as u32;
+            }
+        }
+        1
     }
 }
 
