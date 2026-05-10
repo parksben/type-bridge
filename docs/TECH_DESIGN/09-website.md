@@ -99,7 +99,7 @@ TopNav 导航项与锚点：
 ### 25.5 页面结构（单页 `/`）
 
 - `#hero` — Hero 第一屏（logo + slogan + 概念动画 Banner + 双 CTA）
-- `#scenes` — 5 场景 pill tab 轮播（语音转文字 / AI Coding / 文档产出 / 跨设备流转 / 团队协作）
+- `#scenes` — 4 场景 pill tab 轮播（触控板 / 打字输入 / 语音输入 / 快捷指令）
 - `#flow` — SVG 使用流程图（左→右）
 - `#download` — 动态版本号 + 双架构下载卡片
 

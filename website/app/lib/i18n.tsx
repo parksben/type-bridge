@@ -125,28 +125,28 @@ const DICT = {
   "scenes.voiceInput.theme": { zh: "嘴比键盘快。", en: "Voice beats the keyboard." },
 
   "scenes.quickCommands.title": { zh: "快捷指令，一触即发", en: "Shortcuts at Your Fingertips" },
-  "scenes.quickCommands.subtitle": { zh: "方向键、复制粘贴、撤销——手不离鼠标", en: "Arrow keys, copy-paste, undo — without touching the keyboard." },
+  "scenes.quickCommands.subtitle": { zh: "截屏、全选、复制粘贴，一触即达", en: "Screenshot, select all, copy-paste — one tap away." },
   "scenes.quickCommands.description": {
-    zh: "切到「键盘」模式，方向键、行首行尾、翻页、复制粘贴、撤销重做——最常用的快捷键全在手机上，手不用离开鼠标。",
-    en: "Switch to keyboard mode. Arrow keys, Home/End, Page Up/Down, Copy/Paste, Undo/Redo — all the essentials right on your phone. Hand stays on the mouse.",
+    zh: "切到键盘模式，常用快捷键全在手边——Cmd+Shift+4 截屏、Cmd+A 全选、Cmd+C/V 复制粘贴、Cmd+Z 撤销。手机上点一下，电脑即刻响应。",
+    en: "Keyboard mode puts every daily shortcut on your phone. Cmd+Shift+4 to screenshot, Cmd+A to select all, Cmd+C/V to copy/paste, Cmd+Z to undo. One tap on your phone, instant action on your Mac.",
   },
   "scenes.quickCommands.details": {
     zh: [
-      "翻代码时上下翻页，手不离鼠标",
-      "选中文字 → 手机点复制 → 粘贴到另一个窗口",
-      "写文档时撤销重做，手机上一触即发",
+      "编辑文档：全选 → 复制 → 粘贴，手机上三连点一气呵成",
+      "随手截屏：点一下 Cmd+Shift+4，电脑秒进截图模式",
+      "翻页浏览：方向键上下翻、Home/End 跳首尾，手不用碰键盘",
     ],
     en: [
-      "Scroll through code — hand never leaves the mouse",
-      "Select text → tap copy on phone → paste in another window",
-      "Undo and redo while writing — one tap on your phone",
+      "Editing a doc? Select all → copy → paste. Three taps on your phone, done.",
+      "Need a screenshot? Tap Cmd+Shift+4 — your Mac enters capture mode instantly.",
+      "Browsing code or docs? Arrow keys, Home/End, Page Up/Down — no keyboard needed.",
     ],
   },
   "scenes.quickCommands.tip": {
-    zh: "支持方向键、Home / End、PageUp / PageDown、Cmd+↑↓ 等常用快捷键。",
-    en: "Supports arrow keys, Home/End, PageUp/Down, Cmd+↑↓, and more.",
+    zh: "支持截屏、全选、复制粘贴、撤销重做、方向键、Home / End、PageUp / Down 等高频快捷键。",
+    en: "Supports screenshot, select all, copy/paste, undo/redo, arrow keys, Home/End, PageUp/Down, and more.",
   },
-  "scenes.quickCommands.theme": { zh: "快捷键，在手心里。", en: "Shortcuts in your palm." },
+  "scenes.quickCommands.theme": { zh: "快捷键，全在手心里。", en: "Every shortcut you use. Right in your palm." },
 
   // ── Flow ───────────────────────────────────
   "flow.heading": { zh: "四步，把手机变成**无线键鼠**", en: "Four steps to turn your phone into a **wireless keyboard & trackpad**" },
