@@ -241,14 +241,14 @@ export default function AboutTab() {
 
   async function handleCancelDownload() {
     if (downloadState.phase !== "downloading") return;
+    const version = downloadState.version;
+    // 乐观更新：立即切换到 cancelled 状态，给用户即时视觉反馈
+    // 后端稍后也会发 cancelled 事件（再次设置相同状态，无害）
+    setDownloadState({ phase: "cancelled", version });
     try {
       await invoke("cancel_update_download");
-    } catch (e) {
-      setDownloadState({
-        phase: "failed",
-        version: downloadState.version,
-        reason: String(e),
-      });
+    } catch (_) {
+      // 任务可能已自然结束，slot 已清空，忽略错误
     }
   }
 

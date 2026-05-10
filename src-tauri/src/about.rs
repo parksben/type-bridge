@@ -370,13 +370,15 @@ async fn download_to_file(
     // ── 探测：单字节 Range GET，比 HEAD 更可靠 ────────────────────────
     // HEAD 对某些 CDN（包括 GitHub releases）会返回错误的 Content-Length（0 或缺失）。
     // Range: bytes=0-0 → 206 时，Content-Range: bytes 0-0/TOTAL 给出真实文件大小。
-    let probe = client
-        .get(url)
-        .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
-        .header("Range", "bytes=0-0")
-        .send()
-        .await
-        .map_err(|e| format!("发起探测请求失败：{}", e))?;
+    // 用 tokio::select! 让探测请求可以被取消信号中断，避免网络慢时取消无响应。
+    let probe = tokio::select! {
+        _ = cancel_token.cancelled() => return Ok(DownloadWriteOutcome::Cancelled),
+        result = client
+            .get(url)
+            .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
+            .header("Range", "bytes=0-0")
+            .send() => result.map_err(|e| format!("发起探测请求失败：{}", e))?,
+    };
 
     let is_partial = probe.status().as_u16() == 206;
     let total_opt: Option<u64> = if is_partial {
@@ -477,13 +479,15 @@ async fn download_parallel(
             }
 
             let range_header = format!("bytes={}-{}", start, end);
-            let resp = client
-                .get(&url)
-                .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
-                .header("Range", range_header)
-                .send()
-                .await
-                .map_err(|e| format!("分块请求失败（{}-{}）：{}", start, end, e))?;
+            // 用 tokio::select! 让分块初始连接也可以被取消信号中断
+            let resp = tokio::select! {
+                _ = cancel.cancelled() => return Ok(false),
+                result = client
+                    .get(&url)
+                    .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
+                    .header("Range", range_header)
+                    .send() => result.map_err(|e| format!("分块请求失败（{}-{}）：{}", start, end, e))?,
+            };
 
             if !resp.status().is_success() && resp.status().as_u16() != 206 {
                 return Err(format!("分块下载失败：HTTP {}", resp.status()));
@@ -570,12 +574,14 @@ async fn download_single(
     use futures_util::StreamExt;
     use std::io::Write;
 
-    let resp = client
-        .get(url)
-        .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
-        .send()
-        .await
-        .map_err(|e| format!("发起下载请求失败：{}", e))?;
+    // 用 tokio::select! 让初始连接也能响应取消信号
+    let resp = tokio::select! {
+        _ = cancel_token.cancelled() => return Ok(DownloadWriteOutcome::Cancelled),
+        result = client
+            .get(url)
+            .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
+            .send() => result.map_err(|e| format!("发起下载请求失败：{}", e))?,
+    };
 
     if !resp.status().is_success() {
         return Err(format!("下载失败：HTTP {}", resp.status()));

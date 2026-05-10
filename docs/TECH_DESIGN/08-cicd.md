@@ -123,7 +123,7 @@ AboutTab (前端)
 - `get_app_version`：`cfg!(debug_assertions)` 时返回字符串 `"dev:latest"`，否则 `env!("CARGO_PKG_VERSION")`。CI 在 [release.yml](../../.github/workflows/release.yml) 用 sed 改 `Cargo.toml` 的版本号，所以 release build 自然能拿到正确的 tag 版本
 - `check_update`：release 走 `reqwest`（rustls，无 OpenSSL 依赖）拉 `https://typebridge.parksben.xyz/api/latest-version`，按 `cfg!(target_arch)` 选 `aarch64` / `x64` 下载链接；debug（dev）构建复用同一接口返回的 `latest + download_url`，并在可用时强制 `has_update=true`（仅用于本地联调更新下载链路）
 - `start_update_download`：在 Rust 侧创建单实例后台任务（同一时刻仅允许一个下载），通过 `CancellationToken` 支持取消。任务内部流式下载到 `~/Downloads/{filename}.dmg`，并持续 emit `typebridge://update-download-state` 事件（phase + 进度 + 字节数 + 失败原因）
-- `cancel_update_download`：触发当前任务 token cancel；下载协程收到取消信号后停止写入并删除不完整文件，向前端发送 `cancelled` 事件
+- `cancel_update_download`：触发当前任务 token cancel；下载协程收到取消信号后停止写入并删除不完整文件，向前端发送 `cancelled` 事件。**取消设计要点**：probe 请求和并发分块的初始 `.send()` 均通过 `tokio::select!` 与 cancel token 联动，确保取消能在 HTTP 连接建立阶段即生效，而非仅在数据流读取阶段才响应。前端 `handleCancelDownload` 在 invoke 成功后即刻乐观更新 UI 至 `cancelled` 状态，无需等待后端事件，避免用户感知到"按钮无反应"
 - 下载完成后发 `opening` 事件，随后 `Command::new("open")` 挂载并显示 Finder 卷，再 `app.exit(0)`。用户拖入「应用程序」覆盖旧版后手动重新启动
 - **下载进度 UI**：前端不再使用独立 modal，而是在 About 页顶部渲染与其他 tab 同风格的状态栏；状态栏根据 `typebridge://update-download-state` 切换 `ready/downloading/failed/cancelled/opening`。
 - **失败/长时间未开始统一降级策略**：
