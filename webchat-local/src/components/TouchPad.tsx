@@ -56,6 +56,8 @@ export default function TouchPad({ client, disabled }: Props) {
   const scrollRevRef = useRef(scrollReversed);
   const leftHeldRef = useRef(false);
   const landscapeRef = useRef(false);
+  // 本次手势峰值触摸数（用于两指 tap 检测，避免两指非同步抬起时漏检）
+  const maxTouchesRef = useRef(0);
   // 左键双击检测
   const leftTapCountRef = useRef(0);
   const lastLeftTapEndRef = useRef(0);
@@ -124,7 +126,9 @@ export default function TouchPad({ client, disabled }: Props) {
     if (count === 1) {
       padMovedRef.current = false;
       touchStartTimeRef.current = Date.now();
+      maxTouchesRef.current = 1;
     } else if (count === 2) {
+      if (maxTouchesRef.current < 2) maxTouchesRef.current = 2;
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const centroid = {
@@ -196,7 +200,8 @@ export default function TouchPad({ client, disabled }: Props) {
     const endCount = e.changedTouches.length;
 
     // 双指抬起 → 右键单击
-    if (remaining === 0 && endCount >= 2 && !twoFingerMoved.current) {
+    // 用 maxTouchesRef（峰值触摸数）而非 endCount >= 2，因为两指通常不严格同步抬起
+    if (remaining === 0 && maxTouchesRef.current >= 2 && !twoFingerMoved.current) {
       const duration = Date.now() - touchStartTimeRef.current;
       if (duration < TAP_MAX_DURATION + 80 && !disabled) {
         client.sendMouseClick("right", "down");
@@ -205,12 +210,14 @@ export default function TouchPad({ client, disabled }: Props) {
       for (const touch of Array.from(e.changedTouches)) {
         touchesRef.current.delete(touch.identifier);
       }
+      maxTouchesRef.current = 0;
       twoFingerStart.current = null;
       return;
     }
 
     // 单指短触 → 单击 / 双击 / 三击
-    if (remaining === 0 && endCount === 1 && !padMovedRef.current) {
+    // maxTouchesRef <= 1 防止两指滑动结束后最后一指抬起误触单击
+    if (remaining === 0 && endCount === 1 && !padMovedRef.current && maxTouchesRef.current <= 1) {
       const duration = Date.now() - touchStartTimeRef.current;
       if (duration < TAP_MAX_DURATION) {
         const now = Date.now();
@@ -236,6 +243,7 @@ export default function TouchPad({ client, disabled }: Props) {
     }
     if (remaining === 0) {
       twoFingerStart.current = null;
+      maxTouchesRef.current = 0;
     }
   }
 
