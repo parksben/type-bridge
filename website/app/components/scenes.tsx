@@ -77,7 +77,7 @@ const SCENE_DEFS: SceneDef[] = [
   },
 ];
 
-const AUTO_PLAY_MS = 5000;
+const AUTO_PLAY_MS = 10000;
 
 export function Scenes() {
   const { t, tStrings } = useT();
