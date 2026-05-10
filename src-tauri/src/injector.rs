@@ -456,7 +456,7 @@ pub fn key_combo(combo: &str) -> Result<(), String> {
 // ─── 截图 ────────────────────────────────────────────────────────
 
 /// 截图前检查屏幕录制权限（macOS 10.15+）。
-/// 未授权时调用系统 API 弹出引导提示，并返回错误告知用户去授权。
+/// 未授权时调用系统 API 弹出引导提示，并返回机器可读错误码（前端负责 i18n 翻译）。
 fn ensure_screen_recording_permission() -> Result<(), String> {
     let has_perm = unsafe { CGPreflightScreenCaptureAccess() };
     if has_perm {
@@ -464,11 +464,8 @@ fn ensure_screen_recording_permission() -> Result<(), String> {
     }
     // 触发系统权限引导弹窗（macOS 会弹出「前往系统设置」提示）
     unsafe { CGRequestScreenCaptureAccess() };
-    Err(
-        "需要屏幕录制权限。请在「系统设置 > 隐私与安全性 > 屏幕录制」中为 TypeBridge 授权，\
-         然后重试截图。"
-        .to_string(),
-    )
+    // 返回机器可读错误码，由前端根据语言设置做 i18n 翻译
+    Err("ERR_SCREEN_RECORDING_PERMISSION".to_string())
 }
 
 /// 截图并将结果存入剪贴板。

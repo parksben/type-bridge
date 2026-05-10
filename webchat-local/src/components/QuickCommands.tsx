@@ -433,7 +433,9 @@ export default function QuickCommands({ client, disabled }: Props) {
       const ack = await client.sendScreenshot(cmd.spec.kind);
       const feedbackMsg = ack.success
         ? t("monitor.cmdScreenshotSuccess")
-        : (ack.reason ?? t("monitor.cmdScreenshotFailed"));
+        : ack.reason === "ERR_SCREEN_RECORDING_PERMISSION"
+          ? t("monitor.cmdScreenshotPermDenied")
+          : (ack.reason ?? t("monitor.cmdScreenshotFailed"));
       setScreenshotFeedback({ success: ack.success, msg: feedbackMsg });
       setTimeout(() => setScreenshotFeedback(null), 3000);
       return;
