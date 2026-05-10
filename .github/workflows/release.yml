@@ -127,7 +127,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish metadata to website
-        if: ${{ !contains(steps.version.outputs.VERSION, '-') }}
+        if: ${{ !contains(steps.version.outputs.VERSION, '-') && !contains(steps.version.outputs.VERSION, '_') }}
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
           TAG="v${VERSION}"
