@@ -121,6 +121,7 @@ const ZH = {
     cmdScreenshotSuccess: "截图已存到剪贴板",
     cmdScreenshotFailed: "截图失败",
     cmdScreenshotHint: "截图自动存入剪贴板，再点「粘贴截图」插入当前输入框",
+    cmdScreenshotPermDenied: "需要屏幕录制权限。请在「系统设置 > 隐私与安全性 > 屏幕录制」中为 TypeBridge 授权，然后重试截图。",
   },
 
   bubble: {
@@ -263,6 +264,7 @@ const EN: Dict = {
     cmdScreenshotSuccess: "Screenshot copied to clipboard",
     cmdScreenshotFailed: "Screenshot failed",
     cmdScreenshotHint: "Screenshot saved to clipboard — tap \"Paste Screenshot\" to insert it",
+    cmdScreenshotPermDenied: "Screen recording permission required. Go to System Settings > Privacy & Security > Screen Recording and allow TypeBridge, then try again.",
   },
 
   bubble: {
