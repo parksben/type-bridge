@@ -5,6 +5,7 @@ import {
   Download,
   PackageOpen,
   RefreshCw,
+  X,
   XCircle,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
@@ -53,6 +54,7 @@ export default function AboutTab() {
   const [status, setStatus] = useState<CheckStatus>({ kind: "idle" });
   const [downloadState, setDownloadState] = useState<DownloadState>({ phase: "idle" });
   const [downloadStalled, setDownloadStalled] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const stalledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useI18n();
 
@@ -131,7 +133,7 @@ export default function AboutTab() {
     if (!stalledTimerRef.current) {
       stalledTimerRef.current = setTimeout(() => {
         setDownloadStalled(true);
-      }, 10000);
+      }, 60000);
     }
 
     return () => {
@@ -142,8 +144,24 @@ export default function AboutTab() {
     };
   }, [downloadState]);
 
+  async function handleDismissError() {
+    setDownloadStalled(false);
+    if (stalledTimerRef.current) {
+      clearTimeout(stalledTimerRef.current);
+      stalledTimerRef.current = null;
+    }
+    try {
+      await invoke("cancel_update_download");
+    } catch (_) {
+      // 任务可能已结束，忽略错误
+    }
+    setDownloadState({ phase: "idle" });
+    setBannerDismissed(true);
+  }
+
   async function handleCheck() {
     setStatus({ kind: "checking" });
+    setBannerDismissed(false);
     try {
       const result = await invoke<UpdateCheckResult>("check_update");
       if (!result.has_update || !result.download_url || !result.latest) {
@@ -167,6 +185,7 @@ export default function AboutTab() {
 
   async function handleStartDownload() {
     if (status.kind !== "has-update") return;
+    setBannerDismissed(false);
     setDownloadStalled(false);
     setDownloadState({
       phase: "downloading",
@@ -204,17 +223,19 @@ export default function AboutTab() {
   }
 
   return (
-    <div className="relative h-full overflow-y-auto flex items-center justify-center px-8 py-8">
-      <div className="w-full max-w-md flex flex-col gap-5">
+    <div className="relative h-full flex flex-col">
+      {!bannerDismissed && (
         <UpdateStatusBanner
           status={status}
           downloadState={downloadState}
           downloadStalled={downloadStalled}
           onStart={handleStartDownload}
           onCancel={handleCancelDownload}
+          onDismiss={handleDismissError}
         />
-
-        <div className="flex flex-col items-center text-center gap-5">
+      )}
+      <div className="flex-1 overflow-y-auto flex items-center justify-center px-8 py-8">
+        <div className="w-full max-w-md flex flex-col items-center text-center gap-5">
           <img
             src={logoUrl}
             alt="TypeBridge"
@@ -286,12 +307,9 @@ function CheckResultLine({ status }: { status: CheckStatus }) {
 
   if (status.kind === "has-update") {
     return (
-      <div className="flex flex-col items-center gap-1">
-        <p className="text-[13px] text-text">
-          {ti18n("about.foundNewPrefix")}<span className="font-mono font-semibold">v{status.latest}</span>
-        </p>
-        <p className="text-[11.5px] text-muted">{ti18n("about.downloadInlineHint")}</p>
-      </div>
+      <p className="text-[13px] text-text">
+        {ti18n("about.foundNewPrefix")}<span className="font-mono font-semibold">v{status.latest}</span>
+      </p>
     );
   }
 
@@ -306,24 +324,27 @@ function UpdateStatusBanner({
   downloadStalled,
   onStart,
   onCancel,
+  onDismiss,
 }: {
   status: CheckStatus;
   downloadState: DownloadState;
   downloadStalled: boolean;
   onStart: () => void;
   onCancel: () => void;
+  onDismiss: () => void;
 }) {
   if (downloadState.phase === "failed" || (downloadState.phase === "downloading" && downloadStalled)) {
-    return <ManualDownloadHintBanner />;
+    const reason = downloadState.phase === "failed" ? downloadState.reason : undefined;
+    return <ManualDownloadHintBanner reason={reason} onDismiss={onDismiss} />;
   }
 
   if (downloadState.phase === "downloading") {
     return (
       <div
-        className="flex flex-col gap-3 rounded-md px-3 py-2.5 text-[12px]"
+        className="flex flex-col gap-3 px-6 py-2.5 text-[12px]"
         style={{
           background: "var(--surface-2)",
-          border: "1px solid var(--border)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -355,10 +376,10 @@ function UpdateStatusBanner({
   if (downloadState.phase === "opening") {
     return (
       <div
-        className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+        className="flex items-start gap-2 px-6 py-2.5 text-[12px] leading-relaxed"
         style={{
           background: "var(--surface-2)",
-          border: "1px solid var(--border)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <PackageOpen size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
@@ -373,23 +394,33 @@ function UpdateStatusBanner({
   if (downloadState.phase === "cancelled") {
     return (
       <div
-        className="flex items-start justify-between gap-3 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+        className="flex items-start justify-between gap-3 px-6 py-2.5 text-[12px] leading-relaxed"
         style={{
           background: "var(--surface-2)",
-          border: "1px solid var(--border)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <div className="flex items-start gap-2 text-text">
           <XCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
           {ti18n("about.downloadCancelled")}
         </div>
-        <button
-          type="button"
-          onClick={onStart}
-          className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0"
-        >
-          {ti18n("about.retryDownload")}
-        </button>
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onStart}
+            className="text-[11.5px] underline text-accent hover:opacity-80"
+          >
+            {ti18n("about.retryDownload")}
+          </button>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="text-muted hover:text-text transition-colors"
+            title="关闭"
+          >
+            <X size={13} strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
     );
   }
@@ -398,10 +429,10 @@ function UpdateStatusBanner({
 
   return (
     <div
-      className="flex items-start justify-between gap-3 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+      className="flex items-start justify-between gap-3 px-6 py-2.5 text-[12px] leading-relaxed"
       style={{
         background: "var(--surface-2)",
-        border: "1px solid var(--border)",
+        borderBottom: "1px solid var(--border)",
       }}
     >
       <div className="flex items-start gap-2 text-text">
@@ -422,29 +453,50 @@ function UpdateStatusBanner({
   );
 }
 
-function ManualDownloadHintBanner() {
+function ManualDownloadHintBanner({
+  reason,
+  onDismiss,
+}: {
+  reason?: string;
+  onDismiss: () => void;
+}) {
   return (
     <div
-      className="flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-[12px]"
+      className="flex items-center justify-between gap-2 px-6 py-2.5 text-[12px]"
       style={{
         background: "var(--surface-2)",
-        border: "1px solid var(--border)",
+        borderBottom: "1px solid var(--border)",
       }}
     >
       <div className="flex items-center gap-2 min-w-0 text-text">
         <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 text-error" />
-        <span className="truncate whitespace-nowrap">{ti18n("about.manualDownloadHint")}</span>
+        <span
+          className="truncate whitespace-nowrap"
+          title={reason}
+        >
+          {ti18n("about.manualDownloadHint")}
+        </span>
       </div>
-      <button
-        type="button"
-        onClick={async () => {
-          const { openUrl } = await import("@tauri-apps/plugin-opener");
-          await openUrl("https://typebridge.parksben.xyz/#download");
-        }}
-        className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0 whitespace-nowrap"
-      >
-        {ti18n("about.openWebsiteDownload")}
-      </button>
+      <div className="flex items-center gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={async () => {
+            const { openUrl } = await import("@tauri-apps/plugin-opener");
+            await openUrl("https://typebridge.parksben.xyz/#download");
+          }}
+          className="text-[11.5px] underline text-accent hover:opacity-80 whitespace-nowrap"
+        >
+          {ti18n("about.openWebsiteDownload")}
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-muted hover:text-text transition-colors"
+          title="关闭"
+        >
+          <X size={13} strokeWidth={1.75} />
+        </button>
+      </div>
     </div>
   );
 }

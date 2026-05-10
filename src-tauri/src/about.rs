@@ -212,10 +212,6 @@ pub fn start_update_download(
     download_url: String,
     version: String,
 ) -> Result<(), String> {
-    if cfg!(debug_assertions) {
-        return Err("dev 构建不支持自动更新".to_string());
-    }
-
     let cancel_token = CancellationToken::new();
     {
         let mut guard = download_task_slot()
@@ -340,6 +336,28 @@ enum DownloadWriteOutcome {
     Cancelled,
 }
 
+/// 单块最小字节数（4 MiB）。文件太小时退化为单连接。
+const MIN_CHUNK_SIZE: u64 = 4 * 1024 * 1024;
+
+/// 根据 CPU 逻辑核数动态决定并发块数。
+/// 下载时并发块数 = 逻辑核数，但至少 4、至多 16。
+/// 说明：下载属于 I/O 密集型操作，并发块数超过带宽支撑点后提升有限。
+/// 16 是经验值上限，避免对 GitHub CDN 请求过于频繁触发限流。
+fn compute_chunk_count() -> u64 {
+    let cpus = std::thread::available_parallelism()
+        .map(|n| n.get() as u64)
+        .unwrap_or(4);
+    cpus.clamp(4, 16)
+}
+
+fn build_client() -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(60 * 10))
+        .build()
+        .map_err(|e| format!("初始化 HTTP client 失败：{}", e))
+}
+
 async fn download_to_file(
     app: &AppHandle,
     url: &str,
@@ -347,16 +365,214 @@ async fn download_to_file(
     target: &PathBuf,
     cancel_token: &CancellationToken,
 ) -> Result<DownloadWriteOutcome, String> {
+    let client = build_client()?;
+
+    // ── 探测：单字节 Range GET，比 HEAD 更可靠 ────────────────────────
+    // HEAD 对某些 CDN（包括 GitHub releases）会返回错误的 Content-Length（0 或缺失）。
+    // Range: bytes=0-0 → 206 时，Content-Range: bytes 0-0/TOTAL 给出真实文件大小。
+    let probe = client
+        .get(url)
+        .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
+        .header("Range", "bytes=0-0")
+        .send()
+        .await
+        .map_err(|e| format!("发起探测请求失败：{}", e))?;
+
+    let is_partial = probe.status().as_u16() == 206;
+    let total_opt: Option<u64> = if is_partial {
+        // Content-Range: bytes 0-0/总字节数 — 最可靠的文件大小来源
+        parse_content_range_total(probe.headers())
+    } else {
+        // 服务器不支持 Range，尝试从 Content-Length 拿大小（可能 None）
+        probe.content_length()
+    };
+    drop(probe); // 释放连接（只拉了 1 字节）
+
+    let use_parallel = is_partial
+        && total_opt.map(|t| t >= MIN_CHUNK_SIZE * 2).unwrap_or(false);
+
+    if use_parallel {
+        download_parallel(app, &client, url, version, target, cancel_token, total_opt.unwrap()).await
+    } else {
+        download_single(app, &client, url, version, target, cancel_token, total_opt).await
+    }
+}
+
+/// 从 `Content-Range: bytes 0-0/12345678` 中解析出总字节数。
+fn parse_content_range_total(headers: &reqwest::header::HeaderMap) -> Option<u64> {
+    headers
+        .get("content-range")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.rfind('/').map(|i| &s[i + 1..]))
+        .and_then(|s| s.trim().parse::<u64>().ok())
+}
+
+/// 并发分块下载：把文件切成 N 块，各自独立 GET Range，完成后合并写盘。
+async fn download_parallel(
+    app: &AppHandle,
+    client: &reqwest::Client,
+    url: &str,
+    version: &str,
+    target: &PathBuf,
+    cancel_token: &CancellationToken,
+    total: u64,
+) -> Result<DownloadWriteOutcome, String> {
+    use futures_util::StreamExt;
+    use std::sync::Arc;
+
+    let chunk_count = compute_chunk_count();
+    tracing::info!("[about] 并发分块下载：{} 块（CPU 逻辑核数 = {}）",
+        chunk_count,
+        std::thread::available_parallelism().map(|n| n.get()).unwrap_or(0));
+
+    // 块大小：均分，但不小于 MIN_CHUNK_SIZE
+    let chunk_size = {
+        let ideal = (total + chunk_count - 1) / chunk_count;
+        ideal.max(MIN_CHUNK_SIZE)
+    };
+
+    // 预先分配文件（避免写时扩展）
+    {
+        let f = std::fs::File::create(target)
+            .map_err(|e| format!("创建下载文件失败：{}", e))?;
+        f.set_len(total)
+            .map_err(|e| format!("预分配文件空间失败：{}", e))?;
+    }
+
+    // 共享进度计数器
+    let downloaded_total = Arc::new(std::sync::atomic::AtomicU64::new(0));
+
+    // 生成所有块的 [start, end] 范围
+    let mut ranges: Vec<(u64, u64)> = Vec::new();
+    let mut offset = 0u64;
+    while offset < total {
+        let end = (offset + chunk_size - 1).min(total - 1);
+        ranges.push((offset, end));
+        offset = end + 1;
+    }
+
+    // 并发执行，最多 chunk_count 个并行
+    let semaphore = Arc::new(tokio::sync::Semaphore::new(chunk_count as usize));
+    // 文件写入互斥锁：跨所有 chunk task 共享，保护 seek+write 的原子性
+    let file_mutex = Arc::new(tokio::sync::Mutex::new(()));
+    let cancel = cancel_token.clone();
+    let mut tasks = Vec::new();
+
+    for (start, end) in ranges {
+        let client = client.clone();
+        let url = url.to_string();
+        let version = version.to_string();
+        let target = target.clone();
+        let app = app.clone();
+        let dl_total = Arc::clone(&downloaded_total);
+        let sem = Arc::clone(&semaphore);
+        let file_mutex = Arc::clone(&file_mutex);
+        let cancel = cancel.clone();
+
+        tasks.push(tauri::async_runtime::spawn(async move {
+            let _permit = sem.acquire().await.map_err(|_| "信号量获取失败".to_string())?;
+
+            if cancel.is_cancelled() {
+                return Ok::<_, String>(false); // false = cancelled
+            }
+
+            let range_header = format!("bytes={}-{}", start, end);
+            let resp = client
+                .get(&url)
+                .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
+                .header("Range", range_header)
+                .send()
+                .await
+                .map_err(|e| format!("分块请求失败（{}-{}）：{}", start, end, e))?;
+
+            if !resp.status().is_success() && resp.status().as_u16() != 206 {
+                return Err(format!("分块下载失败：HTTP {}", resp.status()));
+            }
+
+            let mut stream = resp.bytes_stream();
+            let mut chunk_buf: Vec<u8> = Vec::with_capacity((end - start + 1) as usize);
+
+            loop {
+                let item = tokio::select! {
+                    _ = cancel.cancelled() => return Ok(false),
+                    item = stream.next() => item,
+                };
+                let Some(bytes_result) = item else { break };
+                let bytes = bytes_result.map_err(|e| format!("下载流中断：{}", e))?;
+                chunk_buf.extend_from_slice(&bytes);
+
+                let chunk_downloaded = bytes.len() as u64;
+                let prev = dl_total.fetch_add(chunk_downloaded, std::sync::atomic::Ordering::Relaxed);
+                let new_total = prev + chunk_downloaded;
+                let percent = (new_total as f32 / total as f32 * 100.0).min(99.9);
+
+                emit_update_download_state(
+                    &app,
+                    UpdateDownloadEvent::Downloading {
+                        version: version.clone(),
+                        downloaded: new_total,
+                        total: Some(total),
+                        percent: Some(percent),
+                    },
+                );
+            }
+
+            // 写入对应偏移（用文件互斥锁保护 seek+write）
+            {
+                use std::io::{Seek, SeekFrom, Write};
+                let _guard = file_mutex.lock().await;
+                let mut f = std::fs::OpenOptions::new()
+                    .write(true)
+                    .open(&target)
+                    .map_err(|e| format!("打开下载文件失败：{}", e))?;
+                f.seek(SeekFrom::Start(start))
+                    .map_err(|e| format!("文件 seek 失败：{}", e))?;
+                f.write_all(&chunk_buf)
+                    .map_err(|e| format!("写入分块失败：{}", e))?;
+            }
+
+            Ok(true)
+        }));
+    }
+
+    // 等待所有块完成
+    for task in tasks {
+        match task.await {
+            Ok(Ok(false)) => {
+                // 某块被取消
+                remove_partial_file(target);
+                emit_update_download_state(
+                    app,
+                    UpdateDownloadEvent::Cancelled { version: version.to_string() },
+                );
+                return Ok(DownloadWriteOutcome::Cancelled);
+            }
+            Ok(Ok(true)) => {}
+            Ok(Err(e)) => return Err(e),
+            Err(e) => return Err(format!("下载任务 panic：{}", e)),
+        }
+    }
+
+    let downloaded = downloaded_total.load(std::sync::atomic::Ordering::Relaxed);
+    Ok(DownloadWriteOutcome::Completed { downloaded, total: Some(total) })
+}
+
+/// 单流下载（回退路径：服务器不支持 Range 或文件过小）。
+async fn download_single(
+    app: &AppHandle,
+    client: &reqwest::Client,
+    url: &str,
+    version: &str,
+    target: &PathBuf,
+    cancel_token: &CancellationToken,
+    total: Option<u64>,
+) -> Result<DownloadWriteOutcome, String> {
     use futures_util::StreamExt;
     use std::io::Write;
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(60 * 5)) // 5 分钟，覆盖慢网
-        .build()
-        .map_err(|e| format!("初始化 HTTP client 失败：{}", e))?;
-
     let resp = client
         .get(url)
+        .header("User-Agent", concat!("TypeBridge/", env!("CARGO_PKG_VERSION")))
         .send()
         .await
         .map_err(|e| format!("发起下载请求失败：{}", e))?;
@@ -365,7 +581,8 @@ async fn download_to_file(
         return Err(format!("下载失败：HTTP {}", resp.status()));
     }
 
-    let total = resp.content_length();
+    // 优先使用 GET 响应自带的 Content-Length；探测值作为备用
+    let file_total = resp.content_length().or(total).filter(|&t| t > 0);
 
     let mut file = std::fs::File::create(target)
         .map_err(|e| format!("创建下载文件失败：{}", e))?;
@@ -381,31 +598,23 @@ async fn download_to_file(
             item = stream.next() => item,
         };
 
-        let Some(chunk) = next_chunk else {
-            break;
-        };
+        let Some(chunk) = next_chunk else { break };
         let bytes = chunk.map_err(|e| format!("下载流中断：{}", e))?;
         downloaded += bytes.len() as u64;
         file.write_all(&bytes)
             .map_err(|e| format!("写入下载文件失败：{}", e))?;
 
-        let percent = total.map(|t| {
-            if t == 0 {
-                100.0f32
-            } else {
-                (downloaded as f32 / t as f32 * 100.0).min(99.9)
-            }
-        });
+        let percent = file_total.map(|t| (downloaded as f32 / t as f32 * 100.0).min(99.9));
         emit_update_download_state(
             app,
             UpdateDownloadEvent::Downloading {
                 version: version.to_string(),
                 downloaded,
-                total,
+                total: file_total,
                 percent,
             },
         );
     }
 
-    Ok(DownloadWriteOutcome::Completed { downloaded, total })
+    Ok(DownloadWriteOutcome::Completed { downloaded, total: file_total })
 }
