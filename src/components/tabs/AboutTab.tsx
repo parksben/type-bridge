@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -52,6 +52,8 @@ export default function AboutTab() {
   const [version, setVersion] = useState<string>("…");
   const [status, setStatus] = useState<CheckStatus>({ kind: "idle" });
   const [downloadState, setDownloadState] = useState<DownloadState>({ phase: "idle" });
+  const [downloadStalled, setDownloadStalled] = useState(false);
+  const stalledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useI18n();
 
   useEffect(() => {
@@ -107,6 +109,39 @@ export default function AboutTab() {
     };
   }, []);
 
+  useEffect(() => {
+    if (downloadState.phase !== "downloading") {
+      setDownloadStalled(false);
+      if (stalledTimerRef.current) {
+        clearTimeout(stalledTimerRef.current);
+        stalledTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (downloadState.downloaded > 0) {
+      setDownloadStalled(false);
+      if (stalledTimerRef.current) {
+        clearTimeout(stalledTimerRef.current);
+        stalledTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (!stalledTimerRef.current) {
+      stalledTimerRef.current = setTimeout(() => {
+        setDownloadStalled(true);
+      }, 10000);
+    }
+
+    return () => {
+      if (stalledTimerRef.current) {
+        clearTimeout(stalledTimerRef.current);
+        stalledTimerRef.current = null;
+      }
+    };
+  }, [downloadState]);
+
   async function handleCheck() {
     setStatus({ kind: "checking" });
     try {
@@ -132,6 +167,7 @@ export default function AboutTab() {
 
   async function handleStartDownload() {
     if (status.kind !== "has-update") return;
+    setDownloadStalled(false);
     setDownloadState({
       phase: "downloading",
       version: status.latest,
@@ -173,6 +209,7 @@ export default function AboutTab() {
         <UpdateStatusBanner
           status={status}
           downloadState={downloadState}
+          downloadStalled={downloadStalled}
           onStart={handleStartDownload}
           onCancel={handleCancelDownload}
         />
@@ -266,14 +303,20 @@ function CheckResultLine({ status }: { status: CheckStatus }) {
 function UpdateStatusBanner({
   status,
   downloadState,
+  downloadStalled,
   onStart,
   onCancel,
 }: {
   status: CheckStatus;
   downloadState: DownloadState;
+  downloadStalled: boolean;
   onStart: () => void;
   onCancel: () => void;
 }) {
+  if (downloadState.phase === "failed" || (downloadState.phase === "downloading" && downloadStalled)) {
+    return <ManualDownloadHintBanner />;
+  }
+
   if (downloadState.phase === "downloading") {
     return (
       <div
@@ -327,33 +370,6 @@ function UpdateStatusBanner({
     );
   }
 
-  if (downloadState.phase === "failed") {
-    return (
-      <div
-        className="flex items-start justify-between gap-3 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
-        style={{
-          background: "var(--surface-2)",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <div className="flex items-start gap-2">
-          <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-error" />
-          <div className="text-text max-w-[260px] break-words">
-            <span className="text-error">{ti18n("about.downloadFailedPrefix")}</span>
-            {localizeRuntime(downloadState.reason)}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onStart}
-          className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0"
-        >
-          {ti18n("about.retryDownload")}
-        </button>
-      </div>
-    );
-  }
-
   if (downloadState.phase === "cancelled") {
     return (
       <div
@@ -401,6 +417,33 @@ function UpdateStatusBanner({
         className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0"
       >
         {ti18n("about.installNow")}
+      </button>
+    </div>
+  );
+}
+
+function ManualDownloadHintBanner() {
+  return (
+    <div
+      className="flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-[12px]"
+      style={{
+        background: "var(--surface-2)",
+        border: "1px solid var(--border)",
+      }}
+    >
+      <div className="flex items-center gap-2 min-w-0 text-text">
+        <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 text-error" />
+        <span className="truncate whitespace-nowrap">{ti18n("about.manualDownloadHint")}</span>
+      </div>
+      <button
+        type="button"
+        onClick={async () => {
+          const { openUrl } = await import("@tauri-apps/plugin-opener");
+          await openUrl("https://typebridge.parksben.xyz/#download");
+        }}
+        className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0 whitespace-nowrap"
+      >
+        {ti18n("about.openWebsiteDownload")}
       </button>
     </div>
   );

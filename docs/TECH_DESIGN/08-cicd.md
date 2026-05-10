@@ -125,7 +125,11 @@ AboutTab (前端)
 - `start_update_download`：在 Rust 侧创建单实例后台任务（同一时刻仅允许一个下载），通过 `CancellationToken` 支持取消。任务内部流式下载到 `~/Downloads/{filename}.dmg`，并持续 emit `typebridge://update-download-state` 事件（phase + 进度 + 字节数 + 失败原因）
 - `cancel_update_download`：触发当前任务 token cancel；下载协程收到取消信号后停止写入并删除不完整文件，向前端发送 `cancelled` 事件
 - 下载完成后发 `opening` 事件，随后 `Command::new("open")` 挂载并显示 Finder 卷，再 `app.exit(0)`。用户拖入「应用程序」覆盖旧版后手动重新启动
-- **下载进度 UI**：前端不再使用独立 modal，而是在 About 页顶部渲染与其他 tab 同风格的状态栏；状态栏根据 `typebridge://update-download-state` 切换 `ready/downloading/failed/cancelled/opening`，并提供 `取消下载` 与 `重试下载`
+- **下载进度 UI**：前端不再使用独立 modal，而是在 About 页顶部渲染与其他 tab 同风格的状态栏；状态栏根据 `typebridge://update-download-state` 切换 `ready/downloading/failed/cancelled/opening`。
+- **失败/长时间未开始统一降级策略**：
+  - `failed`：直接展示单行"前往官网重新下载覆盖安装"提示，不展示进度条
+  - `downloading` 且长期 `downloaded=0`（前端定时阈值判定）：同样切换到官网引导提示，不展示进度条
+  - 上述两种状态的 CTA 统一为"前往官网"，减少用户决策成本
 
 **官网 API** ([website/app/api/latest-version/route.ts](../../website/app/api/latest-version/route.ts))：
 - **v0.9+ 优化**：不再每次调 GitHub API。CI 完成 Release 后通过 `POST /api/publish`（带 `UPLOAD_SECRET` 鉴权）把 `{version, tag_name, name, notes, published_at, download_urls}` 写到 Netlify Blobs（key: `latest-release`）。`GET /api/latest-version` 直接从 Blobs 读，响应时间从 ~300ms 降到 ~50ms，且不受 GitHub rate limit 限制
