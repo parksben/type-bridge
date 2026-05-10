@@ -106,7 +106,7 @@ export default function ConnectionHub() {
 
       {/* intro 说明 banner，置于 tab 下方全宽 */}
       <div
-        className="flex items-center gap-2 px-6 py-2 text-[12px] shrink-0"
+        className="flex justify-center items-center gap-2 px-6 py-2 text-[12px] shrink-0"
         style={{
           background: "var(--surface-2)",
           borderBottom: "1px solid var(--border)",
