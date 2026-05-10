@@ -85,6 +85,54 @@ const SCREENSHOT_CMDS: CmdDef[] = [
   { labelKey: "monitor.cmdScreenshotPaste",  Icon: ClipboardPaste, spec: { type: "combo", combo: "Paste" } },
 ];
 
+// ─── RowCmdButton: 全宽横排按钮（图标 + 文字左对齐）──────────────
+
+function RowCmdButton({
+  cmd,
+  onPress,
+  disabled,
+}: {
+  cmd: CmdDef;
+  onPress: (cmd: CmdDef) => void;
+  disabled: boolean;
+}) {
+  const [pressed, setPressed] = useState(false);
+  const { Icon, labelKey, accent } = cmd;
+
+  return (
+    <button
+      type="button"
+      onTouchStart={(e) => { e.stopPropagation(); if (!disabled) setPressed(true); }}
+      onTouchEnd={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setPressed(false);
+        if (!disabled) onPress(cmd);
+      }}
+      onTouchCancel={() => setPressed(false)}
+      onClick={() => { if (!disabled) onPress(cmd); }}
+      disabled={disabled}
+      className="flex items-center gap-3.5 w-full rounded-2xl select-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      style={{
+        background: pressed
+          ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
+          : "var(--tb-surface)",
+        border: `1px solid ${pressed ? "var(--tb-text)" : "var(--tb-border)"}`,
+        color: accent ? "var(--tb-danger)" : "var(--tb-text)",
+        padding: "14px 16px",
+      }}
+    >
+      <Icon size={22} strokeWidth={2} />
+      <span
+        className="text-[15px] font-medium"
+        style={{ color: accent ? "var(--tb-danger)" : "var(--tb-text)" }}
+      >
+        {t(labelKey)}
+      </span>
+    </button>
+  );
+}
+
 // ─── CmdButton ─────────────────────────────────────────────────
 
 function CmdButton({
@@ -204,6 +252,78 @@ function PairedButtons({
       {mkBtn(left, lPressed, setLPressed, "left")}
       <div style={{ width: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
       {mkBtn(right, rPressed, setRPressed, "right")}
+    </div>
+  );
+}
+
+// ─── VerticalPairedButtons: 两个按钮上下一体化 ─────────────────
+
+function VerticalPairedButtons({
+  top,
+  bottom,
+  onPress,
+  disabled,
+}: {
+  top: CmdDef;
+  bottom: CmdDef;
+  onPress: (cmd: CmdDef) => void;
+  disabled: boolean;
+}) {
+  const [tPressed, setTPressed] = useState(false);
+  const [bPressed, setRPressed] = useState(false);
+
+  function mkBtn(
+    cmd: CmdDef,
+    pressed: boolean,
+    setPressed: (v: boolean) => void,
+    side: "top" | "bottom",
+  ) {
+    const { Icon, labelKey } = cmd;
+    const borderColor = pressed ? "var(--tb-text)" : "var(--tb-border)";
+    return (
+      <button
+        type="button"
+        onTouchStart={(e) => { e.stopPropagation(); if (!disabled) setPressed(true); }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          setPressed(false);
+          if (!disabled) onPress(cmd);
+        }}
+        onTouchCancel={() => setPressed(false)}
+        onClick={() => { if (!disabled) onPress(cmd); }}
+        disabled={disabled}
+        className="flex flex-col items-center justify-center gap-1.5 select-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{
+          background: pressed
+            ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
+            : "var(--tb-surface)",
+          borderLeft: `1px solid ${borderColor}`,
+          borderRight: `1px solid ${borderColor}`,
+          borderTop: side === "top" ? `1px solid ${borderColor}` : "none",
+          borderBottom: side === "bottom" ? `1px solid ${borderColor}` : "none",
+          borderRadius: side === "top" ? "16px 16px 0 0" : "0 0 16px 16px",
+          minHeight: "64px",
+          padding: "10px 8px",
+          color: "var(--tb-text)",
+        }}
+      >
+        <Icon size={22} strokeWidth={2} />
+        <span
+          className="text-[11px] leading-none text-center font-medium"
+          style={{ color: "var(--tb-muted)" }}
+        >
+          {t(labelKey)}
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col flex-1">
+      {mkBtn(top, tPressed, setTPressed, "top")}
+      <div style={{ height: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
+      {mkBtn(bottom, bPressed, setRPressed, "bottom")}
     </div>
   );
 }
@@ -383,19 +503,10 @@ export default function QuickCommands({ client, disabled }: Props) {
           {/* 截图反馈 toast */}
           <ScreenshotToast feedback={screenshotFeedback} />
 
-          {/* 截取窗口 / 截取屏幕 */}
-          <div className="grid grid-cols-2 gap-3">
-            {SCREENSHOT_CMDS.slice(0, 2).map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
-            ))}
-          </div>
-
-          {/* 粘贴截图：独占半行居中 */}
-          <div className="flex justify-center">
-            <div className="w-1/2 pr-1.5">
-              <CmdButton cmd={SCREENSHOT_CMDS[2]} onPress={handlePress} disabled={disabled} large />
-            </div>
-          </div>
+          {/* 三个截图按钮：每个独占一行 */}
+          {SCREENSHOT_CMDS.map((cmd) => (
+            <RowCmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+          ))}
 
           {/* 提示说明 */}
           <p
@@ -454,11 +565,11 @@ export default function QuickCommands({ client, disabled }: Props) {
           {/* 行首 ↔ 行尾 */}
           <PairedButtons left={CMD_HOME} right={CMD_END} onPress={handlePress} disabled={disabled} />
 
-          {/* 上一页 ↔ 下一页 */}
-          <PairedButtons left={CMD_PAGE_UP} right={CMD_PAGE_DOWN} onPress={handlePress} disabled={disabled} />
-
-          {/* 页首 ↔ 页尾 */}
-          <PairedButtons left={CMD_DOC_TOP} right={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} />
+          {/* 上一页/下一页 ↕ 与 页首/页尾 ↕ 并列一行 */}
+          <div className="flex gap-3 w-full">
+            <VerticalPairedButtons top={CMD_PAGE_UP} bottom={CMD_PAGE_DOWN} onPress={handlePress} disabled={disabled} />
+            <VerticalPairedButtons top={CMD_DOC_TOP} bottom={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} />
+          </div>
         </div>
 
       </div>
