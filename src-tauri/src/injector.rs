@@ -43,6 +43,7 @@ extern "C" {
         wheel3: i32,
     ) -> *mut std::ffi::c_void;
     fn CGEventSetDoubleValueField(event: *mut std::ffi::c_void, field: u32, value: f64);
+    fn CGEventSetIntegerValueField(event: *mut std::ffi::c_void, field: u32, value: i64);
     // 屏幕录制权限（macOS 10.15+）
     fn CGPreflightScreenCaptureAccess() -> bool;
     fn CGRequestScreenCaptureAccess() -> bool;
@@ -104,6 +105,8 @@ const CG_SCROLL_EVENT_UNIT_PIXEL: u32 = 0;
 const CG_EVENT_MAGNIFY: u32 = 29;
 /// kCGEventGestureMagnification field id（CGEventField 枚举值，参见 CGEventTypes.h 113 = 0x71）
 const CG_FIELD_MAGNIFICATION: u32 = 113;
+/// kCGMouseEventClickState (CGEventField value 13) — 单/双/三击计数
+const CG_FIELD_MOUSE_CLICK_STATE: u32 = 13;
 
 unsafe fn set_event_flags(event: *mut std::ffi::c_void, flags: u64) {
     CGEventSetFlags(event, flags);
@@ -383,7 +386,7 @@ pub fn mouse_move(dx: f64, dy: f64) -> Result<(), String> {
 }
 
 /// 鼠标按键（down / up）。button = "left" | "right"，action = "down" | "up"。
-pub fn mouse_click(button: &str, action: &str) -> Result<(), String> {
+pub fn mouse_click(button: &str, action: &str, click_count: u32) -> Result<(), String> {
     let (event_type, mouse_btn) = match (button, action) {
         ("left", "down") => (CG_EVENT_LEFT_MOUSE_DOWN, CG_MOUSE_BUTTON_LEFT),
         ("left", "up") => (CG_EVENT_LEFT_MOUSE_UP, CG_MOUSE_BUTTON_LEFT),
@@ -401,6 +404,10 @@ pub fn mouse_click(button: &str, action: &str) -> Result<(), String> {
         );
         if event.is_null() {
             return Err("CGEventCreateMouseEvent(click) failed".into());
+        }
+        // macOS 需要 kCGMouseEventClickState 字段来区分单击/双击/三击
+        if click_count > 1 {
+            CGEventSetIntegerValueField(event, CG_FIELD_MOUSE_CLICK_STATE, click_count as i64);
         }
         CGEventPost(0, event);
         CFRelease(event);

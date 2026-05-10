@@ -233,10 +233,10 @@ export class WebChatClient {
     this.socket.emit("mouse_scroll", { userToken: this.userToken, dx, dy });
   }
 
-  /** 鼠标按键事件（down / up）。fire-and-forget，无 ack。 */
-  sendMouseClick(button: "left" | "right", action: "down" | "up"): void {
+  /** 鼠标按键事件（down / up）。fire-and-forget，无 ack。clickCount=2 表示双击事件。 */
+  sendMouseClick(button: "left" | "right", action: "down" | "up", clickCount = 1): void {
     if (!this.userToken) return;
-    this.socket.emit("mouse_click", { userToken: this.userToken, button, action });
+    this.socket.emit("mouse_click", { userToken: this.userToken, button, action, clickCount });
   }
 
   /** 双指缩放。delta 为归一化量（正=放大，负=缩小）。fire-and-forget。 */

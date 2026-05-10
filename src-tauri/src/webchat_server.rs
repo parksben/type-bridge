@@ -533,7 +533,11 @@ struct MouseClickMsg {
     user_token: String,
     button: String,  // "left" | "right"
     action: String,  // "down" | "up"
+    #[serde(rename = "clickCount", default = "default_click_count")]
+    click_count: u32,
 }
+
+fn default_click_count() -> u32 { 1 }
 
 #[derive(Debug, Deserialize)]
 struct MouseZoomMsg {
@@ -765,9 +769,9 @@ async fn on_connect(socket: SocketRef) {
             if verify_user_token(&msg.user_token, &state).is_err() {
                 return;
             }
-            let (button, action) = (msg.button.clone(), msg.action.clone());
+            let (button, action, click_count) = (msg.button.clone(), msg.action.clone(), msg.click_count);
             tokio::task::spawn_blocking(move || {
-                let _ = crate::injector::mouse_click(&button, &action);
+                let _ = crate::injector::mouse_click(&button, &action, click_count);
             });
         },
     );

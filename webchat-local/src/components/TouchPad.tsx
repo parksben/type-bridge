@@ -56,6 +56,10 @@ export default function TouchPad({ client, disabled }: Props) {
   const scrollRevRef = useRef(scrollReversed);
   const leftHeldRef = useRef(false);
   const landscapeRef = useRef(false);
+  // 左键双击检测
+  const leftTapCountRef = useRef(0);
+  const lastLeftTapEndRef = useRef(0);
+  const leftTapResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ResizeObserver 监听容器尺寸，用于横屏 CSS rotate
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,8 +106,9 @@ export default function TouchPad({ client, disabled }: Props) {
   async function fireMultiClick(count: 1 | 2 | 3) {
     if (disabled) return;
     for (let i = 0; i < count; i++) {
-      client.sendMouseClick("left", "down");
-      client.sendMouseClick("left", "up");
+      const clickNum = (i + 1) as 1 | 2 | 3;
+      client.sendMouseClick("left", "down", clickNum);
+      client.sendMouseClick("left", "up", clickNum);
       if (i < count - 1) await new Promise<void>((r) => setTimeout(r, 55));
     }
   }
@@ -240,13 +245,25 @@ export default function TouchPad({ client, disabled }: Props) {
     e.stopPropagation(); e.preventDefault();
     setLeftPressed(true);
     leftHeldRef.current = true;
-    if (!disabled) client.sendMouseClick("left", "down");
+    // 检测双击：与上次抬起间隔在 MULTI_TAP_INTERVAL 内则计数递增
+    const now = Date.now();
+    if (now - lastLeftTapEndRef.current < MULTI_TAP_INTERVAL) {
+      leftTapCountRef.current += 1;
+    } else {
+      leftTapCountRef.current = 1;
+    }
+    if (leftTapResetTimerRef.current) clearTimeout(leftTapResetTimerRef.current);
+    if (!disabled) client.sendMouseClick("left", "down", leftTapCountRef.current);
   }
   function handleLeftEnd(e: React.TouchEvent) {
     e.stopPropagation(); e.preventDefault();
     setLeftPressed(false);
     leftHeldRef.current = false;
-    if (!disabled) client.sendMouseClick("left", "up");
+    lastLeftTapEndRef.current = Date.now();
+    leftTapResetTimerRef.current = setTimeout(() => {
+      leftTapCountRef.current = 0;
+    }, MULTI_TAP_INTERVAL);
+    if (!disabled) client.sendMouseClick("left", "up", leftTapCountRef.current);
   }
   function handleRightStart(e: React.TouchEvent) {
     e.stopPropagation(); e.preventDefault();
