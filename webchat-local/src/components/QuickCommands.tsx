@@ -115,17 +115,20 @@ function RowCmdButton({
       onTouchCancel={() => setPressed(false)}
       onClick={() => { if (!disabled) onPress(cmd); }}
       disabled={disabled}
-      className="flex items-center gap-3.5 w-full rounded-2xl select-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className="flex items-center gap-3.5 w-full rounded-2xl select-none disabled:opacity-30 disabled:cursor-not-allowed"
       style={{
         background: pressed
-          ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
-          : "var(--tb-surface)",
-        border: `1px solid ${pressed ? "var(--tb-text)" : "var(--tb-border)"}`,
+          ? "rgba(255,255,255,0.05)"
+          : "rgba(255,255,255,0.03)",
+        border: `1px solid ${pressed ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
         color: accent ? "var(--tb-danger)" : "var(--tb-text)",
         padding: "14px 16px",
+        transition: "background 80ms ease, border-color 80ms ease",
       }}
     >
-      <Icon size={22} strokeWidth={2} />
+      <span style={{ color: accent ? "var(--tb-danger)" : "var(--tb-accent)", flexShrink: 0, display: "flex" }}>
+        <Icon size={22} strokeWidth={1.8} />
+      </span>
       <span
         className="text-[15px] font-medium"
         style={{ color: accent ? "var(--tb-danger)" : "var(--tb-text)" }}
@@ -149,37 +152,33 @@ function CmdButton({
   disabled: boolean;
   large?: boolean;
 }) {
-  const [pressed, setPressed] = useState(false);
   const { Icon, labelKey, accent } = cmd;
 
   return (
     <button
       type="button"
-      onTouchStart={(e) => { e.stopPropagation(); if (!disabled) setPressed(true); }}
+      onTouchStart={(e) => { e.stopPropagation(); }}
       onTouchEnd={(e) => {
         e.stopPropagation();
         e.preventDefault();
-        setPressed(false);
         if (!disabled) onPress(cmd);
       }}
-      onTouchCancel={() => setPressed(false)}
       onClick={() => { if (!disabled) onPress(cmd); }}
       disabled={disabled}
-      className="flex flex-col items-center justify-center gap-1.5 rounded-2xl select-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className={`keycap flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed${large ? " rounded-full" : " rounded-2xl"}`}
       style={{
-        background: pressed
-          ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
-          : "var(--tb-surface)",
-        border: `1px solid ${pressed ? "var(--tb-text)" : "var(--tb-border)"}`,
         color: accent ? "var(--tb-danger)" : "var(--tb-text)",
-        minHeight: large ? "96px" : "82px",
-        padding: "12px 8px",
+        minHeight: large ? "80px" : "76px",
+        minWidth: large ? "80px" : undefined,
+        padding: "10px 8px",
       }}
     >
-      <Icon size={large ? 26 : 23} strokeWidth={2} />
+      <span style={{ color: accent ? "var(--tb-danger)" : "var(--tb-accent)" }}>
+        <Icon size={large ? 26 : 22} strokeWidth={1.8} />
+      </span>
       <span
-        className="text-[12px] leading-none text-center font-medium"
-        style={{ color: accent ? "var(--tb-danger)" : "var(--tb-muted)" }}
+        className="text-[11px] leading-none text-center font-semibold tracking-wide"
+        style={{ color: accent ? "var(--tb-danger)" : "rgba(255,255,255,0.4)" }}
       >
         {t(labelKey)}
       </span>
@@ -210,7 +209,7 @@ function PairedButtons({
     side: "left" | "right",
   ) {
     const { Icon, labelKey } = cmd;
-    const borderColor = pressed ? "var(--tb-text)" : "var(--tb-border)";
+    const isActive = pressed;
     return (
       <button
         type="button"
@@ -224,25 +223,27 @@ function PairedButtons({
         onTouchCancel={() => setPressed(false)}
         onClick={() => { if (!disabled) onPress(cmd); }}
         disabled={disabled}
-        className="flex-1 flex flex-col items-center justify-center gap-1.5 select-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="flex-1 flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed"
         style={{
-          background: pressed
-            ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
-            : "var(--tb-surface)",
-          borderTop: `1px solid ${borderColor}`,
-          borderBottom: `1px solid ${borderColor}`,
-          borderLeft: side === "left" ? `1px solid ${borderColor}` : "none",
-          borderRight: side === "right" ? `1px solid ${borderColor}` : "none",
+          background: isActive
+            ? "rgba(255,255,255,0.05)"
+            : "rgba(255,255,255,0.02)",
+          borderTop: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
+          borderBottom: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
+          borderLeft: side === "left" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
+          borderRight: side === "right" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
           borderRadius: side === "left" ? "16px 0 0 16px" : "0 16px 16px 0",
-          minHeight: "72px",
+          minHeight: "68px",
           padding: "10px 8px",
-          color: "var(--tb-text)",
+          transition: "background 80ms ease",
         }}
       >
-        <Icon size={22} strokeWidth={2} />
+        <span style={{ color: "var(--tb-accent)", display: "flex" }}>
+          <Icon size={22} strokeWidth={1.8} />
+        </span>
         <span
-          className="text-[11px] leading-none text-center font-medium"
-          style={{ color: "var(--tb-muted)" }}
+          className="text-[11px] leading-none text-center font-semibold tracking-wide"
+          style={{ color: "rgba(255,255,255,0.4)" }}
         >
           {t(labelKey)}
         </span>
@@ -253,7 +254,7 @@ function PairedButtons({
   return (
     <div className="flex w-full">
       {mkBtn(left, lPressed, setLPressed, "left")}
-      <div style={{ width: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
+      <div style={{ width: "1px", background: "rgba(255,255,255,0.07)", flexShrink: 0 }} />
       {mkBtn(right, rPressed, setRPressed, "right")}
     </div>
   );
@@ -282,7 +283,7 @@ function VerticalPairedButtons({
     side: "top" | "bottom",
   ) {
     const { Icon, labelKey } = cmd;
-    const borderColor = pressed ? "var(--tb-text)" : "var(--tb-border)";
+    const isActive = pressed;
     return (
       <button
         type="button"
@@ -296,25 +297,27 @@ function VerticalPairedButtons({
         onTouchCancel={() => setPressed(false)}
         onClick={() => { if (!disabled) onPress(cmd); }}
         disabled={disabled}
-        className="flex flex-col items-center justify-center gap-1.5 select-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed"
         style={{
-          background: pressed
-            ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
-            : "var(--tb-surface)",
-          borderLeft: `1px solid ${borderColor}`,
-          borderRight: `1px solid ${borderColor}`,
-          borderTop: side === "top" ? `1px solid ${borderColor}` : "none",
-          borderBottom: side === "bottom" ? `1px solid ${borderColor}` : "none",
+          background: isActive
+            ? "rgba(255,255,255,0.05)"
+            : "rgba(255,255,255,0.02)",
+          borderLeft: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
+          borderRight: `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})`,
+          borderTop: side === "top" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
+          borderBottom: side === "bottom" ? `1px solid rgba(255,255,255,${isActive ? 0.12 : 0.06})` : "none",
           borderRadius: side === "top" ? "16px 16px 0 0" : "0 0 16px 16px",
-          minHeight: "64px",
+          minHeight: "60px",
           padding: "10px 8px",
-          color: "var(--tb-text)",
+          transition: "background 80ms ease",
         }}
       >
-        <Icon size={22} strokeWidth={2} />
+        <span style={{ color: "var(--tb-accent)", display: "flex" }}>
+          <Icon size={22} strokeWidth={1.8} />
+        </span>
         <span
-          className="text-[11px] leading-none text-center font-medium"
-          style={{ color: "var(--tb-muted)" }}
+          className="text-[11px] leading-none text-center font-semibold tracking-wide"
+          style={{ color: "rgba(255,255,255,0.4)" }}
         >
           {t(labelKey)}
         </span>
@@ -325,7 +328,7 @@ function VerticalPairedButtons({
   return (
     <div className="flex flex-col flex-1">
       {mkBtn(top, tPressed, setTPressed, "top")}
-      <div style={{ height: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
+      <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", flexShrink: 0 }} />
       {mkBtn(bottom, bPressed, setRPressed, "bottom")}
     </div>
   );
@@ -343,12 +346,12 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
       className="flex items-start gap-3 px-3.5 py-3 rounded-xl text-[13px] font-medium shrink-0"
       style={{
         background: success
-          ? "color-mix(in srgb, var(--tb-success) 12%, transparent)"
-          : "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+          ? "rgba(74, 222, 128, 0.1)"
+          : "rgba(248, 113, 113, 0.1)",
         color: success ? "var(--tb-success)" : "var(--tb-danger)",
         border: `1px solid ${success
-          ? "color-mix(in srgb, var(--tb-success) 28%, transparent)"
-          : "color-mix(in srgb, var(--tb-danger) 22%, transparent)"}`,
+          ? "rgba(74, 222, 128, 0.25)"
+          : "rgba(248, 113, 113, 0.22)"}`,
       }}
     >
       <span className="shrink-0 mt-0.5">
@@ -457,8 +460,9 @@ export default function QuickCommands({ client, disabled }: Props) {
         <div
           className="mx-4 mt-3 px-3 py-2 rounded-xl text-[12px] text-center shrink-0"
           style={{
-            background: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+            background: "rgba(248, 113, 113, 0.1)",
             color: "var(--tb-danger)",
+            border: "1px solid rgba(248, 113, 113, 0.2)",
           }}
         >
           {error}
@@ -469,8 +473,8 @@ export default function QuickCommands({ client, disabled }: Props) {
       <div
         className="flex shrink-0 overflow-x-auto scrollbar-none"
         style={{
-          borderBottom: "1px solid var(--tb-border)",
-          background: "var(--tb-bg)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          background: "var(--tb-surface)",
         }}
       >
         {TABS.map(({ id, label, Icon }) => (
@@ -478,17 +482,22 @@ export default function QuickCommands({ client, disabled }: Props) {
             key={id}
             type="button"
             onClick={() => handleTabClick(id)}
-            className="flex-1 py-2.5 text-[12px] font-semibold whitespace-nowrap transition-colors relative flex flex-col items-center gap-1"
-            style={{ color: activeTab === id ? "var(--tb-accent)" : "var(--tb-muted)" }}
+            className="flex-1 py-2.5 text-[12px] font-semibold whitespace-nowrap relative flex flex-col items-center gap-1 select-none"
+            style={{
+              color: activeTab === id ? "var(--tb-accent)" : "rgba(255,255,255,0.3)",
+              transition: "color 150ms ease",
+            }}
           >
-            <Icon size={18} strokeWidth={2} />
+            <Icon size={18} strokeWidth={1.8} />
             {label}
             <span
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full transition-all duration-200"
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full"
               style={{
-                width: activeTab === id ? "80%" : "0%",
+                width: activeTab === id ? "70%" : "0%",
                 height: "2px",
                 background: "var(--tb-accent)",
+                boxShadow: activeTab === id ? "0 0 8px var(--tb-accent-glow)" : "none",
+                transition: "width 200ms ease, box-shadow 200ms ease",
               }}
             />
           </button>
@@ -519,7 +528,7 @@ export default function QuickCommands({ client, disabled }: Props) {
           {/* 提示说明 */}
           <p
             className="text-center text-[11px] leading-relaxed"
-            style={{ color: "var(--tb-muted)" }}
+            style={{ color: "rgba(255,255,255,0.2)" }}
           >
             {t("monitor.cmdScreenshotHint")}
           </p>
@@ -532,17 +541,23 @@ export default function QuickCommands({ client, disabled }: Props) {
           style={{ height: "100%", scrollSnapAlign: "start" }}
         >
           {/* 编辑操作：undo/redo/enter/delete/clear/escape */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             {EDIT_CMDS.slice(0, 6).map((cmd) => (
               <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
             ))}
           </div>
 
           {/* 分割线 */}
-          <div style={{ height: "1px", background: "var(--tb-border)", margin: "2px 0" }} />
+          <div
+            style={{
+              height: "1px",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
+              margin: "2px 0",
+            }}
+          />
 
           {/* 剪贴板：selectAll/copy/cut/paste */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             {EDIT_CMDS.slice(6).map((cmd) => (
               <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
             ))}
@@ -556,25 +571,32 @@ export default function QuickCommands({ client, disabled }: Props) {
           style={{ height: "100%", scrollSnapAlign: "start" }}
         >
           {/* 方向键 D-pad */}
-          <div className="grid grid-cols-3 gap-2.5 w-full max-w-[270px]">
+          <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
             <div />
             <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
             <div />
           </div>
-          <div className="grid grid-cols-3 gap-2.5 w-full max-w-[270px]">
+          <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
             <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
             <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
             <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
           </div>
 
           {/* 分割线 */}
-          <div className="w-full" style={{ height: "1px", background: "var(--tb-border)", margin: "2px 0" }} />
+          <div
+            className="w-full"
+            style={{
+              height: "1px",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
+              margin: "2px 0",
+            }}
+          />
 
           {/* 行首 ↔ 行尾 */}
           <PairedButtons left={CMD_HOME} right={CMD_END} onPress={handlePress} disabled={disabled} />
 
           {/* 上一页/下一页 ↕ 与 页首/页尾 ↕ 并列一行 */}
-          <div className="flex gap-3 w-full">
+          <div className="flex gap-2.5 w-full">
             <VerticalPairedButtons top={CMD_PAGE_UP} bottom={CMD_PAGE_DOWN} onPress={handlePress} disabled={disabled} />
             <VerticalPairedButtons top={CMD_DOC_TOP} bottom={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} />
           </div>

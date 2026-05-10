@@ -290,12 +290,16 @@ export default function TouchPad({ client, disabled }: Props) {
       {showSettings && (
         <div
           className="fixed inset-0 z-50 flex items-end"
-          style={{ background: "rgba(0,0,0,0.38)" }}
+          style={{ background: "rgba(0,0,0,0.65)" }}
           onClick={() => setShowSettings(false)}
         >
           <div
-            className="w-full rounded-t-2xl px-6 pt-5 pb-8 safe-area-bottom"
-            style={{ background: "var(--tb-surface)" }}
+            className="w-full rounded-t-2xl px-6 pt-5 pb-8 safe-area-bottom animate-fade-up"
+            style={{
+              background: "#1a1e2a",
+              borderTop: "1px solid rgba(255,255,255,0.07)",
+              boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
@@ -306,7 +310,11 @@ export default function TouchPad({ client, disabled }: Props) {
                 type="button"
                 onClick={() => setShowSettings(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-full"
-                style={{ background: "var(--tb-bg)", color: "var(--tb-muted)" }}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  color: "var(--tb-muted)",
+                }}
               >
                 <X size={18} strokeWidth={2.2} />
               </button>
@@ -389,24 +397,38 @@ export default function TouchPad({ client, disabled }: Props) {
           <div
             className="flex flex-col flex-1 m-3 overflow-hidden"
             style={{
-              background: "var(--tb-surface)",
-              border: "1px solid var(--tb-border)",
-              borderRadius: "20px",
+              background: "var(--tb-pad-bg)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "22px",
+              boxShadow: "0 0 0 1px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.5)",
             }}
           >
             {/* ── Trackpad area ──────────────────────────── */}
             <div
-              className="relative touch-none select-none flex-1 overflow-hidden"
+              className="pad-surface relative touch-none select-none flex-1 overflow-hidden"
               onTouchStart={handlePadTouchStart}
               onTouchMove={handlePadTouchMove}
               onTouchEnd={handlePadTouchEnd}
               onTouchCancel={handlePadTouchEnd}
+              style={{ borderRadius: "22px 22px 0 0" }}
             >
-              {/* 中心大字提示 */}
+              {/* 顶部高光线 */}
+              <div
+                className="absolute top-0 left-4 right-4 pointer-events-none"
+                style={{
+                  height: "1px",
+                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+                }}
+              />
+              {/* 中心提示 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span
-                  className="text-[28px] font-medium tracking-wide select-none"
-                  style={{ color: "color-mix(in srgb, var(--tb-muted) 35%, transparent)" }}
+                  className="text-[22px] font-light tracking-widest select-none"
+                  style={{
+                    color: "rgba(255,255,255,0.07)",
+                    fontVariantNumeric: "tabular-nums",
+                    letterSpacing: "0.25em",
+                  }}
                 >
                   {t("monitor.touchpadHint")}
                 </span>
@@ -417,14 +439,15 @@ export default function TouchPad({ client, disabled }: Props) {
                   type="button"
                   onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); toggleLandscape(); }}
                   onClick={() => toggleLandscape()}
-                  className="w-9 h-9 flex items-center justify-center rounded-full"
+                  className="w-9 h-9 flex items-center justify-center rounded-full select-none"
                   style={{
                     background: landscape
                       ? "var(--tb-accent)"
-                      : "color-mix(in srgb, var(--tb-surface) 80%, transparent)",
-                    color: landscape ? "white" : "var(--tb-muted)",
-                    border: "1px solid var(--tb-border)",
-                    backdropFilter: "blur(4px)",
+                      : "rgba(255,255,255,0.06)",
+                    color: landscape ? "white" : "rgba(255,255,255,0.4)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(8px)",
+                    boxShadow: landscape ? "0 0 12px var(--tb-accent-glow)" : "none",
                   }}
                 >
                   {landscape
@@ -435,12 +458,12 @@ export default function TouchPad({ client, disabled }: Props) {
                   type="button"
                   onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowSettings(true); }}
                   onClick={() => setShowSettings(true)}
-                  className="w-9 h-9 flex items-center justify-center rounded-full"
+                  className="w-9 h-9 flex items-center justify-center rounded-full select-none"
                   style={{
-                    background: "color-mix(in srgb, var(--tb-surface) 80%, transparent)",
-                    color: "var(--tb-muted)",
-                    border: "1px solid var(--tb-border)",
-                    backdropFilter: "blur(4px)",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.4)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(8px)",
                   }}
                 >
                   <Settings2 size={16} strokeWidth={2} />
@@ -449,40 +472,48 @@ export default function TouchPad({ client, disabled }: Props) {
             </div>
 
             {/* ── 分割线 ─────────────────────────────────── */}
-            <div style={{ height: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
+            <div
+              style={{
+                height: "1px",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+                flexShrink: 0,
+              }}
+            />
 
             {/* ── Mouse buttons（始终横排在底部）────────── */}
-            <div className="flex shrink-0" style={{ height: "72px" }}>
+            <div className="flex shrink-0" style={{ height: "76px" }}>
               <button
                 type="button"
-                className="flex-1 text-[15px] font-medium select-none transition-colors"
+                className={`hw-button${leftPressed ? " pressed" : ""} flex-1 flex flex-col items-center justify-center gap-1 select-none`}
                 style={{
-                  background: leftPressed
-                    ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
-                    : "transparent",
-                  color: "var(--tb-text)",
-                  borderRight: `1px solid var(--tb-border)`,
+                  borderRight: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: "0 0 0 22px",
                 }}
                 onTouchStart={handleLeftStart}
                 onTouchEnd={handleLeftEnd}
                 onTouchCancel={handleLeftEnd}
               >
-                {t("monitor.touchpadLeftBtn")}
+                <span
+                  className="text-[13px] font-semibold tracking-wide"
+                  style={{ color: leftPressed ? "var(--tb-accent)" : "rgba(255,255,255,0.45)" }}
+                >
+                  {t("monitor.touchpadLeftBtn")}
+                </span>
               </button>
               <button
                 type="button"
-                className="flex-1 text-[15px] font-medium select-none transition-colors"
-                style={{
-                  background: rightPressed
-                    ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
-                    : "transparent",
-                  color: "var(--tb-text)",
-                }}
+                className={`hw-button${rightPressed ? " pressed" : ""} flex-1 flex flex-col items-center justify-center gap-1 select-none`}
+                style={{ borderRadius: "0 0 22px 0" }}
                 onTouchStart={handleRightStart}
                 onTouchEnd={handleRightEnd}
                 onTouchCancel={handleRightEnd}
               >
-                {t("monitor.touchpadRightBtn")}
+                <span
+                  className="text-[13px] font-semibold tracking-wide"
+                  style={{ color: rightPressed ? "var(--tb-accent)" : "rgba(255,255,255,0.45)" }}
+                >
+                  {t("monitor.touchpadRightBtn")}
+                </span>
               </button>
             </div>
           </div>

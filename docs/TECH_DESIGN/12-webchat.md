@@ -218,6 +218,13 @@ loading → 读 URL ?s=<sessionId> 并 UA 检查
 
 **控制键面板演进**：最初以"单排7键收起/展开面板"（`ShortcutKeysPanel.tsx`）设计，后扩展为 4-tab 的 `QuickCommands`，最终从 TouchPad 底部 sheet 提升为顶部独立"键盘"Tab，整页展示，按钮显著放大。当前实现见 §35.11.4。
 
+**WebChat UI 主题（v2 重设计）**：移动端 SPA 从米白暖色系切换为深色主题（海军蓝底 `#0d0f14` + 品牌橙 `#f97316`），整体呈"硬件控制器"质感：
+- `styles.css` 新增 `.keycap`（键帽 3D depth + box-shadow 按压动效）、`.pad-surface`（触控板点阵纹理）、`.hw-button`（鼠标键硬件按键 pressed 凹陷）等工具类
+- `ShortcutKeysPanel`：每个快捷键按钮使用 `.keycap` 类，图标变为品牌橙
+- `TouchPad`：触控板区使用点阵纹理背景，左/右鼠标键改为硬件按钮样式（pressed 态凹陷），设置面板切换为深色 modal
+- `QuickCommands`：Tab 栏橙色光晕指示线，所有按钮使用 `.keycap` 或半透明深色卡片，分割线改为渐变线
+- `ChatPage` Header：Tab 切换器改为橙色玻璃高亮（active 态 `rgba(249,115,22,0.18)` 底 + 橙色文字 + 光晕）
+
 ### 35.7 Tauri 集成
 
 **tauri.conf.json**：

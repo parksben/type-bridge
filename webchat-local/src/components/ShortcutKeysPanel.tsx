@@ -33,8 +33,11 @@ type Props = {
 export default function ShortcutKeysPanel({ onPress, disabled }: Props) {
   return (
     <div
-      className="px-3 pt-2 pb-1.5 flex items-stretch gap-1.5 overflow-x-auto scrollbar-none"
-      style={{ background: "var(--tb-surface)" }}
+      className="px-2.5 pt-2 pb-2 flex items-stretch gap-1.5 overflow-x-auto scrollbar-none"
+      style={{
+        background: "var(--tb-surface)",
+        borderTop: "1px solid var(--tb-border)",
+      }}
     >
       {KEYS.map(({ code, Icon, labelKey }) => (
         <button
@@ -43,15 +46,13 @@ export default function ShortcutKeysPanel({ onPress, disabled }: Props) {
           onClick={() => onPress(code)}
           disabled={disabled}
           aria-label={t(labelKey)}
-          className="flex-1 min-w-[44px] min-h-[44px] rounded-xl border flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: "var(--tb-bg)",
-            borderColor: "var(--tb-border)",
-            color: "var(--tb-text)",
-          }}
+          className="keycap flex-1 min-w-[42px] min-h-[50px] rounded-[10px] flex flex-col items-center justify-center gap-1 select-none disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <Icon size={18} strokeWidth={2} />
-          <span className="text-[10px] leading-none" style={{ color: "var(--tb-muted)" }}>
+          <Icon size={16} strokeWidth={2} style={{ color: "var(--tb-accent)" }} />
+          <span
+            className="text-[9px] leading-none font-semibold tracking-wider uppercase"
+            style={{ color: "var(--tb-muted)" }}
+          >
             {t(labelKey)}
           </span>
         </button>
