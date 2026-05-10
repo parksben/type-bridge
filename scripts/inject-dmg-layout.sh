@@ -1,82 +1,70 @@
 #!/bin/bash
-# Inject DMG icon positions + extra files (首次启动前必读.txt) with sanity checks and automatic rollback
+# 用 create-dmg 重新制作 DMG，让 Finder 自己写 DS_Store（确保背景图 + 图标位置可靠生效）。
+# 原 Python ds_store 方案写出的 DS_Store 格式已过时，现代 macOS Finder 会忽略它。
 
 set -euxo pipefail
 
-python3 -m venv /tmp/dsstore-venv
-/tmp/dsstore-venv/bin/pip install -q ds_store
-
+VERSION="${VERSION:-0.1.0}"
 TXT_SRC="src-tauri/resources/首次启动前必读.txt"
+BG_PNG="src-tauri/icons/dmg-background.png"
 
 for arch in aarch64 x86_64; do
-  DMG_DIR="src-tauri/target/${arch}-apple-darwin/release/bundle/dmg"
-  DMG=$(ls "$DMG_DIR"/*.dmg | head -1)
-  ORIG="/tmp/dmg-orig-${arch}.dmg"
+  case "$arch" in
+    aarch64) TRIPLE="aarch64-apple-darwin"; SUFFIX="aarch64" ;;
+    x86_64)  TRIPLE="x86_64-apple-darwin";  SUFFIX="x64" ;;
+  esac
 
-  cp "$DMG" "$ORIG"
-  rm -f /tmp/dmg-rw.dmg /tmp/dmg-out.dmg
+  APP_PATH="src-tauri/target/${TRIPLE}/release/bundle/macos/TypeBridge.app"
+  DMG_DIR="src-tauri/target/${TRIPLE}/release/bundle/dmg"
+  DMG_OUT="${DMG_DIR}/TypeBridge_${VERSION}_${SUFFIX}.dmg"
 
-  INJECT_OK=false
-  if hdiutil convert "$DMG" -format UDRW -o /tmp/dmg-rw.dmg \
-    && hdiutil attach -nobrowse -readwrite /tmp/dmg-rw.dmg -mountpoint /tmp/dmg-mnt; then
+  # 准备 staging 目录（.app + TXT，Applications 符号链接由 create-dmg 自动创建）
+  STAGING="/tmp/dmg-staging-${arch}"
+  rm -rf "$STAGING"
+  mkdir -p "$STAGING"
+  cp -r "$APP_PATH" "$STAGING/"
+  cp "$TXT_SRC" "$STAGING/"
 
-    # Copy the first-launch guide TXT into the DMG root
-    cp "$TXT_SRC" /tmp/dmg-mnt/
+  # 卸载同名已挂载卷（避免 create-dmg 冲突）
+  hdiutil detach "/Volumes/TypeBridge" 2>/dev/null || true
 
-    # Patch DS_Store icon positions
-    if /tmp/dsstore-venv/bin/python scripts/fix_dsstore.py /tmp/dmg-mnt src-tauri/icons/dmg-dsstore; then
-      hdiutil detach /tmp/dmg-mnt -force
-      if hdiutil convert /tmp/dmg-rw.dmg -format UDZO -imagekey zlib-level=9 -o /tmp/dmg-out.dmg; then
-        INJECT_OK=true
-      fi
-    else
-      hdiutil detach /tmp/dmg-mnt -force >/dev/null 2>&1 || true
-    fi
+  # 清理旧产物
+  rm -f "$DMG_OUT"
+
+  # create-dmg 使用 osascript/Finder 原生写 DS_Store，背景图和图标位置完全可靠
+  # 退出码 2 = "resource busy" 警告但 DMG 已生成，视为成功
+  create-dmg \
+    --volname "TypeBridge" \
+    --background "$BG_PNG" \
+    --window-pos 200 120 \
+    --window-size 760 540 \
+    --icon-size 128 \
+    --text-size 13 \
+    --icon "TypeBridge.app" 180 185 \
+    --app-drop-link 530 185 \
+    --icon "首次启动前必读.txt" 380 400 \
+    --hide-extension "TypeBridge.app" \
+    --no-internet-enable \
+    "$DMG_OUT" \
+    "$STAGING/" || { CODE=$?; [ "$CODE" -eq 2 ] || exit "$CODE"; }
+
+  echo "✓ 创建完成: $DMG_OUT ($(ls -lh "$DMG_OUT" | awk '{print $5}'))"
+
+  # 基础校验
+  hdiutil verify "$DMG_OUT"
+
+  # 验证 TXT 文件存在
+  hdiutil attach -nobrowse -readonly "$DMG_OUT" -mountpoint /tmp/dmg-check
+  if [ ! -f "/tmp/dmg-check/首次启动前必读.txt" ]; then
+    echo "ERROR: 首次启动前必读.txt not found in DMG for $arch"
+    hdiutil detach /tmp/dmg-check -force
+    exit 1
   fi
+  echo "✓ 首次启动前必读.txt 存在于 DMG 中"
+  hdiutil detach /tmp/dmg-check -force
 
-  if [ "$INJECT_OK" = "true" ]; then
-    mv /tmp/dmg-out.dmg "$DMG"
-
-    # Smoke test: verify DMG integrity
-    if ! hdiutil verify "$DMG" >/dev/null 2>&1; then
-      echo "Injected DMG verify failed for $arch, rollback to original DMG"
-      cp "$ORIG" "$DMG"
-    # Smoke test: attach the DMG
-    elif ! hdiutil attach -nobrowse -readonly "$DMG" -mountpoint /tmp/dmg-check >/dev/null 2>&1; then
-      echo "Injected DMG attach failed for $arch, rollback to original DMG"
-      cp "$ORIG" "$DMG"
-    # Sanity check: verify DS_Store icon positions and TXT presence
-    elif ! /tmp/dsstore-venv/bin/python - <<'PYSCRIPT'
-# -*- coding: utf-8 -*-
-import os, sys
-from ds_store import DSStore
-
-mnt = '/tmp/dmg-check'
-
-# Verify TXT file is present
-txt_path = os.path.join(mnt, '首次启动前必读.txt')
-assert os.path.isfile(txt_path), f"Guide TXT not found: {txt_path}"
-
-# Verify DS_Store icon positions
-p = os.path.join(mnt, '.DS_Store')
-with DSStore.open(p, 'r') as ds:
-    entries = {(e.filename, e.code): e.value for e in ds if e.code == b'Iloc'}
-assert entries.get(('TypeBridge.app', b'Iloc')) == (180, 185), f"TypeBridge.app pos mismatch: {entries.get(('TypeBridge.app', b'Iloc'))}"
-assert entries.get(('Applications', b'Iloc')) == (530, 185), f"Applications pos mismatch: {entries.get(('Applications', b'Iloc'))}"
-assert entries.get(('首次启动前必读.txt', b'Iloc')) == (380, 378), f"TXT pos mismatch: {entries.get(('首次启动前必读.txt', b'Iloc'))}"
-print("DS_Store sanity check passed")
-PYSCRIPT
-    then
-      echo "Injected DMG DS_Store sanity check failed for $arch, rollback to original DMG"
-      cp "$ORIG" "$DMG"
-    fi
-
-    hdiutil detach /tmp/dmg-check -force >/dev/null 2>&1 || true
-  else
-    echo "DMG layout injection failed for $arch, rollback to original DMG"
-    hdiutil detach /tmp/dmg-mnt -force >/dev/null 2>&1 || true
-    cp "$ORIG" "$DMG"
-  fi
+  rm -rf "$STAGING"
+done
 
   rm -f "$ORIG" /tmp/dmg-rw.dmg /tmp/dmg-out.dmg
 done
