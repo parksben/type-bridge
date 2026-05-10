@@ -4,7 +4,7 @@
 //!
 //! 1. 前端 AboutTab 启动时 invoke `get_app_version` 拿版本号文案
 //! 2. 用户点「检查更新」→ invoke `check_update`
-//!    - dev 构建直接返回 `is_dev=true`，前端展示「已是最新版」
+//!    - dev 构建用于联调：优先复用官网版本信息并强制判定有更新
 //!    - release 构建 fetch 官网 `/api/latest-version` → 比版本号
 //! 3. 有新版 → 前端 About 页顶部状态栏展示「立即下载」
 //! 4. 用户点下载 → invoke `start_update_download`
@@ -88,17 +88,6 @@ pub async fn check_update() -> Result<UpdateCheckResult, String> {
         env!("CARGO_PKG_VERSION").to_string()
     };
 
-    if cfg!(debug_assertions) {
-        return Ok(UpdateCheckResult {
-            is_dev: true,
-            current,
-            latest: None,
-            has_update: false,
-            download_url: None,
-            notes: None,
-        });
-    }
-
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS))
         .build()
@@ -120,10 +109,16 @@ pub async fn check_update() -> Result<UpdateCheckResult, String> {
         .map_err(|e| format!("解析最新版本响应失败：{}", e))?;
 
     let download_url = pick_download_url(&payload.download_urls);
-    let has_update = is_newer_version(&payload.version, &current);
+    let has_update = if cfg!(debug_assertions) {
+        // DEV 联调模式：只要能拿到可下载的新包信息，就强制展示为"可更新"。
+        // 这样每次都能走完整的下载/取消/失败/重试链路验证。
+        download_url.is_some()
+    } else {
+        is_newer_version(&payload.version, &current)
+    };
 
     Ok(UpdateCheckResult {
-        is_dev: false,
+        is_dev: cfg!(debug_assertions),
         current,
         latest: Some(payload.version),
         has_update,
