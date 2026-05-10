@@ -105,8 +105,8 @@ const CG_SCROLL_EVENT_UNIT_PIXEL: u32 = 0;
 const CG_EVENT_MAGNIFY: u32 = 29;
 /// kCGEventGestureMagnification field id（CGEventField 枚举值，参见 CGEventTypes.h 113 = 0x71）
 const CG_FIELD_MAGNIFICATION: u32 = 113;
-/// kCGMouseEventClickState (CGEventField value 13) — 单/双/三击计数
-const CG_FIELD_MOUSE_CLICK_STATE: u32 = 13;
+/// kCGMouseEventClickState (CGEventField = 1) — single/double/triple click count
+const CG_FIELD_MOUSE_CLICK_STATE: u32 = 1;
 
 unsafe fn set_event_flags(event: *mut std::ffi::c_void, flags: u64) {
     CGEventSetFlags(event, flags);
@@ -405,10 +405,9 @@ pub fn mouse_click(button: &str, action: &str, click_count: u32) -> Result<(), S
         if event.is_null() {
             return Err("CGEventCreateMouseEvent(click) failed".into());
         }
-        // macOS 需要 kCGMouseEventClickState 字段来区分单击/双击/三击
-        if click_count > 1 {
-            CGEventSetIntegerValueField(event, CG_FIELD_MOUSE_CLICK_STATE, click_count as i64);
-        }
+        // Always set kCGMouseEventClickState so macOS apps can distinguish
+        // single / double / triple clicks (default is 1 if not set, but be explicit)
+        CGEventSetIntegerValueField(event, CG_FIELD_MOUSE_CLICK_STATE, click_count as i64);
         CGEventPost(0, event);
         CFRelease(event);
     }
