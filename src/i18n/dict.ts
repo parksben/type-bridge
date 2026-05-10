@@ -15,6 +15,7 @@ export const ZH = {
 
   sidebar: {
     connection: "连接 TypeBridge",
+    link: "连接应用",
     input: "自动提交",
     history: "历史消息",
     logs: "系统日志",
@@ -359,6 +360,7 @@ export const EN: Dict = {
 
   sidebar: {
     connection: "Connect TypeBridge",
+    link: "Link Chat Apps",
     input: "Auto Submit",
     history: "Message History",
     logs: "System Log",

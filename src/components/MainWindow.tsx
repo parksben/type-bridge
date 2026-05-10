@@ -11,6 +11,7 @@ import { useI18n } from "../i18n";
 import SideBar from "./SideBar";
 import ErrorBoundary from "./ErrorBoundary";
 import ConnectionHub from "./ConnectionHub";
+import LinkAppsHub from "./LinkAppsHub";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
 import InputSettingsTab from "./tabs/InputSettingsTab";
@@ -144,6 +145,11 @@ export default function MainWindow() {
         {activeTab === "connection" && (
           <ErrorBoundary label={t("sidebar.connection")}>
             <ConnectionHub />
+          </ErrorBoundary>
+        )}
+        {activeTab === "link" && (
+          <ErrorBoundary label={t("sidebar.link")}>
+            <LinkAppsHub />
           </ErrorBoundary>
         )}
         {activeTab === "history" && (
