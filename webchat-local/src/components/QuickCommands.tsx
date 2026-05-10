@@ -24,6 +24,9 @@ import {
   Monitor,
   CheckCircle,
   ShieldAlert,
+  Camera,
+  PenLine,
+  Compass,
 } from "lucide-react";
 import type { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
@@ -373,10 +376,10 @@ export default function QuickCommands({ client, disabled }: Props) {
     screenshot: null, edit: null, nav: null,
   });
 
-  const TABS: { id: TabId; label: string }[] = [
-    { id: "screenshot", label: t("monitor.cmdGroupScreenshot") },
-    { id: "edit",       label: t("monitor.cmdGroupEdit") },
-    { id: "nav",        label: t("monitor.cmdGroupNav") },
+  const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
+    { id: "screenshot", label: t("monitor.cmdGroupScreenshot"), Icon: Camera },
+    { id: "edit",       label: t("monitor.cmdGroupEdit"),       Icon: PenLine },
+    { id: "nav",        label: t("monitor.cmdGroupNav"),        Icon: Compass },
   ];
 
   // ── Scroll spy ──────────────────────────────────────────────
@@ -470,14 +473,15 @@ export default function QuickCommands({ client, disabled }: Props) {
           background: "var(--tb-bg)",
         }}
       >
-        {TABS.map(({ id, label }) => (
+        {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => handleTabClick(id)}
-            className="flex-1 py-3 text-[13px] font-semibold whitespace-nowrap transition-colors relative"
+            className="flex-1 py-2.5 text-[12px] font-semibold whitespace-nowrap transition-colors relative flex flex-col items-center gap-1"
             style={{ color: activeTab === id ? "var(--tb-accent)" : "var(--tb-muted)" }}
           >
+            <Icon size={18} strokeWidth={2} />
             {label}
             <span
               className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full transition-all duration-200"
