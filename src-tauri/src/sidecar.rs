@@ -85,6 +85,10 @@ impl SidecarBridge {
         *g = None;
     }
 
+    pub fn take(&self) -> Option<CommandChild> {
+        self.child.lock().unwrap().take()
+    }
+
     pub fn is_connected(&self) -> bool {
         self.child.lock().unwrap().is_some()
     }
@@ -564,17 +568,26 @@ pub async fn start_wecom<R: Runtime>(
     .await
 }
 
-/// 停止某渠道 sidecar。现在只发 status:false 事件并依赖 Terminated 清理；
-/// 真正的 child.kill() 留给 Tauri 进程生命周期处理。
+/// 停止某渠道 sidecar。若进程存在则立即 kill，并同步广播 status:false。
 #[tauri::command]
-pub fn stop_channel<R: Runtime>(app: AppHandle<R>, channel: ChannelId) {
-    let _ = app.emit(
+pub fn stop_channel<R: Runtime>(app: AppHandle<R>, channel: ChannelId) -> Result<(), String> {
+    let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
+    let bridge = ctx.bridges.get(channel);
+
+    if let Some(child) = bridge.take() {
+        child.kill().map_err(|e| format!("failed to stop {} sidecar: {}", channel.key(), e))?;
+    }
+
+    app.emit(
         "typebridge://status",
         ChannelStatusPayload {
             channel,
             connected: false,
         },
-    );
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 /// 对某渠道发 selftest 命令，等待该渠道 sidecar 回执（10s 超时）。

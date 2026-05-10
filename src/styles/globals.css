@@ -258,6 +258,55 @@ button.tb-btn-secondary:disabled {
   border-color: var(--border);
 }
 
+button.tb-btn-danger-outline {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, transform 80ms ease;
+}
+button.tb-btn-danger-outline:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  transform: translateY(-0.5px);
+}
+button.tb-btn-danger-outline:active:not(:disabled) {
+  transform: translateY(0);
+}
+button.tb-btn-danger-outline:disabled {
+  border-color: var(--border);
+  color: var(--subtle);
+  cursor: not-allowed;
+}
+
+button.tb-btn-status-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+button.tb-btn-status-action:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-2);
+}
+button.tb-btn-status-action:disabled {
+  color: var(--subtle);
+  cursor: not-allowed;
+}
+
 button.tb-btn-ghost {
   background: transparent;
   color: var(--muted);

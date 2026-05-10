@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   AlertCircle,
@@ -11,6 +11,7 @@ import {
   Radar,
   RotateCw,
   Sparkles,
+  Unplug,
 } from "lucide-react";
 import { useAppStore, type Settings } from "../../store";
 import { useI18n } from "../../i18n";
@@ -29,8 +30,11 @@ export default function WeComConnectionTab() {
   const [hydrated, setHydrated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [selftesting, setSelftesting] = useState(false);
   const [selftestResult, setSelftestResult] = useState<SelftestResult | null>(null);
+  const botIdInputId = useId();
+  const secretInputId = useId();
 
   const { channelConnected, addLog } = useAppStore();
   const { t } = useI18n();
@@ -63,6 +67,10 @@ export default function WeComConnectionTab() {
 
   useEffect(() => {
     if (connected) setStarting(false);
+  }, [connected]);
+
+  useEffect(() => {
+    if (!connected) setStopping(false);
   }, [connected]);
 
   function validate(): FieldErrors {
@@ -116,6 +124,21 @@ export default function WeComConnectionTab() {
     }
   }
 
+  async function handleDisconnect() {
+    if (!connected || stopping) return;
+    const label = t("channel.wecom");
+    if (!window.confirm(t("conn.disconnectConfirm", { label }))) return;
+
+    setStopping(true);
+    try {
+      await invoke("stop_channel", { channel: "wecom" });
+      addLog({ kind: "connect", channel: "wecom", text: t("conn.disconnected") });
+    } catch (e) {
+      addLog({ kind: "error", channel: "wecom", text: t("conn.disconnectFailed", { error: String(e) }) });
+      setStopping(false);
+    }
+  }
+
   async function openWeComAdmin() {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
     await openUrl("https://work.weixin.qq.com/wework_admin/frame#/aiHelper/list?tab=manage").catch(() => {});
@@ -128,15 +151,10 @@ export default function WeComConnectionTab() {
 
   const botIdError = fieldErrors.botId;
   const secretError = fieldErrors.secret;
-  useEffect(() => {
-    if (botIdError) setFieldErrors((e) => ({ ...e, botId: undefined }));
-  }, [botId]);
-  useEffect(() => {
-    if (secretError) setFieldErrors((e) => ({ ...e, secret: undefined }));
-  }, [secret]);
 
-  const canStart = !starting && botId.trim().length > 0 && secret.trim().length > 0;
+  const canStart = !starting && !stopping && botId.trim().length > 0 && secret.trim().length > 0;
   const canSelftest = connected && !selftesting;
+  const canDisconnect = connected && !stopping && !starting;
 
   return (
     <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
@@ -190,6 +208,7 @@ export default function WeComConnectionTab() {
             <div className="flex-1 text-text">
               {t("wecom.bannerIdleBefore")}
               <button
+                type="button"
                 onClick={openWeComAdmin}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
@@ -215,15 +234,21 @@ export default function WeComConnectionTab() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+          <label htmlFor={botIdInputId} className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <KeyRound size={12} strokeWidth={1.75} />
             Bot ID
           </label>
           <input
+            id={botIdInputId}
             className="tb-input"
             placeholder="ww_xxxxxxxxxxxxxxxxxx"
             value={botId}
-            onChange={(e) => setBotId(e.target.value)}
+            onChange={(e) => {
+              setBotId(e.target.value);
+              if (fieldErrors.botId) {
+                setFieldErrors((prev) => ({ ...prev, botId: undefined }));
+              }
+            }}
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
@@ -238,16 +263,22 @@ export default function WeComConnectionTab() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
+          <label htmlFor={secretInputId} className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
             <Lock size={12} strokeWidth={1.75} />
             Secret
           </label>
           <input
+            id={secretInputId}
             type="password"
             className="tb-input"
             placeholder={t("wecom.secretPlaceholder")}
             value={secret}
-            onChange={(e) => setSecret(e.target.value)}
+            onChange={(e) => {
+              setSecret(e.target.value);
+              if (fieldErrors.secret) {
+                setFieldErrors((prev) => ({ ...prev, secret: undefined }));
+              }
+            }}
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
@@ -263,9 +294,11 @@ export default function WeComConnectionTab() {
 
         <div className="flex gap-2 mt-1">
           <button
+            type="button"
             onClick={handleStart}
             disabled={!canStart}
-            className="tb-btn-primary flex-1 flex items-center justify-center gap-1.5"
+            className="tb-btn-primary flex items-center justify-center gap-1.5"
+            style={{ flex: connected ? "1 1 0%" : "1" }}
           >
             {starting ? (
               <>
@@ -279,46 +312,66 @@ export default function WeComConnectionTab() {
               </>
             )}
           </button>
-          <button
-            onClick={handleSelftest}
-            disabled={!canSelftest}
-            className="flex-1 flex items-center justify-center gap-1.5 text-[13px] rounded-lg py-[10px] transition-colors"
-            style={{
-              background: "var(--surface-2)",
-              border: `1px solid ${canSelftest ? "var(--border-strong)" : "var(--border)"}`,
-              color: canSelftest ? "var(--text)" : "var(--subtle)",
-              cursor: canSelftest ? "pointer" : "not-allowed",
-            }}
-            title={connected ? t("wecom.selftestTooltip") : t("conn.testTooltipDisabled")}
-          >
-            {selftesting ? (
-              <>
-                <RotateCw size={13} strokeWidth={1.75} className="animate-spin" />
-                {t("conn.testing")}
-              </>
-            ) : (
-              <>
-                <Radar size={13} strokeWidth={1.75} />
-                {t("conn.test")}
-              </>
-            )}
-          </button>
+          {connected && (
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              disabled={!canDisconnect}
+              className="tb-btn-danger-outline min-w-[132px] flex items-center justify-center gap-1.5"
+              title={t("conn.disconnect")}
+            >
+              {stopping ? (
+                <>
+                  <RotateCw size={13} strokeWidth={1.75} className="animate-spin" />
+                  {t("conn.disconnect")}
+                </>
+              ) : (
+                <>
+                  <Unplug size={13} strokeWidth={1.75} />
+                  {t("conn.disconnect")}
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* 连接状态 */}
-        <div className="flex items-center gap-2.5 px-0.5 py-1">
-          <span
-            className={`inline-block w-2.5 h-2.5 rounded-full ${
-              connState === "connected"
-                ? "dot-connected"
-                : connState === "connecting"
-                ? "dot-connecting"
-                : "dot-idle"
-            }`}
-          />
-          <span className="text-[12.5px] text-muted">
-            {connState === "connected" ? t("conn.statusConnected") : connState === "connecting" ? t("conn.statusConnecting") : t("conn.statusIdle")}
-          </span>
+        <div className="flex items-center justify-between gap-2.5 px-0.5 py-1">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`inline-block w-2.5 h-2.5 rounded-full ${
+                connState === "connected"
+                  ? "dot-connected"
+                  : connState === "connecting"
+                  ? "dot-connecting"
+                  : "dot-idle"
+              }`}
+            />
+            <span className="text-[12.5px] text-muted">
+              {connState === "connected" ? t("conn.statusConnected") : connState === "connecting" ? t("conn.statusConnecting") : t("conn.statusIdle")}
+            </span>
+          </div>
+          {connected && (
+            <button
+              type="button"
+              onClick={handleSelftest}
+              disabled={!canSelftest}
+              className="tb-btn-status-action"
+              title={connected ? t("wecom.selftestTooltip") : t("conn.testTooltipDisabled")}
+            >
+              {selftesting ? (
+                <>
+                  <RotateCw size={12} strokeWidth={1.75} className="animate-spin" />
+                  {t("conn.testing")}
+                </>
+              ) : (
+                <>
+                  <Radar size={12} strokeWidth={1.75} />
+                  {t("conn.test")}
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* 启动成功后：引导去管理后台 */}
@@ -335,6 +388,7 @@ export default function WeComConnectionTab() {
             <div className="flex-1">
               {t("wecom.afterStartBefore")}
               <button
+                type="button"
                 onClick={openWeComAdmin}
                 className="text-accent hover:underline inline-flex items-center gap-0.5"
               >
