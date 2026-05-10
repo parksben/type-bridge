@@ -25,7 +25,7 @@
 
 ## 👋 What is TypeBridge?
 
-TypeBridge is a macOS menu bar app. Open the app, scan a code — your phone instantly becomes a wireless keyboard and trackpad for your Mac. Type, control the cursor, or use your voice, all from one device.
+TypeBridge is a macOS desktop app. Open the app, scan a code — your phone instantly becomes a wireless keyboard and trackpad for your Mac. Type, control the cursor, or use your voice, all from one device.
 
 You can also send messages through Feishu, DingTalk, or WeCom bots — they'll land right where your cursor is on the desktop.
 

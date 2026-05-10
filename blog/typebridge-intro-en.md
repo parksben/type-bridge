@@ -14,7 +14,7 @@ Presenting slides from across the room and needing to skip forward. Lounging on 
 
 ## What Is TypeBridge?
 
-TypeBridge is a macOS menu bar app. One sentence: **it turns your iPhone or Android phone into a wireless keyboard, trackpad, and voice input device for your Mac.**
+TypeBridge is a macOS desktop app. One sentence: **it turns your iPhone or Android phone into a wireless keyboard, trackpad, and voice input device for your Mac.**
 
 No Bluetooth pairing. No shared Apple ID. Not even a cable. Open the app, scan a QR code with your phone, and you are connected.
 
@@ -31,23 +31,21 @@ Type on your phone — text lands at your Mac's cursor. Use your phone screen as
 
 Type on your phone, hit send, and the text lands wherever your Mac cursor is. VS Code, Terminal, the browser address bar, Slack — if the cursor is there, that is where the words go.
 
-> Real-world moment: a verification code arrives on your phone. Instead of reading it out loud and typing it in — tap send. The field fills itself.
+Type Mode also works naturally with voice input: open your phone's built-in keyboard, tap the mic, speak, then hit send — your words appear right at the Mac cursor. **No extra speech-to-text engine required.** Mandarin Chinese comfortably hits 200+ characters per minute — roughly twice as fast as most people type.
+
+> Real-world moment: a verification code arrives on your phone. Instead of reading it out loud and typing it in — tap send. The field fills itself. Writing a weekly report? Think out loud, sentence by sentence, and watch the lines appear in Notion.
 
 ### Trackpad Mode
 
-Your phone screen becomes a Mac trackpad. One finger moves the cursor, two fingers scroll, tap to click, two-finger tap to right-click. Three fingers up for Mission Control, left or right to switch desktops.
+Your phone screen becomes a Mac trackpad. One finger moves the cursor, two fingers scroll, tap to click, two-finger tap to right-click.
 
 > Real-world moment: you are presenting slides from the front of the room. Your phone is in your hand — advance slides, move the cursor, no need to walk back to the laptop. Browsing YouTube from the couch? Your phone is the remote.
 
-### Voice Mode
+### Shortcut Mode
 
-This is the one that makes people say "wait, what."
+The third tab is a shortcut panel. Screenshot, undo, select all, copy, paste, arrow keys, page navigation — all the commands you reach for every day, one tap away, executed directly on your Mac without touching the keyboard.
 
-Open your phone's keyboard — the built-in one, no extra apps — tap the mic, and say what you want to write. Hit send. The words appear right at your Mac's cursor.
-
-**No extra speech-to-text engine required.** Your phone's native input method is already the best voice recognition tool you own. Mandarin Chinese comfortably hits 200+ characters per minute — roughly twice as fast as most people type.
-
-> Real-world moment: writing a weekly report. Think out loud, sentence by sentence, and watch the lines appear in Notion. Briefing an AI assistant — describe the task verbally, hit send, and Cursor receives it instantly.
+> Real-world moment: briefing an AI assistant — describe the task verbally, hit send, and Cursor receives it instantly. Reviewing a document? Scroll with one hand, keep the coffee in the other.
 
 ---
 
@@ -55,7 +53,7 @@ Open your phone's keyboard — the built-in one, no extra apps — tap the mic, 
 
 Let us zoom in on this magic trick.
 
-You are on TypeBridge's WebChat page. Tap the mic on your phone's keyboard and say: "Write a user growth analysis report, focusing on..."
+You are on TypeBridge's WebChat typing page. Tap the mic on your phone's keyboard and say: "Write a user growth analysis report, focusing on..."
 
 Tap send. On your Mac — no matter which app is in front, ChatGPT in the browser, Cursor, or Feishu Docs — at the blinking cursor, the words start filling in. Line by line.
 
@@ -70,14 +68,14 @@ Same WiFi, end to end on your local network. Your data never leaves the room.
 
 ## Shortcut Panel
 
-Beyond typing and touch, TypeBridge packs a shortcut panel.
+The "Shortcut" tab packs three categories: **Screenshot**, **Edit & Input**, and **Page & Cursor**.
 
-Need a screenshot? Tap Cmd+Shift+4 on your phone — your Mac enters capture mode instantly. Editing a document? Select all, copy, paste — three taps, seamless. Arrow keys, page navigation, Home/End — browse code and docs without touching the keyboard.
+Screenshots — tap the Screenshot tab on your phone, choose full screen or current window, and your Mac captures it instantly. Select all, copy, paste, undo, redo — document editing in a few taps. Arrow keys, Home/End, page navigation — browse code and docs without touching the keyboard.
 
 ![Screenshot 3: Mobile shortcut panel](./screenshots/3-mobile-shortcut-panel.png)
-*▲ Fig.3 | Mobile WebChat "Keyboard" tab shortcut panel (Edit / Screenshot / Navigation)*
+*▲ Fig.3 | Mobile WebChat "Shortcut" tab (Screenshot / Edit & Input / Page & Cursor categories)*
 
-> Put another way: it moves the dozen shortcuts you reach for every day from your keyboard to your phone.
+> Put another way: it moves the dozen commands you reach for every day from your keyboard to your phone.
 
 ---
 

@@ -13,7 +13,7 @@
 
 ## 项目概览
 
-TypeBridge 是 macOS 菜单栏应用：接收飞书机器人消息 → 通过 Accessibility API 注入当前聚焦的输入框。仅支持飞书**自建应用**（长连接不支持商店应用）。
+TypeBridge 是 macOS 桌面应用：接收飞书机器人消息 → 通过 Accessibility API 注入当前聚焦的输入框。仅支持飞书**自建应用**（长连接不支持商店应用）。
 
 ## 常用命令
 
