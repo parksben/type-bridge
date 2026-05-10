@@ -59,8 +59,8 @@ export default function InputSettingsTab() {
         <div className="flex flex-col gap-0">
           {/* 自动提交行 */}
           <div
-            className="flex items-center justify-between px-6 py-4 border-b transition-colors hover:bg-surface-2"
-            style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+            className="flex items-center justify-between px-6 py-4 border-b transition-colors bg-surface hover:bg-surface-2"
+            style={{ borderColor: "var(--border)" }}
           >
             <div className="flex flex-col gap-1.5 flex-1">
               <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
@@ -84,8 +84,7 @@ export default function InputSettingsTab() {
 
           {/* 提交按键行 */}
           <div
-            className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-surface-2"
-            style={{ background: "var(--surface)" }}
+            className="flex items-center justify-between px-6 py-4 transition-colors bg-surface hover:bg-surface-2"
           >
             <div className="flex flex-col gap-1.5 flex-1">
               <div className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
