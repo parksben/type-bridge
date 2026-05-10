@@ -148,7 +148,7 @@ Netlify 函数以 `ReadableStream` 返回 body 时，运行时强制使用 `Tran
 2. 字典 `DICT` 是一个嵌套的 `Record`，key 结构为 `section.component.field`（如 `hero.headline`）
 3. `useT()` 返回 `t(key: string): string`，根据当前语言从字典取值
 4. `<html lang>` 属性跟随当前语言；SEO metadata（`<title>`、`<meta description>`、`og:*` 等）在 `layout.tsx` 中通过 `generateMetadata()` + `headers()` 读取 `Accept-Language` 请求头动态切换
-5. 初始语言检测优先级：`localStorage` → `navigator.language` → 中文兜底
+5. 初始语言检测优先级：`localStorage` → `navigator.language`（`zh*` → 中文，其余语言 → 英文）→ 英文兜底（非中文地区用户默认英文）
 6. 各组件通过 `useT()` 读取文案，不再使用组件内硬编码常量
 
 ### 25.10 主题切换

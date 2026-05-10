@@ -7,10 +7,9 @@ async function detectLanguageFromHeaders(): Promise<Language> {
     const headersList = await headers();
     const acceptLang = headersList.get("accept-language") || "";
     const trimmed = acceptLang.trim().toLowerCase();
-    if (trimmed.startsWith("en")) return "en";
     if (trimmed.startsWith("zh")) return "zh";
   } catch {}
-  return "zh";
+  return "en";
 }
 
 export default async function HomePage() {

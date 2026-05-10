@@ -217,17 +217,16 @@ export function renderMarked(text: string, idPrefix?: string): ReactNode {
   });
 }
 
-/** Detects the initial language: localStorage → navigator.language → fallback "zh". */
+/** Detects the initial language: localStorage → navigator.language → fallback "en". */
 function detectLanguage(): Language {
-  if (typeof window === "undefined") return "zh";
+  if (typeof window === "undefined") return "en";
   try {
     const stored = localStorage.getItem("tb-lang");
     if (stored === "zh" || stored === "en") return stored;
   } catch {}
   const nav = navigator.language?.toLowerCase() ?? "";
   if (nav.startsWith("zh")) return "zh";
-  if (nav.startsWith("en")) return "en";
-  return "zh";
+  return "en";
 }
 
 // ────────────────────────────────────────────

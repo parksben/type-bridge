@@ -6,9 +6,9 @@ async function isEnglishRequest(): Promise<boolean> {
   try {
     const headersList = await headers();
     const acceptLang = headersList.get("accept-language") || "";
-    return acceptLang.trim().toLowerCase().startsWith("en");
+    return !acceptLang.trim().toLowerCase().startsWith("zh");
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -51,9 +51,9 @@ const themeInit = `(function(){try{var t=localStorage.getItem('tb-theme')||'syst
 
 /**
  * Language detection — runs before React hydration.
- * Reads localStorage.tb-lang. Falls back to navigator.language, then zh-CN.
+ * Reads localStorage.tb-lang. Falls back to navigator.language, then 'en'.
  */
-const langInit = `(function(){try{var l=localStorage.getItem('tb-lang');if(!l){var n=navigator.language||'';l=n.startsWith('en')?'en':n.startsWith('zh')?'zh':null;}if(l==='en')document.documentElement.lang='en';else document.documentElement.lang='zh-CN';}catch(e){}})()`;
+const langInit = `(function(){try{var l=localStorage.getItem('tb-lang');if(!l){var n=navigator.language||'';l=n.startsWith('zh')?'zh':'en';}if(l==='zh')document.documentElement.lang='zh-CN';else document.documentElement.lang='en';}catch(e){}})()`;
 
 export default async function RootLayout({
   children,
