@@ -6,8 +6,8 @@ set -euxo pipefail
 
 VERSION="${VERSION:-0.1.0}"
 TXT_SRC="src-tauri/resources/首次启动前必读.txt"
-BG_PNG="src-tauri/icons/dmg-background.png"       # 760×480 (1x) — 传给 create-dmg
-BG_PNG_2X="src-tauri/icons/dmg-background@2x.png" # 1520×960 (2x) — Retina 用
+BG_PNG="src-tauri/icons/dmg-background.png"       # 760×540 (1x) — 传给 create-dmg
+BG_PNG_2X="src-tauri/icons/dmg-background@2x.png" # 1520×1080 (2x) — Retina 用
 
 for arch in aarch64 x86_64; do
   case "$arch" in
@@ -38,11 +38,11 @@ for arch in aarch64 x86_64; do
     --volname "TypeBridge" \
     --background "$BG_PNG" \
     --window-pos 200 120 \
-    --window-size 760 480 \
+    --window-size 760 540 \
     --icon-size 128 \
     --text-size 13 \
-    --icon "TypeBridge.app" 205 215 \
-    --app-drop-link 555 215 \
+    --icon "TypeBridge.app" 205 247 \
+    --app-drop-link 555 247 \
     --icon "首次启动前必读.txt" 380 355 \
     --hide-extension "TypeBridge.app" \
     --no-internet-enable \
