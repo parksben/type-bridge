@@ -42,7 +42,7 @@
       "dmg": {
         "background": "icons/dmg-background.png",
         "windowSize": {
-          "height": 480,
+          "height": 540,
           "width": 760
         },
         "appPosition": {
