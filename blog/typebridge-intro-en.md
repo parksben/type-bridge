@@ -54,7 +54,7 @@ Your phone screen turns into a Mac trackpad. One finger moves the cursor, two fi
 	<img src="./screenshots/mobile-en-touchpad-settings.png" width="49%" alt="Trackpad settings sheet" />
 </p>
 
-*▲ The trackpad surface on the left, sensitivity and scroll direction tweaks on the right.*
+*▲ Left: the trackpad in action. Right: the settings panel.*
 
 > Presenting slides from the front of the room — your phone is in your hand, advancing slides and moving the cursor. No need to walk back. Browsing YouTube from the couch? The phone is your remote.
 
@@ -68,7 +68,7 @@ The third tab is a shortcut panel. Screenshot, undo, select all, copy, paste, ar
 	<img src="./screenshots/mobile-en-shortcut-nav.png" width="32%" alt="Shortcut page and cursor group" />
 </p>
 
-*▲ Screenshot, Edit & Input, Page & Cursor — three groups you can tap through. The shortcuts you use every day, right on your phone.*
+*▲ Screenshot, Edit & Input, Page & Cursor — shortcuts for all kinds of tasks. What takes a key combo on your keyboard is a single tap here.*
 
 > Briefing an AI assistant — describe the task aloud, hit send, and Cursor receives it. Reviewing a document? Scroll with one hand, keep your coffee in the other.
 
