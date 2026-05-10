@@ -120,6 +120,7 @@ const ZH = {
     cmdScreenshotPaste: "粘贴截图",
     cmdScreenshotSuccess: "截图已存到剪贴板",
     cmdScreenshotFailed: "截图失败",
+    cmdScreenshotHint: "截图自动存入剪贴板，再点「粘贴截图」插入当前输入框",
   },
 
   bubble: {
@@ -261,6 +262,7 @@ const EN: Dict = {
     cmdScreenshotPaste: "Paste Screenshot",
     cmdScreenshotSuccess: "Screenshot copied to clipboard",
     cmdScreenshotFailed: "Screenshot failed",
+    cmdScreenshotHint: "Screenshot saved to clipboard — tap \"Paste Screenshot\" to insert it",
   },
 
   bubble: {
