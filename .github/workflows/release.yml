@@ -115,17 +115,6 @@ jobs:
           files: release-artifacts/*.dmg
           fail_on_unmatched_files: true
           make_latest: true
-          body: |
-            ## 更新内容
-
-            - fix(ui): 统一弹层（辅助功能权限提示 / 关于页）确认/取消按钮等宽，修正 WebChat 手机端文案与命名不一致
-
-            ## 下载
-
-            | 架构 | 安装包 |
-            |------|--------|
-            | Apple Silicon | `TypeBridge_${{ steps.version.outputs.VERSION }}_aarch64.dmg` |
-            | Intel | `TypeBridge_${{ steps.version.outputs.VERSION }}_x64.dmg` |
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
