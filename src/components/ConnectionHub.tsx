@@ -29,23 +29,6 @@ export default function ConnectionHub() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* 顶部 intro 说明 */}
-      <div
-        className="flex items-center gap-2 px-6 py-3 text-[12.5px]"
-        style={{
-          background: "var(--surface-2)",
-          borderBottom: "1px solid var(--border)",
-          color: "var(--muted)",
-        }}
-      >
-        <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
-        <span>
-          {activeConnectionChannel === "webchat"
-            ? t("connectionHub.introWebchat")
-            : t("connectionHub.introIM")}
-        </span>
-      </div>
-
       {/* 横向渠道子 tab */}
       <div
         className="flex items-center px-6"
@@ -87,6 +70,23 @@ export default function ConnectionHub() {
             </button>
           );
         })}
+      </div>
+
+      {/* intro 说明 banner，置于 tab 下方全宽 */}
+      <div
+        className="flex items-center gap-2 px-6 py-3 text-[12.5px] shrink-0"
+        style={{
+          background: "var(--surface-2)",
+          borderBottom: "1px solid var(--border)",
+          color: "var(--muted)",
+        }}
+      >
+        <Info size={13} strokeWidth={1.75} className="text-accent shrink-0" />
+        <span>
+          {activeConnectionChannel === "webchat"
+            ? t("connectionHub.introWebchat")
+            : t("connectionHub.introIM")}
+        </span>
       </div>
 
       {/* 当前渠道面板，占据剩余高度独立滚动 */}
