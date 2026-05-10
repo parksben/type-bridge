@@ -49,6 +49,8 @@ interface UpdateDownloadStateEvent {
   reason?: string;
 }
 
+import { useAppStore } from "../../store";
+
 export default function AboutTab() {
   const [version, setVersion] = useState<string>("…");
   const [status, setStatus] = useState<CheckStatus>({ kind: "idle" });
@@ -57,11 +59,35 @@ export default function AboutTab() {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const stalledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useI18n();
+  const { latestVersionInfo, setLatestVersionInfo } = useAppStore();
+  // 用 ref 捕获挂载时刻的值，避免 useEffect 依赖数组问题
+  const initialVersionInfoRef = useRef(latestVersionInfo);
 
   useEffect(() => {
     invoke<string>("get_app_version")
       .then(setVersion)
       .catch(() => setVersion(t("about.versionUnknown")));
+  }, []);
+
+  // 挂载时：若后台已检测到新版本且本地尚未展示，自动预填 has-update 状态
+  useEffect(() => {
+    const info = initialVersionInfoRef.current;
+    if (!info) return;
+    invoke<string>("get_app_version").then((ver) => {
+      setStatus({
+        kind: "has-update",
+        current: ver,
+        latest: info.latest,
+        downloadUrl: info.downloadUrl,
+      });
+    }).catch(() => {
+      setStatus({
+        kind: "has-update",
+        current: "unknown",
+        latest: info.latest,
+        downloadUrl: info.downloadUrl,
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -170,6 +196,8 @@ export default function AboutTab() {
           current: result.current,
           isDev: result.is_dev,
         });
+        // 当前已是最新，清除后台缓存的"有更新"状态
+        setLatestVersionInfo(null);
       } else {
         setStatus({
           kind: "has-update",
@@ -177,6 +205,8 @@ export default function AboutTab() {
           latest: result.latest,
           downloadUrl: result.download_url,
         });
+        // 同步更新 store，保持一致
+        setLatestVersionInfo({ latest: result.latest, downloadUrl: result.download_url });
       }
     } catch (e) {
       setStatus({ kind: "error", message: String(e) });

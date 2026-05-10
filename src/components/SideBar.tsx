@@ -1,7 +1,6 @@
 import { History, Info, Plug, Terminal, Zap, LucideIcon } from "lucide-react";
 import { useAppStore, TabId } from "../store";
 import { useI18n, type TKey } from "../i18n";
-
 interface TabDef {
   id: TabId;
   labelKey: TKey;
@@ -20,7 +19,7 @@ const TABS: TabDef[] = [
 const ABOUT_TAB: TabDef = { id: "about", labelKey: "sidebar.about", icon: Info };
 
 export default function SideBar() {
-  const { activeTab, setActiveTab } = useAppStore();
+  const { activeTab, setActiveTab, latestVersionInfo } = useAppStore();
   const { t } = useI18n();
 
   return (
@@ -49,6 +48,7 @@ export default function SideBar() {
           tab={ABOUT_TAB}
           label={t(ABOUT_TAB.labelKey)}
           active={activeTab === ABOUT_TAB.id}
+          hasUpdate={!!latestVersionInfo}
           onClick={() => setActiveTab(ABOUT_TAB.id)}
         />
       </div>
@@ -94,11 +94,13 @@ function FooterTabButton({
   tab,
   label,
   active,
+  hasUpdate,
   onClick,
 }: {
   tab: TabDef;
   label: string;
   active: boolean;
+  hasUpdate?: boolean;
   onClick: () => void;
 }) {
   const Icon = tab.icon;
@@ -111,7 +113,15 @@ function FooterTabButton({
       style={active ? { background: "var(--surface-2)" } : undefined}
     >
       <Icon size={12} strokeWidth={1.5} />
-      <span className="truncate">{label}</span>
+      <span className="truncate flex-1">{label}</span>
+      {hasUpdate && (
+        <span
+          className="shrink-0 text-[9px] font-bold leading-none px-1.5 py-0.5 rounded-full"
+          style={{ background: "var(--error, #e53e3e)", color: "#fff" }}
+        >
+          NEW
+        </span>
+      )}
     </button>
   );
 }

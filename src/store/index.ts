@@ -68,6 +68,13 @@ export type TabId =
   | "logs"        // 系统日志
   | "about";      // 关于 TypeBridge（v0.7.x 起）
 
+/// 后台静默检查更新的结果（与 about.rs UpdateCheckResult 对齐）。
+/// null = 尚未检查过 / 检查失败。
+export interface LatestVersionInfo {
+  latest: string;
+  downloadUrl: string;
+}
+
 export interface SubmitKey {
   key: string;      // KeyboardEvent.code (e.g. "Enter", "KeyA", "Space")
   cmd: boolean;
@@ -116,6 +123,8 @@ interface AppStore {
   language: Lang | "";
   /// UI 主题。"system" = 跟随系统（默认）。
   theme: Theme;
+  /// 后台静默检查结果。有值 = 发现新版本；null = 未检查或无更新。
+  latestVersionInfo: LatestVersionInfo | null;
 
   setChannelConnected: (channel: ChannelId, connected: boolean) => void;
   setAutoSubmit: (v: boolean) => void;
@@ -125,6 +134,7 @@ interface AppStore {
   /// 仅更新内存状态。持久化由调用方负责（hooks/usePersistLanguage.ts）。
   setLanguage: (lang: Lang) => void;
   setTheme: (theme: Theme) => void;
+  setLatestVersionInfo: (info: LatestVersionInfo | null) => void;
   addLog: (entry: Omit<LogEntry, "time">) => void;
   clearLogs: () => void;
   setHistory: (items: HistoryMessage[]) => void;
@@ -166,6 +176,7 @@ export const useAppStore = create<AppStore>((set) => ({
   activeConnectionChannel: "webchat",
   language: readLangHint(),
   theme: readThemeHint(),
+  latestVersionInfo: null,
 
   setChannelConnected: (channel, connected) =>
     set((state) => ({
@@ -176,6 +187,7 @@ export const useAppStore = create<AppStore>((set) => ({
   setActiveTab: (activeTab) => set({ activeTab }),
   setActiveConnectionChannel: (activeConnectionChannel) =>
     set({ activeConnectionChannel }),
+  setLatestVersionInfo: (latestVersionInfo) => set({ latestVersionInfo }),
   setLanguage: (language) => {
     try {
       window.localStorage.setItem("tb_lang_hint", language);
