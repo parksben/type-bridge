@@ -12,7 +12,7 @@ type TouchData = { x: number; y: number };
 
 const LS_SENSITIVITY = "tb_touchpad_sensitivity";
 const LS_SCROLL_REVERSED = "tb_scroll_reversed";
-const DEFAULT_SENSITIVITY = 1.5;
+const DEFAULT_SENSITIVITY = 2.0;
 const TAP_MAX_DURATION = 260;
 const MULTI_TAP_INTERVAL = 320;
 const TWO_FINGER_MOVE_THRESHOLD = 14;
@@ -55,6 +55,7 @@ export default function TouchPad({ client, disabled }: Props) {
   const sensRef = useRef(sensitivity);
   const scrollRevRef = useRef(scrollReversed);
   const leftHeldRef = useRef(false);
+  const landscapeRef = useRef(false);
 
   // ResizeObserver 监听容器尺寸，用于横屏 CSS rotate
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +70,14 @@ export default function TouchPad({ client, disabled }: Props) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // landscapeRef 与 state 保持同步，供 touch handler 同步读取
+  function toggleLandscape() {
+    setLandscape((v) => {
+      landscapeRef.current = !v;
+      return !v;
+    });
+  }
 
   function saveSensitivity(v: number) {
     const clamped = Math.round(v * 10) / 10;
@@ -136,7 +145,10 @@ export default function TouchPad({ client, disabled }: Props) {
         if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
           padMovedRef.current = true;
           if (!disabled) {
-            client.sendMouseMove(dx * sensRef.current, dy * sensRef.current);
+            // 横屏旋转 90° 后坐标轴对换：鼠标X=dy, 鼠标Y=-dx
+            const mx = landscapeRef.current ? dy : dx;
+            const my = landscapeRef.current ? -dx : dy;
+            client.sendMouseMove(mx * sensRef.current, my * sensRef.current);
           }
         }
       }
@@ -374,8 +386,8 @@ export default function TouchPad({ client, disabled }: Props) {
             <div className="absolute top-3 right-3 z-10 flex gap-2">
               <button
                 type="button"
-                onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setLandscape((v) => !v); }}
-                onClick={() => setLandscape((v) => !v)}
+                onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); toggleLandscape(); }}
+                onClick={() => toggleLandscape()}
                 className="w-9 h-9 flex items-center justify-center rounded-full"
                 style={{
                   background: landscape
