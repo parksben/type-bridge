@@ -90,8 +90,9 @@ def generate(mount: str, template: str | None = None) -> None:
                 ds['.']['icvp'] = icvp
             else:
                 print(f'WARN: background image missing, skip bwsp/icvp: {background_image}')
-        ds['TypeBridge.app']['Iloc'] = (206, 238)
-        ds['Applications']['Iloc'] = (554, 238)
+        ds['TypeBridge.app']['Iloc'] = (180, 185)
+        ds['Applications']['Iloc'] = (530, 185)
+        ds['\u9996\u6b21\u542f\u52a8\u524d\u5fc5\u8bfb.txt']['Iloc'] = (380, 378)
 
     new_size = ds_path.stat().st_size
     print(f"✓ patched {ds_path} ({old_size}B -> {new_size}B)")

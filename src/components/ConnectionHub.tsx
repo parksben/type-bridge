@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useAppStore, type ChannelId } from "../store";
 import { useI18n } from "../i18n";
 import ConnectionTab from "./tabs/ConnectionTab";
@@ -27,11 +28,37 @@ export default function ConnectionHub() {
     useAppStore();
   const { t } = useI18n();
 
+  // 用于计算下划线动效的位置和宽度
+  const tabRefs = useRef<Record<ChannelId, HTMLButtonElement | null>>({
+    webchat: null,
+    feishu: null,
+    dingtalk: null,
+    wecom: null,
+  });
+  const [underlineStyle, setUnderlineStyle] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0,
+  });
+
+  useEffect(() => {
+    const activeButton = tabRefs.current[activeConnectionChannel];
+    if (activeButton) {
+      const rect = activeButton.getBoundingClientRect();
+      const parentRect = activeButton.parentElement?.getBoundingClientRect();
+      if (parentRect) {
+        setUnderlineStyle({
+          left: rect.left - parentRect.left,
+          width: rect.width,
+        });
+      }
+    }
+  }, [activeConnectionChannel]);
+
   return (
     <div className="h-full flex flex-col">
       {/* 横向渠道子 tab */}
       <div
-        className="flex justify-center items-center"
+        className="flex justify-center items-center relative"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         {CHANNELS.map((ch) => {
@@ -41,6 +68,9 @@ export default function ConnectionHub() {
             <button
               type="button"
               key={ch}
+              ref={(el) => {
+                if (el) tabRefs.current[ch] = el;
+              }}
               onClick={() => setActiveConnectionChannel(ch)}
               className={`relative flex items-center gap-2 px-5 h-12 text-[14px] transition-colors ${
                 active ? "text-text" : "text-muted hover:text-text"
@@ -59,18 +89,19 @@ export default function ConnectionHub() {
               >
                 <ChannelIcon channel={ch} size={15} />
               </span>
-              <span className={active ? "font-semibold" : ""}>
-                {t(`channel.${ch}` as any)}
-              </span>
-              {active && (
-                <span
-                  className="absolute left-3 right-3 bottom-0 h-[2px] rounded-t-sm"
-                  style={{ background: "var(--accent)" }}
-                />
-              )}
+              <span>{t(`channel.${ch}` as any)}</span>
             </button>
           );
         })}
+        {/* 动画下划线 */}
+        <div
+          className="absolute bottom-0 h-[2px] rounded-t-sm transition-all duration-300"
+          style={{
+            background: "var(--accent)",
+            left: `${underlineStyle.left}px`,
+            width: `${underlineStyle.width}px`,
+          }}
+        />
       </div>
 
       {/* intro 说明 banner，置于 tab 下方全宽 */}
