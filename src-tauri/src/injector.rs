@@ -43,6 +43,9 @@ extern "C" {
         wheel3: i32,
     ) -> *mut std::ffi::c_void;
     fn CGEventSetDoubleValueField(event: *mut std::ffi::c_void, field: u32, value: f64);
+    // 屏幕录制权限（macOS 10.15+）
+    fn CGPreflightScreenCaptureAccess() -> bool;
+    fn CGRequestScreenCaptureAccess() -> bool;
 }
 
 /// macOS CGPoint（与 C ABI 一致：两个 f64）
@@ -452,6 +455,22 @@ pub fn key_combo(combo: &str) -> Result<(), String> {
 
 // ─── 截图 ────────────────────────────────────────────────────────
 
+/// 截图前检查屏幕录制权限（macOS 10.15+）。
+/// 未授权时调用系统 API 弹出引导提示，并返回错误告知用户去授权。
+fn ensure_screen_recording_permission() -> Result<(), String> {
+    let has_perm = unsafe { CGPreflightScreenCaptureAccess() };
+    if has_perm {
+        return Ok(());
+    }
+    // 触发系统权限引导弹窗（macOS 会弹出「前往系统设置」提示）
+    unsafe { CGRequestScreenCaptureAccess() };
+    Err(
+        "需要屏幕录制权限。请在「系统设置 > 隐私与安全性 > 屏幕录制」中为 TypeBridge 授权，\
+         然后重试截图。"
+        .to_string(),
+    )
+}
+
 /// 截图并将结果存入剪贴板。
 /// kind: "screen" → 全屏截图；"window" → 截取前台窗口（失败时回退到全屏）
 pub fn screenshot(kind: &str) -> Result<(), String> {
@@ -463,6 +482,12 @@ pub fn screenshot(kind: &str) -> Result<(), String> {
 }
 
 fn screenshot_screen() -> Result<(), String> {
+    ensure_screen_recording_permission()?;
+    screenshot_screen_inner()
+}
+
+/// 不做权限检查的全屏截图（作为 fallback 被内部调用）。
+fn screenshot_screen_inner() -> Result<(), String> {
     // screencapture -c: 存剪贴板；-x: 无声
     let status = std::process::Command::new("screencapture")
         .args(["-c", "-x"])
@@ -476,22 +501,46 @@ fn screenshot_screen() -> Result<(), String> {
 }
 
 fn screenshot_window() -> Result<(), String> {
-    // 通过 osascript 获取前台进程的第一个窗口 ID（CGWindowID）
-    let output = std::process::Command::new("osascript")
-        .args([
-            "-e",
-            "tell application \"System Events\" to id of first window of \
-             (first process whose frontmost is true)",
-        ])
-        .output();
+    ensure_screen_recording_permission()?;
 
-    let window_id = match output {
-        Ok(o) if o.status.success() => {
-            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
-            if s.is_empty() { None } else { Some(s) }
-        }
-        _ => None,
+    // 通过 NSWorkspace 在 Rust 层获取前台应用 PID，避免依赖 osascript 的
+    // `frontmost is true` 查询（后者有时会把 TypeBridge 自身当作前台进程）。
+    let my_pid = std::process::id() as i32;
+    let target_pid = unsafe {
+        use objc2_app_kit::NSWorkspace;
+        let ws = NSWorkspace::sharedWorkspace();
+        ws.frontmostApplication().map(|app| app.processIdentifier() as i32)
     };
+
+    let target_pid = match target_pid {
+        Some(pid) if pid != my_pid => pid,
+        Some(_) => {
+            // TypeBridge 自身是前台应用，回退到全屏截图
+            return screenshot_screen_inner();
+        }
+        None => return screenshot_screen_inner(),
+    };
+
+    // 用 PID（unix id）精确查找该进程的第一个窗口 ID（CGWindowID），
+    // 比 `frontmost is true` 更准确——不受 TypeBridge 窗口状态干扰。
+    let script = format!(
+        "tell application \"System Events\" to id of first window of \
+         (first process whose unix id is {})",
+        target_pid
+    );
+
+    let window_id = std::process::Command::new("osascript")
+        .args(["-e", &script])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
+                if s.is_empty() { None } else { Some(s) }
+            } else {
+                None
+            }
+        });
 
     match window_id {
         Some(wid) => {
@@ -503,9 +552,9 @@ fn screenshot_window() -> Result<(), String> {
                 Ok(())
             } else {
                 // 带 window id 失败（如窗口已消失），回退到全屏
-                screenshot_screen()
+                screenshot_screen_inner()
             }
         }
-        None => screenshot_screen(),
+        None => screenshot_screen_inner(),
     }
 }
