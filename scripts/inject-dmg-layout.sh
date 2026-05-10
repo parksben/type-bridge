@@ -65,6 +65,3 @@ for arch in aarch64 x86_64; do
 
   rm -rf "$STAGING"
 done
-
-  rm -f "$ORIG" /tmp/dmg-rw.dmg /tmp/dmg-out.dmg
-done
