@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, RefreshCw, PackageOpen } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  PackageOpen,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import logoUrl from "../../assets/icons/typebridge.png";
@@ -27,30 +34,76 @@ type CheckStatus =
 
 type DownloadState =
   | { phase: "idle" }
-  | { phase: "downloading"; downloaded: number; total: number | null; percent: number | null }
-  | { phase: "opening" };
+  | { phase: "downloading"; version: string; downloaded: number; total: number | null; percent: number | null }
+  | { phase: "opening"; version: string }
+  | { phase: "failed"; version: string; reason: string }
+  | { phase: "cancelled"; version: string };
 
-interface DownloadProgressEvent {
-  downloaded: number;
-  total: number | null;
-  percent: number | null;
+interface UpdateDownloadStateEvent {
+  phase: "starting" | "downloading" | "opening" | "failed" | "cancelled";
+  version: string;
+  downloaded?: number;
+  total?: number | null;
+  percent?: number | null;
+  reason?: string;
 }
 
 export default function AboutTab() {
   const [version, setVersion] = useState<string>("…");
   const [status, setStatus] = useState<CheckStatus>({ kind: "idle" });
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [downloadState, setDownloadState] = useState<DownloadState>({ phase: "idle" });
-  const unlistenRef = useRef<UnlistenFn | null>(null);
   const { t } = useI18n();
 
   useEffect(() => {
     invoke<string>("get_app_version")
       .then(setVersion)
       .catch(() => setVersion(t("about.versionUnknown")));
+  }, []);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+
+    listen<UpdateDownloadStateEvent>("typebridge://update-download-state", (event) => {
+      const payload = event.payload;
+      switch (payload.phase) {
+        case "starting":
+          setDownloadState({
+            phase: "downloading",
+            version: payload.version,
+            downloaded: 0,
+            total: null,
+            percent: null,
+          });
+          return;
+        case "downloading":
+          setDownloadState({
+            phase: "downloading",
+            version: payload.version,
+            downloaded: payload.downloaded ?? 0,
+            total: payload.total ?? null,
+            percent: payload.percent ?? null,
+          });
+          return;
+        case "opening":
+          setDownloadState({ phase: "opening", version: payload.version });
+          return;
+        case "failed":
+          setDownloadState({
+            phase: "failed",
+            version: payload.version,
+            reason: payload.reason ?? "unknown",
+          });
+          return;
+        case "cancelled":
+          setDownloadState({ phase: "cancelled", version: payload.version });
+          return;
+      }
+    }).then((fn) => {
+      unlisten = fn;
+    });
 
     return () => {
-      unlistenRef.current?.();
+      unlisten?.();
     };
   }, []);
 
@@ -77,84 +130,95 @@ export default function AboutTab() {
     }
   }
 
-  function openConfirm() {
-    setConfirmOpen(true);
-  }
-
-  async function handleConfirmInstall() {
+  async function handleStartDownload() {
     if (status.kind !== "has-update") return;
-
-    // 订阅进度事件
-    const unlisten = await listen<DownloadProgressEvent>(
-      "typebridge://download-progress",
-      (event) => {
-        const { downloaded, total, percent } = event.payload;
-        if (percent !== null && percent >= 100) {
-          setDownloadState({ phase: "opening" });
-        } else {
-          setDownloadState({ phase: "downloading", downloaded, total, percent });
-        }
-      },
-    );
-    unlistenRef.current = unlisten;
-
-    setDownloadState({ phase: "downloading", downloaded: 0, total: null, percent: null });
+    setDownloadState({
+      phase: "downloading",
+      version: status.latest,
+      downloaded: 0,
+      total: null,
+      percent: null,
+    });
 
     try {
-      await invoke("apply_update", { downloadUrl: status.downloadUrl });
-      // apply_update 末尾 app.exit(0)，正常不会执行到此
+      await invoke("start_update_download", {
+        downloadUrl: status.downloadUrl,
+        version: status.latest,
+      });
     } catch (e) {
-      unlistenRef.current?.();
-      unlistenRef.current = null;
-      setDownloadState({ phase: "idle" });
-      setConfirmOpen(false);
-      setStatus({ kind: "error", message: String(e) });
+      setDownloadState({
+        phase: "failed",
+        version: status.latest,
+        reason: String(e),
+      });
+    }
+  }
+
+  async function handleCancelDownload() {
+    if (downloadState.phase !== "downloading") return;
+    try {
+      await invoke("cancel_update_download");
+    } catch (e) {
+      setDownloadState({
+        phase: "failed",
+        version: downloadState.version,
+        reason: String(e),
+      });
     }
   }
 
   return (
     <div className="relative h-full overflow-y-auto flex items-center justify-center px-8 py-8">
-      <div className="w-full max-w-md flex flex-col items-center text-center gap-5">
-        <img
-          src={logoUrl}
-          alt="TypeBridge"
-          width={88}
-          height={88}
-          className="rounded-2xl"
-          style={{
-            boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
-          }}
+      <div className="w-full max-w-md flex flex-col gap-5">
+        <UpdateStatusBanner
+          status={status}
+          downloadState={downloadState}
+          onStart={handleStartDownload}
+          onCancel={handleCancelDownload}
         />
 
-        <div>
-          <h1 className="text-[18px] font-semibold text-text">TypeBridge</h1>
-          <p className="text-[12px] text-muted mt-1 font-mono">{version}</p>
+        <div className="flex flex-col items-center text-center gap-5">
+          <img
+            src={logoUrl}
+            alt="TypeBridge"
+            width={88}
+            height={88}
+            className="rounded-2xl"
+            style={{
+              boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
+            }}
+          />
+
+          <div>
+            <h1 className="text-[18px] font-semibold text-text">TypeBridge</h1>
+            <p className="text-[12px] text-muted mt-1 font-mono">{version}</p>
+          </div>
+
+          <button
+            onClick={handleCheck}
+            disabled={status.kind === "checking" || downloadState.phase === "opening"}
+            className="flex items-center justify-center gap-1.5 text-[12px] rounded-md px-3.5 py-1.5 transition-colors disabled:cursor-not-allowed"
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border-strong)",
+              color: "var(--text)",
+            }}
+          >
+            {status.kind === "checking" ? (
+              <>
+                <RefreshCw size={12} strokeWidth={1.75} className="animate-spin" />
+                {t("about.checking")}
+              </>
+            ) : (
+              <>
+                <RefreshCw size={12} strokeWidth={1.75} />
+                {t("about.check")}
+              </>
+            )}
+          </button>
+
+          <CheckResultLine status={status} />
         </div>
-
-        <button
-          onClick={handleCheck}
-          disabled={status.kind === "checking" || downloadState.phase !== "idle"}
-          className="flex items-center justify-center gap-1.5 text-[12px] rounded-md px-3.5 py-1.5 transition-colors disabled:cursor-not-allowed"
-          style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--border-strong)",
-            color: "var(--text)",
-          }}
-        >
-          {status.kind === "checking" ? (
-            <>
-              <RefreshCw size={12} strokeWidth={1.75} className="animate-spin" />
-              {t("about.checking")}
-            </>
-          ) : (
-            <>
-              <RefreshCw size={12} strokeWidth={1.75} />
-              {t("about.check")}
-            </>
-          )}
-        </button>
-
-        <CheckResultLine status={status} onShowConfirm={openConfirm} />
       </div>
 
       {/* 语言切换 + 主题切换 — 页面右下角并排 */}
@@ -167,29 +231,11 @@ export default function AboutTab() {
         </div>
       </div>
 
-      {confirmOpen && status.kind === "has-update" && (
-        <ConfirmInstallDialog
-          current={status.current}
-          latest={status.latest}
-          downloadState={downloadState}
-          onCancel={() => {
-            if (downloadState.phase !== "idle") return;
-            setConfirmOpen(false);
-          }}
-          onConfirm={handleConfirmInstall}
-        />
-      )}
     </div>
   );
 }
 
-function CheckResultLine({
-  status,
-  onShowConfirm,
-}: {
-  status: CheckStatus;
-  onShowConfirm: () => void;
-}) {
+function CheckResultLine({ status }: { status: CheckStatus }) {
   if (status.kind === "idle" || status.kind === "checking") return null;
 
   if (status.kind === "up-to-date") {
@@ -203,16 +249,11 @@ function CheckResultLine({
 
   if (status.kind === "has-update") {
     return (
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-1">
         <p className="text-[13px] text-text">
           {ti18n("about.foundNewPrefix")}<span className="font-mono font-semibold">v{status.latest}</span>
         </p>
-        <button
-          onClick={onShowConfirm}
-          className="text-[12px] underline text-accent hover:opacity-80"
-        >
-          {ti18n("about.installNow")}
-        </button>
+        <p className="text-[11.5px] text-muted">{ti18n("about.downloadInlineHint")}</p>
       </div>
     );
   }
@@ -222,156 +263,145 @@ function CheckResultLine({
   );
 }
 
-function ConfirmInstallDialog({
-  current,
-  latest,
+function UpdateStatusBanner({
+  status,
   downloadState,
+  onStart,
   onCancel,
-  onConfirm,
 }: {
-  current: string;
-  latest: string;
+  status: CheckStatus;
   downloadState: DownloadState;
+  onStart: () => void;
   onCancel: () => void;
-  onConfirm: () => void;
 }) {
-  const isDownloading = downloadState.phase === "downloading";
-  const isOpening = downloadState.phase === "opening";
-  const isBusy = isDownloading || isOpening;
+  if (downloadState.phase === "downloading") {
+    return (
+      <div
+        className="flex flex-col gap-3 rounded-md px-3 py-2.5 text-[12px]"
+        style={{
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2 leading-relaxed">
+            <Download size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
+            <div className="text-text">
+              <span className="font-medium">{ti18n("about.downloading")}</span>
+              <span className="font-mono"> v{downloadState.version}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-[11.5px] underline text-muted hover:text-text"
+          >
+            {ti18n("about.cancelDownload")}
+          </button>
+        </div>
 
-  const [showSlowHint, setShowSlowHint] = useState(false);
-  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+        <DownloadProgressBar
+          downloaded={downloadState.downloaded}
+          total={downloadState.total}
+          percent={downloadState.percent}
+        />
+      </div>
+    );
+  }
 
-  // 下载开始时启动 5 秒计时器
-  useEffect(() => {
-    if (!isDownloading) {
-      setShowSlowHint(false);
-      if (slowTimerRef.current) {
-        clearTimeout(slowTimerRef.current);
-        slowTimerRef.current = null;
-      }
-      return;
-    }
-    slowTimerRef.current = setTimeout(() => setShowSlowHint(true), 5000);
-    return () => {
-      if (slowTimerRef.current) {
-        clearTimeout(slowTimerRef.current);
-        slowTimerRef.current = null;
-      }
-    };
-  }, [isDownloading]);
+  if (downloadState.phase === "opening") {
+    return (
+      <div
+        className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+        style={{
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <PackageOpen size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
+        <div className="flex-1 text-text">
+          {ti18n("about.downloadOpening")}
+          <span className="font-mono"> v{downloadState.version}</span>
+        </div>
+      </div>
+    );
+  }
 
-  // 有字节传输后取消计时器
-  useEffect(() => {
-    if (
-      downloadState.phase === "downloading" &&
-      downloadState.downloaded > 0 &&
-      slowTimerRef.current
-    ) {
-      clearTimeout(slowTimerRef.current);
-      slowTimerRef.current = null;
-    }
-  }, [downloadState]);
+  if (downloadState.phase === "failed") {
+    return (
+      <div
+        className="flex items-start justify-between gap-3 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+        style={{
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <div className="flex items-start gap-2">
+          <AlertCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-error" />
+          <div className="text-text max-w-[260px] break-words">
+            <span className="text-error">{ti18n("about.downloadFailedPrefix")}</span>
+            {localizeRuntime(downloadState.reason)}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onStart}
+          className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0"
+        >
+          {ti18n("about.retryDownload")}
+        </button>
+      </div>
+    );
+  }
+
+  if (downloadState.phase === "cancelled") {
+    return (
+      <div
+        className="flex items-start justify-between gap-3 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+        style={{
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <div className="flex items-start gap-2 text-text">
+          <XCircle size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
+          {ti18n("about.downloadCancelled")}
+        </div>
+        <button
+          type="button"
+          onClick={onStart}
+          className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0"
+        >
+          {ti18n("about.retryDownload")}
+        </button>
+      </div>
+    );
+  }
+
+  if (status.kind !== "has-update") return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.45)" }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isBusy) onCancel();
+      className="flex items-start justify-between gap-3 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
+      style={{
+        background: "var(--surface-2)",
+        border: "1px solid var(--border)",
       }}
     >
-      <div
-        className="w-[420px] rounded-lg p-5"
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.30)",
-        }}
-      >
-        {/* ── 正在打开安装包 ── */}
-        {isOpening ? (
-          <div className="flex flex-col items-center gap-3 py-4">
-            <PackageOpen size={28} strokeWidth={1.5} className="text-accent" />
-            <p className="text-[13px] text-muted">{ti18n("about.downloadOpening")}</p>
-          </div>
-        ) : isDownloading ? (
-          /* ── 下载进度 ── */
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-[15px] font-semibold text-text mb-0.5">
-                  {ti18n("about.downloading")}
-                </h2>
-                <p className="text-[12px] text-subtle font-mono">
-                  TypeBridge v{latest}
-                </p>
-              </div>
-              {showSlowHint && (
-                <p className="text-[11px] text-muted text-right shrink-0 leading-relaxed pt-0.5">
-                  {ti18n("about.downloadSlowHintPre")}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const { openUrl } = await import("@tauri-apps/plugin-opener");
-                      await openUrl("https://typebridge.parksben.xyz/#download");
-                    }}
-                    className="text-accent underline hover:opacity-80 cursor-pointer"
-                  >
-                    {ti18n("about.downloadSlowHintLink")}
-                  </button>
-                  {ti18n("about.downloadSlowHintPost")}
-                </p>
-              )}
-            </div>
-
-            <DownloadProgressBar
-              downloaded={downloadState.downloaded}
-              total={downloadState.total}
-              percent={downloadState.percent}
-            />
-          </div>
-        ) : (
-          /* ── 确认对话框 ── */
-          <>
-            <h2 className="text-[15px] font-semibold text-text mb-2">{ti18n("about.confirmTitle")}</h2>
-            <p className="text-[13px] text-muted leading-relaxed mb-4">
-              {ti18n("about.confirmDetectedPrefix")}<span className="font-mono text-text">v{latest}</span>{ti18n("about.confirmCurrentPrefix")}
-              <span className="font-mono text-text">v{current}</span>{ti18n("about.confirmCurrentSuffix")}
-              <br />
-              {ti18n("about.confirmStepsHead")}
-              <br />
-              1. {ti18n("about.confirmStep1")}<span className="text-text font-medium">{ti18n("about.confirmStep1Bold")}</span>
-              <br />
-              2. {ti18n("about.confirmStep2")}
-              <br />
-              3. {ti18n("about.confirmStep3")}
-              <br />
-              {ti18n("about.confirmFooter")}
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={onCancel}
-                className="flex-1 px-4 py-1.5 text-[13px] rounded-md border text-center"
-                style={{
-                  borderColor: "var(--border-strong)",
-                  color: "var(--text)",
-                  background: "var(--surface-2)",
-                }}
-              >
-                {ti18n("about.cancel")}
-              </button>
-              <button
-                onClick={onConfirm}
-                className="flex-1 tb-btn-primary px-4 py-1.5 flex items-center justify-center gap-1.5"
-              >
-                {ti18n("about.confirm")}
-              </button>
-            </div>
-          </>
-        )}
+      <div className="flex items-start gap-2 text-text">
+        <Download size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
+        <div>
+          {ti18n("about.foundNewPrefix")}
+          <span className="font-mono font-medium">v{status.latest}</span>
+        </div>
       </div>
+      <button
+        type="button"
+        onClick={onStart}
+        className="text-[11.5px] underline text-accent hover:opacity-80 shrink-0"
+      >
+        {ti18n("about.installNow")}
+      </button>
     </div>
   );
 }

@@ -48,7 +48,8 @@ pub fn run() {
             logger::get_log_dir,
             about::get_app_version,
             about::check_update,
-            about::apply_update,
+            about::start_update_download,
+            about::cancel_update_download,
         ])
         .setup(|app| {
             window::setup_main_window(app)?;
