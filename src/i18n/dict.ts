@@ -283,7 +283,7 @@ export const ZH = {
 
   keybind: {
     setAria: "设置提交按键",
-    pressTarget: "按下目标组合…",
+    pressTarget: "按下目标按键或组合键…",
     resetTooltip: "重置为 Enter",
   },
 
@@ -627,7 +627,7 @@ export const EN: Dict = {
 
   keybind: {
     setAria: "Set submit key",
-    pressTarget: "Press target chord…",
+    pressTarget: "Press a key or chord…",
     resetTooltip: "Reset to Enter",
   },
 

@@ -90,21 +90,21 @@ export default function KeyBindInput({ value, onChange, disabled }: Props) {
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={() => !disabled && setCapturing(true)}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-mono transition-colors outline-none ${
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-mono transition-colors outline-none ${
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       }`}
       style={{
         background: chipBg,
         border: `1px solid ${chipBorder}`,
         color: "var(--text)",
-        minWidth: 110,
+        ...(capturing ? {} : { minWidth: 110 }),
         justifyContent: "center",
       }}
       role="button"
       aria-label={t("keybind.setAria")}
     >
       {capturing ? (
-        <span className="text-accent">{t("keybind.pressTarget")}</span>
+        <span className="text-accent whitespace-nowrap">{t("keybind.pressTarget")}</span>
       ) : (
         <>
           {value.ctrl && <ChevronUp size={12} strokeWidth={2} />}
