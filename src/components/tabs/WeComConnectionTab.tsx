@@ -16,6 +16,7 @@ import {
 import { useAppStore, type Settings } from "../../store";
 import { useI18n } from "../../i18n";
 import SelftestChecklist, { type SelftestResult } from "../SelftestChecklist";
+import ConfirmDialog from "../ConfirmDialog";
 
 type ConnState = "idle" | "connecting" | "connected";
 
@@ -31,6 +32,7 @@ export default function WeComConnectionTab() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [selftesting, setSelftesting] = useState(false);
   const [selftestResult, setSelftestResult] = useState<SelftestResult | null>(null);
   const botIdInputId = useId();
@@ -124,11 +126,13 @@ export default function WeComConnectionTab() {
     }
   }
 
-  async function handleDisconnect() {
+  function handleDisconnect() {
     if (!connected || stopping) return;
-    const label = t("channel.wecom");
-    if (!window.confirm(t("conn.disconnectConfirm", { label }))) return;
+    setShowDisconnectConfirm(true);
+  }
 
+  async function doDisconnect() {
+    setShowDisconnectConfirm(false);
     setStopping(true);
     try {
       await invoke("stop_channel", { channel: "wecom" });
@@ -317,7 +321,8 @@ export default function WeComConnectionTab() {
               type="button"
               onClick={handleDisconnect}
               disabled={!canDisconnect}
-              className="tb-btn-danger-outline min-w-[132px] flex items-center justify-center gap-1.5"
+              className="tb-btn-danger-outline flex items-center justify-center gap-1.5"
+              style={{ flex: "1 1 0%" }}
               title={t("conn.disconnect")}
             >
               {stopping ? (
@@ -410,6 +415,15 @@ export default function WeComConnectionTab() {
           />
         )}
       </div>
+      <ConfirmDialog
+        open={showDisconnectConfirm}
+        title={t("conn.disconnect")}
+        body={t("conn.disconnectConfirm", { label: t("channel.wecom") })}
+        dangerous
+        confirmLabel={t("conn.disconnect")}
+        onConfirm={doDisconnect}
+        onCancel={() => setShowDisconnectConfirm(false)}
+      />
     </div>
   );
 }
