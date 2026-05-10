@@ -14,8 +14,8 @@ export const ZH = {
   },
 
   sidebar: {
-    connection: "连接 TypeBridge",
-    link: "连接应用",
+    connection: "连接手机",
+    link: "连接聊天应用",
     input: "自动提交",
     history: "历史消息",
     logs: "系统日志",
@@ -62,7 +62,7 @@ export const ZH = {
 
   connectionHub: {
     introWebchat: "扫码配对，手机变身桌面鼠标键盘",
-    introIM: "给机器人发消息，自动写入桌面当前聚焦输入框",
+    introIM: "给聊天应用的机器人发消息，自动写入桌面当前聚焦输入框",
   },
 
   feishu: {
@@ -359,7 +359,7 @@ export const EN: Dict = {
   },
 
   sidebar: {
-    connection: "Connect TypeBridge",
+    connection: "Connect Phone",
     link: "Link Chat Apps",
     input: "Auto Submit",
     history: "Message History",
