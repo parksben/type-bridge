@@ -123,7 +123,7 @@ Go sidecar stdout 输出的 JSON Lines `type` 字段：`status` / `message` / `i
 - 顶部固定导航栏：首页 / 场景 / 流程 / 下载（锚点导航 + Scroll Spy）+ GitHub 入口 + 语言切换 + 主题切换
 - 页面结构（单页 `/`）：
   - `#hero` — Hero 第一屏（logo + slogan + 概念动画 Banner + 双 CTA）
-  - `#scenes` — 5 场景 pill tab 轮播（语音转文字 / AI Coding / 文档产出 / 跨设备流转 / 团队协作）
+  - `#scenes` — 4 场景 pill tab 轮播（触控板 / 打字输入 / 语音输入 / 快捷指令）
   - `#flow` — SVG 使用流程图
   - `#download` — 动态版本号 + 双架构下载卡片
 - 路由：
