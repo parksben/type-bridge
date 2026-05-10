@@ -34,29 +34,39 @@ Go sidecar 收到消息后向 stdout 输出 JSON 行（JSON Lines 格式），Ru
 
 ### 1.2 文字注入策略
 
-**决策：优先使用 `CGEventPost` 模拟逐键输入**
+**决策：统一使用 `NSPasteboard + Cmd+V`（剪贴板粘贴策略）**
 
 **方案说明：**
-- 使用 macOS `CoreGraphics` 框架的 `CGEventCreateKeyboardEvent` + `CGEventPost` 模拟键盘按键序列
-- 对于中文等 Unicode 字符，使用 `CGEventKeyboardSetUnicodeString` 直接设置事件的 Unicode 内容
-- 注入前通过 `AXUIElement` 检测当前焦点元素是否为可写输入框（`AXRole == AXTextField / AXTextArea / AXWebArea`），做前置校验
+- 文本写入 `NSPasteboard`（`NSPasteboardTypeString`），图片写入 `NSPasteboard`（`NSPasteboardTypePNG`）
+- 写入后通过 `CGEventPost` 模拟 `Cmd+V` 触发粘贴，内容落入当前前台应用
+- 粘贴前通过 `NSWorkspace.frontmostApplication.bundleIdentifier` 校验前台不是 TypeBridge 自己
 
 **为什么不用 `AXSetValue`：**
 - `AXSetValue` 直接替换整个字段值，不触发输入事件（`onChange`、`input` 等），导致 VSCode、浏览器内的富文本输入框无响应
-- `CGEventPost` 模拟真实按键，所有应用均可正常接收
+
+**为什么放弃旧的 AX + CGEventPost 逐字符方案（v0.4 之前）：**
+- `AXUIElement` 查焦点在 Electron 类应用（VSCode / Slack / Discord / Figma 等）上返回 `AXError=-25212 NoValue`——webview 内容未通过标准 AX 接口暴露焦点
+- 结果：TypeBridge 对所有 Electron 应用判"无焦点"，消息无法输入
+- 已整体替换为剪贴板 + Cmd+V 方案，不再需要 AX 焦点查询
 
 **注入流程：**
 ```
 收到消息
   ↓
-AXUIElement 检查焦点元素
-  ├─ 有可写焦点 → CGEventPost 逐字符注入
-  └─ 无焦点     → 暂存消息 + 发送系统通知
+check_accessibility（确认辅助功能权限）
+  ↓
+is_frontmost_self（防止打回 TypeBridge 自己）
+  ├─ 是 TypeBridge → 拒绝，返回 failure_reason
+  └─ 不是 TypeBridge →
+        NSPasteboard 写入文本/图片
+        CGEventPost 模拟 Cmd+V → 当前前台应用
+        （可选）CGEventPost 模拟提交按键
 ```
 
 **注意事项：**
-- 需要「辅助功能」权限（`kAXTrustedCheckOptionPrompt`），首次使用时主动引导授权
-- 注入速度：每字符间隔约 5-10ms，避免部分应用丢字；可配置
+- `CGEventPost` 模拟按键事件仍需「辅助功能」权限（macOS TCC 要求），首次使用时主动引导授权
+- `NSPasteboard` 操作本身不需要辅助功能权限
+- 详细演进背景见 [07-input-strategy.md §二十一](./07-input-strategy.md)
 
 ---
 
@@ -66,11 +76,11 @@ AXUIElement 检查焦点元素
 
 | 依赖 | 版本策略 | 用途 |
 |------|---------|------|
-| React | 18.x | UI 渲染 |
-| Vite | 5.x | 构建工具（Tauri 官方推荐） |
+| React | 19.x | UI 渲染 |
+| Vite | 7.x | 构建工具（Tauri 官方推荐） |
 | TypeScript | 5.x | 类型安全 |
 | Tailwind CSS | 3.x | 样式 |
-| Zustand | 4.x | 轻量全局状态管理 |
+| Zustand | 5.x | 轻量全局状态管理 |
 | `@tauri-apps/api` | 2.x | 与 Rust 后端通信 |
 
 ---
@@ -79,31 +89,46 @@ AXUIElement 检查焦点元素
 
 ```
 typebridge/
-├── src/                        # React 前端
+├── src/                        # React 前端（Vite + Tailwind + Zustand）
+│   ├── App.tsx                 # 路由分流（pathname == "/log" → 日志窗口，否则 → 主窗口）
 │   ├── components/
-│   │   ├── ConfigWindow.tsx    # 配置 & 连接窗口
-│   │   └── LogWindow.tsx       # 日志窗口
+│   │   ├── MainWindow.tsx      # 主窗口框架（侧边栏 + 内容区）
+│   │   ├── ConnectionHub.tsx   # 渠道连接 Tab（横向子 tab：WebChat / 飞书 / 钉钉 / 企微）
+│   │   ├── SideBar.tsx         # 竖向侧边栏（tab 导航 + 状态指示）
+│   │   ├── AccessibilityGate.tsx  # 辅助功能权限 blocking gate 模态
+│   │   └── ...
 │   ├── store/
-│   │   └── index.ts            # Zustand 状态
+│   │   └── index.ts            # Zustand 全局状态
 │   └── main.tsx
 │
 ├── src-tauri/                  # Tauri / Rust 后端
 │   ├── src/
-│   │   ├── main.rs             # 入口、窗口管理
-│   │   ├── tray.rs             # 托盘图标与菜单
-│   │   ├── sidecar.rs          # feishu-bridge 进程管理
-│   │   ├── injector.rs         # CGEventPost 注入逻辑
-│   │   ├── notification.rs     # 系统通知
-│   │   ├── store.rs            # 凭据持久化
-│   │   └── logger.rs           # 日志文件管理
+│   │   ├── lib.rs              # 入口：注册 plugin / command / tray / window；AppContext 构造
+│   │   ├── main.rs             # Tauri entry point
+│   │   ├── tray.rs             # 托盘图标（无菜单，单击唤回主窗口）
+│   │   ├── window.rs           # 主窗口生命周期：build / show / 拦截 close 改 hide
+│   │   ├── sidecar.rs          # 三个 Go sidecar 进程管理（启动/停止/重连/解析 JSON Lines）
+│   │   ├── injector.rs         # NSPasteboard + CGEventPost(Cmd+V) 注入逻辑
+│   │   ├── queue.rs            # FIFO 注入队列 + 反馈状态机
+│   │   ├── webchat.rs          # WebChat 渠道 session 生命周期管理
+│   │   ├── webchat_server.rs   # axum HTTP server + socketioxide（Socket.IO）
+│   │   ├── webchat_net.rs      # LAN IP 枚举 + CoreWLAN FFI 获取 WiFi SSID
+│   │   ├── channel.rs          # ChannelId 枚举与渠道能力矩阵
+│   │   ├── history.rs          # 消息历史（读写 / 删除 / 清空）
+│   │   ├── about.rs            # 版本号查询与检查更新
+│   │   ├── store.rs            # 凭据与设置持久化（tauri-plugin-store）
+│   │   └── logger.rs           # 按天滚动文件日志（~/Library/Logs/TypeBridge/）
 │   ├── binaries/
-│   │   └── feishu-bridge-aarch64-apple-darwin  # 编译好的 Go 二进制
+│   │   ├── feishu-bridge-aarch64-apple-darwin
+│   │   ├── dingtalk-bridge-aarch64-apple-darwin
+│   │   └── wecom-bridge-aarch64-apple-darwin
 │   └── tauri.conf.json
 │
-└── feishu-bridge/              # Go sidecar 源码
-    ├── main.go                 # 入口：读取 appId/appSecret，建立长连接
-    ├── handler.go              # 消息处理：格式化为 JSON Lines 输出
-    └── go.mod
+├── feishu-bridge/              # 飞书 Go sidecar（larkws 官方 SDK 长连接）
+├── dingtalk-bridge/            # 钉钉 Go sidecar（Stream Mode 官方 SDK）
+├── wecom-bridge/               # 企微 Go sidecar（手写 WSS 协议）
+├── website/                    # 产品官网（Next.js，单页落地页）
+└── webchat-local/              # WebChat 手机端 SPA（Vite + React + TS + Socket.IO）
 ```
 
 ---
@@ -113,36 +138,40 @@ typebridge/
 ### 3.1 消息接收与注入
 
 ```
-飞书服务器
-    │ WebSocket
+飞书 / 钉钉 / 企微服务器
+    │ WebSocket / Stream Mode / WSS
     ▼
-feishu-bridge (Go)
+{feishu,dingtalk,wecom}-bridge (Go)
     │ stdout JSON Lines
-    │ {"type":"message","sender":"张三","text":"...","ts":"..."}
+    │ {"type":"message","channel":"feishu","sender":"...","text":"...","ts":"..."}
     ▼
 sidecar.rs (Rust) — 解析 & 派发
-    ├──► 前端 LogWindow（实时日志展示）
-    └──► injector.rs
-              ├─ 有焦点 → CGEventPost → 目标输入框
-              └─ 无焦点 → notification.rs → 系统推送
+    ├──► 前端（实时日志 / 历史消息展示）
+    └──► queue.rs → FIFO 注入队列
+              ▼
+         injector.rs
+              ├─ NSPasteboard 写入文本/图片
+              └─ CGEventPost 模拟 Cmd+V → 当前前台应用
 ```
 
 ### 3.2 凭据配置流
 
 ```
-前端 ConfigWindow
-    │ invoke("save_credentials", {appId, appSecret})
+前端 ConnectionHub（各渠道配置表单）
+    │ invoke("save_settings", {feishu_app_id, feishu_app_secret, ...})
     ▼
-store.rs — 加密写入 tauri-plugin-store
+store.rs — 写入 tauri-plugin-store（config.json）
     │
     ▼
-sidecar.rs — 以环境变量方式传入 feishu-bridge
+sidecar.rs — 以环境变量方式传入对应 bridge
     │ FEISHU_APP_ID=xxx FEISHU_APP_SECRET=xxx ./feishu-bridge
+    │ DINGTALK_CLIENT_ID=xxx DINGTALK_CLIENT_SECRET=xxx ./dingtalk-bridge
+    │ WECOM_BOT_ID=xxx WECOM_SECRET=xxx ./wecom-bridge
     ▼
-feishu-bridge — 建立长连接，连接结果写 stdout
-    │ {"type":"status","connected":true}
+bridge (Go) — 建立长连接，连接结果写 stdout
+    │ {"type":"status","channel":"feishu","connected":true}
     ▼
-前端 — 更新连接状态显示
+前端 — 更新渠道连接状态显示（子 tab 绿点）
 ```
 
 ---
@@ -155,17 +184,20 @@ feishu-bridge — 建立长连接，连接结果写 stdout
 
 ### 4.1 Go sidecar 双架构编译
 
-两份独立二进制放入 `src-tauri/binaries/`：
+三个 sidecar 各编两份独立二进制放入 `src-tauri/binaries/`：
 
 ```bash
-cd feishu-bridge
-GOOS=darwin GOARCH=arm64 go build \
-  -o ../src-tauri/binaries/feishu-bridge-aarch64-apple-darwin .
-GOOS=darwin GOARCH=amd64 go build \
-  -o ../src-tauri/binaries/feishu-bridge-x86_64-apple-darwin .
+for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
+  cd "$bridge"
+  GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 go build \
+    -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .
+  GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=amd64 go build \
+    -o "../src-tauri/binaries/${bridge}-x86_64-apple-darwin" .
+  cd ..
+done
 ```
 
-Tauri `externalBin: ["binaries/feishu-bridge"]` 会在 `cargo build --target <triple>` 时自动按 triple 后缀选对应二进制，无需改配置。
+Tauri `externalBin: ["binaries/feishu-bridge", "binaries/dingtalk-bridge", "binaries/wecom-bridge"]` 会在 `cargo build --target <triple>` 时自动按 triple 后缀选对应二进制，无需改配置。
 
 ### 4.2 Tauri 双架构打包
 
