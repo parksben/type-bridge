@@ -5,8 +5,8 @@
 </div>
 
 <p align="center">
-  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Ftypebridge.parksben.xyz%2Fapi%2Fbadge%2Fversion&cacheSeconds=3600" alt="最新版本" />
-  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Ftypebridge.parksben.xyz%2Fapi%2Fbadge%2Fdownloads&cacheSeconds=3600" alt="总下载量" />
+  <img src="https://typebridge.parksben.xyz/api/badge/version" alt="最新版本" />
+  <img src="https://typebridge.parksben.xyz/api/badge/downloads" alt="总下载量" />
 </p>
 
 <p align="center">
