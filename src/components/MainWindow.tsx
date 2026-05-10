@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   useAppStore,
   type ChannelId,
   type Settings,
+  type LatestVersionInfo,
 } from "../store";
 import { useI18n } from "../i18n";
 import SideBar from "./SideBar";
@@ -15,9 +16,31 @@ import SystemLogTab from "./tabs/SystemLogTab";
 import InputSettingsTab from "./tabs/InputSettingsTab";
 import AboutTab from "./tabs/AboutTab";
 
+interface UpdateCheckResult {
+  has_update: boolean;
+  latest: string | null;
+  download_url: string | null;
+}
+
 export default function MainWindow() {
-  const { activeTab, setChannelConnected, addLog } = useAppStore();
+  const { activeTab, setChannelConnected, addLog, setLatestVersionInfo } = useAppStore();
   const { t } = useI18n();
+
+  // 后台静默检查更新：不抛错、不影响 UI，仅写 store
+  const silentCheckUpdate = useCallback(async () => {
+    try {
+      const result = await invoke<UpdateCheckResult>("check_update");
+      if (result.has_update && result.latest && result.download_url) {
+        const info: LatestVersionInfo = {
+          latest: result.latest,
+          downloadUrl: result.download_url,
+        };
+        setLatestVersionInfo(info);
+      }
+    } catch {
+      // 网络失败静默忽略，不影响任何功能
+    }
+  }, [setLatestVersionInfo]);
 
   // 启动时拉一次 settings，把已配置凭据的渠道注册到 channelConnected
   // （初始都是 false）。这样 sidebar 底部能立刻显示对应渠道行，而不是"尚未配置"。
@@ -32,6 +55,18 @@ export default function MainWindow() {
       }
     }).catch(() => {});
   }, []);
+
+  // 挂载时后台静默检查更新
+  useEffect(() => {
+    silentCheckUpdate();
+  }, [silentCheckUpdate]);
+
+  // 窗口重新获得焦点时再检查一次（用户切回应用时可感知到新版本）
+  useEffect(() => {
+    const handleFocus = () => silentCheckUpdate();
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [silentCheckUpdate]);
 
   // WebChat 是零配置渠道，"连接"语义是 phase === "bound"（至少一台手机绑定）。
   // 初始拉一次 snapshot 同步当前状态；后续由 typebridge://webchat-session-update
