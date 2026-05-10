@@ -40,24 +40,18 @@
     将 TypeBridge 拖入右侧 Applications 文件夹即可完成安装
   </text>
 
-  <!-- 两个主图标区域卡片 -->
-  <!-- 左卡片（TypeBridge.app 图标，中心 180,185） -->
-  <!-- 右卡片（Applications 文件夹，中心 530,185） -->
+  <!-- 两个主图标区域卡片（关于 x=380 完全对称：左中心205，右中心555）-->
   <g filter="url(#cardShadow)">
-    <rect x="70" y="90" width="220" height="190" rx="28"
+    <rect x="95" y="90" width="220" height="190" rx="28"
           fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="1"/>
-    <rect x="420" y="90" width="220" height="190" rx="28"
+    <rect x="445" y="90" width="220" height="190" rx="28"
           fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="1"/>
   </g>
 
-  <!-- 中间箭头 -->
-  <line x1="312" y1="185" x2="400" y2="185"
-        stroke="#d9480f" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.70"/>
-  <polyline points="389,174 403,185 389,196"
-            stroke="#d9480f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-            fill="none" stroke-opacity="0.70"/>
-  <!-- 箭头起点小圆 -->
-  <circle cx="312" cy="185" r="3.5" fill="#d9480f" fill-opacity="0.50"/>
+  <!-- 中间箭头：实心短胖多边形，颜色克制 -->
+  <!-- 箭头主体 350→398，箭头头 398→415，垂直居中 y=185，总高 28px -->
+  <polygon points="352,179 398,179 398,171 415,185 398,199 398,191 352,191"
+           fill="#c8a07c" fill-opacity="0.42"/>
 
   <!-- 分隔区域（非常淡的横线） -->
   <line x1="120" y1="325" x2="640" y2="325"
