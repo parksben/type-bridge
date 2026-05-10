@@ -28,7 +28,7 @@ def build_bwsp_blob() -> bytes:
             'ShowStatusBar': False,
             'ShowTabView': False,
             'ShowToolbar': False,
-            'WindowBounds': '{{10, 360}, {760, 480}}',
+            'WindowBounds': '{{10, 300}, {760, 540}}',
         },
         fmt=plistlib.FMT_BINARY,
     )
@@ -92,7 +92,7 @@ def generate(mount: str, template: str | None = None) -> None:
                 print(f'WARN: background image missing, skip bwsp/icvp: {background_image}')
         ds['TypeBridge.app']['Iloc'] = (180, 185)
         ds['Applications']['Iloc'] = (530, 185)
-        ds['\u9996\u6b21\u542f\u52a8\u524d\u5fc5\u8bfb.txt']['Iloc'] = (380, 378)
+        ds['\u9996\u6b21\u542f\u52a8\u524d\u5fc5\u8bfb.txt']['Iloc'] = (380, 400)
 
     new_size = ds_path.stat().st_size
     print(f"✓ patched {ds_path} ({old_size}B -> {new_size}B)")

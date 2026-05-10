@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="540" viewBox="0 0 760 540" fill="none">
   <defs>
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#fffaf5"/>
@@ -26,11 +26,11 @@
   </defs>
 
   <!-- 背景渐变 -->
-  <rect width="760" height="480" fill="url(#bgGrad)"/>
+  <rect width="760" height="540" fill="url(#bgGrad)"/>
 
   <!-- 柔和光晕装饰（非常淡） -->
   <circle cx="110" cy="90" r="200" fill="url(#warmGlow1)"/>
-  <circle cx="700" cy="420" r="220" fill="url(#warmGlow2)"/>
+  <circle cx="700" cy="470" r="220" fill="url(#warmGlow2)"/>
 
   <!-- 顶部安装提示 -->
   <text x="380" y="55"
@@ -60,17 +60,17 @@
   <circle cx="312" cy="185" r="3.5" fill="#d9480f" fill-opacity="0.50"/>
 
   <!-- 分隔区域（非常淡的横线） -->
-  <line x1="120" y1="305" x2="640" y2="305"
+  <line x1="120" y1="325" x2="640" y2="325"
         stroke="#c8846a" stroke-opacity="0.15" stroke-width="1" stroke-dasharray="4 6"/>
 
   <!-- 底部 TXT 文件区域卡片（"首次启动前必读.txt"，中心 380,378） -->
   <g filter="url(#txtShadow)">
-    <rect x="295" y="318" width="170" height="120" rx="20"
+    <rect x="295" y="342" width="170" height="116" rx="20"
           fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.85" stroke-width="1"/>
   </g>
 
   <!-- 底部说明文字 -->
-  <text x="380" y="458"
+  <text x="380" y="490"
         text-anchor="middle"
         font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif"
         font-size="11" font-weight="500" fill="#9a6a52" letter-spacing="0.2">
