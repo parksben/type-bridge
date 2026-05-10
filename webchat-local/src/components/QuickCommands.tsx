@@ -23,7 +23,7 @@ import {
   AppWindow,
   Monitor,
   CheckCircle,
-  XCircle,
+  ShieldAlert,
 } from "lucide-react";
 import type { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
@@ -337,7 +337,7 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
   const { success, msg } = feedback;
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium shrink-0"
+      className="flex items-start gap-3 px-3.5 py-3 rounded-xl text-[13px] font-medium shrink-0"
       style={{
         background: success
           ? "color-mix(in srgb, var(--tb-success) 12%, transparent)"
@@ -348,10 +348,12 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
           : "color-mix(in srgb, var(--tb-danger) 22%, transparent)"}`,
       }}
     >
-      {success
-        ? <CheckCircle size={16} strokeWidth={2} />
-        : <XCircle size={16} strokeWidth={2} />}
-      {msg}
+      <span className="shrink-0 mt-0.5">
+        {success
+          ? <CheckCircle size={20} strokeWidth={2} />
+          : <ShieldAlert size={20} strokeWidth={2} />}
+      </span>
+      <span className="leading-relaxed">{msg}</span>
     </div>
   );
 }
@@ -513,7 +515,7 @@ export default function QuickCommands({ client, disabled }: Props) {
             className="text-center text-[11px] leading-relaxed"
             style={{ color: "var(--tb-muted)" }}
           >
-            截图自动存入剪贴板，再点「粘贴截图」插入当前输入框
+            {t("monitor.cmdScreenshotHint")}
           </p>
         </div>
 
