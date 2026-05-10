@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Settings2, X } from "lucide-react";
+import { RotateCw, Settings2, X } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
 import { t } from "@/i18n";
 
@@ -39,6 +39,7 @@ export default function TouchPad({ client, disabled }: Props) {
   const [sensitivity, setSensitivity] = useState<number>(loadSensitivity);
   const [scrollReversed, setScrollReversed] = useState<boolean>(loadScrollReversed);
   const [showSettings, setShowSettings] = useState(false);
+  const [landscape, setLandscape] = useState(false);
   const [leftPressed, setLeftPressed] = useState(false);
   const [rightPressed, setRightPressed] = useState(false);
 
@@ -317,89 +318,144 @@ export default function TouchPad({ client, disabled }: Props) {
         </div>
       )}
 
-      {/* ── Toolbar ───────────────────────────────────────── */}
-      {/* 已移入触控板右上角 overlay，不再独占一行 */}
-
-      {/* ── Trackpad area ─────────────────────────────────── */}
-      <div
-        className="mx-3 mt-3 flex-1 relative rounded-2xl touch-none select-none overflow-hidden"
-        style={{
-          background: "var(--tb-surface)",
-          border: "1px solid var(--tb-border)",
-        }}
-        onTouchStart={handlePadTouchStart}
-        onTouchMove={handlePadTouchMove}
-        onTouchEnd={handlePadTouchEnd}
-        onTouchCancel={handlePadTouchEnd}
-      >
-        {/* 中心大字提示 */}
+      {/* ── Trackpad + Buttons (landscape-aware) ─────────── */}
+      <div className={`flex-1 flex overflow-hidden ${landscape ? "flex-row" : "flex-col"}`}>
+        {/* ── Trackpad area ────────────────────────────────── */}
         <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          className={`relative rounded-2xl touch-none select-none overflow-hidden flex-1 ${landscape ? "mt-3 ml-3 mb-3" : "mx-3 mt-3"}`}
+          style={{
+            background: "var(--tb-surface)",
+            border: "1px solid var(--tb-border)",
+          }}
+          onTouchStart={handlePadTouchStart}
+          onTouchMove={handlePadTouchMove}
+          onTouchEnd={handlePadTouchEnd}
+          onTouchCancel={handlePadTouchEnd}
         >
-          <span
-            className="text-[28px] font-medium tracking-wide select-none"
-            style={{ color: "color-mix(in srgb, var(--tb-muted) 35%, transparent)" }}
+          {/* 中心大字提示 */}
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
           >
-            {t("monitor.touchpadHint")}
-          </span>
+            <span
+              className="text-[28px] font-medium tracking-wide select-none"
+              style={{ color: "color-mix(in srgb, var(--tb-muted) 35%, transparent)" }}
+            >
+              {t("monitor.touchpadHint")}
+            </span>
+          </div>
+          {/* 右上角 overlay：旋转 + 设置 */}
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
+            <button
+              type="button"
+              onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setLandscape((v) => !v); }}
+              onClick={() => setLandscape((v) => !v)}
+              className="w-9 h-9 flex items-center justify-center rounded-full"
+              style={{
+                background: landscape
+                  ? "var(--tb-accent)"
+                  : "color-mix(in srgb, var(--tb-surface) 80%, transparent)",
+                color: landscape ? "white" : "var(--tb-muted)",
+                border: "1px solid var(--tb-border)",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              <RotateCw size={16} strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowSettings(true); }}
+              onClick={() => setShowSettings(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-full"
+              style={{
+                background: "color-mix(in srgb, var(--tb-surface) 80%, transparent)",
+                color: "var(--tb-muted)",
+                border: "1px solid var(--tb-border)",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              <Settings2 size={16} strokeWidth={2} />
+            </button>
+          </div>
         </div>
-        {/* 设置按钮 — 右上角 overlay */}
-        <div className="absolute top-3 right-3 z-10">
-          <button
-            type="button"
-            onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setShowSettings(true); }}
-            onClick={() => setShowSettings(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-full"
-            style={{
-              background: "color-mix(in srgb, var(--tb-surface) 80%, transparent)",
-              color: "var(--tb-muted)",
-              border: "1px solid var(--tb-border)",
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            <Settings2 size={16} strokeWidth={2} />
-          </button>
-        </div>
-      </div>
 
-      {/* ── Bottom mouse buttons ──────────────────────────── */}
-      <div className="flex gap-2 px-4 pt-3 pb-safe shrink-0" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px) + 16px, 24px)" }}>
-        <button
-          type="button"
-          className="flex-1 rounded-xl text-[15px] font-medium select-none transition-colors"
-          style={{
-            background: leftPressed
-              ? "color-mix(in srgb, var(--tb-text) 18%, var(--tb-surface))"
-              : "var(--tb-surface)",
-            color: "var(--tb-text)",
-            border: `1px solid ${leftPressed ? "var(--tb-text)" : "var(--tb-border)"}`,
-            paddingTop: "18px",
-            paddingBottom: "18px",
-          }}
-          onTouchStart={handleLeftStart}
-          onTouchEnd={handleLeftEnd}
-          onTouchCancel={handleLeftEnd}
-        >
-          {t("monitor.touchpadLeftBtn")}
-        </button>
-        <button
-          type="button"
-          className="flex-1 rounded-xl text-[15px] font-medium select-none transition-colors"
-          style={{
-            background: rightPressed
-              ? "color-mix(in srgb, var(--tb-text) 18%, var(--tb-surface))"
-              : "var(--tb-surface)",
-            color: "var(--tb-text)",
-            border: `1px solid ${rightPressed ? "var(--tb-text)" : "var(--tb-border)"}`,
-            paddingTop: "18px",
-            paddingBottom: "18px",
-          }}
-          onTouchStart={handleRightStart}
-          onTouchEnd={handleRightEnd}
-          onTouchCancel={handleRightEnd}
-        >
-          {t("monitor.touchpadRightBtn")}
-        </button>
+        {/* ── Mouse buttons ─────────────────────────────────── */}
+        {landscape ? (
+          /* 横屏：左右键竖排在右侧 */
+          <div className="flex flex-col gap-2 mt-3 mr-3 mb-3 ml-2 shrink-0 w-20">
+            <button
+              type="button"
+              className="flex-1 rounded-xl text-[15px] font-medium select-none transition-colors"
+              style={{
+                background: leftPressed
+                  ? "color-mix(in srgb, var(--tb-text) 18%, var(--tb-surface))"
+                  : "var(--tb-surface)",
+                color: "var(--tb-text)",
+                border: `1px solid ${leftPressed ? "var(--tb-text)" : "var(--tb-border)"}`,
+              }}
+              onTouchStart={handleLeftStart}
+              onTouchEnd={handleLeftEnd}
+              onTouchCancel={handleLeftEnd}
+            >
+              {t("monitor.touchpadLeftBtn")}
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-xl text-[15px] font-medium select-none transition-colors"
+              style={{
+                background: rightPressed
+                  ? "color-mix(in srgb, var(--tb-text) 18%, var(--tb-surface))"
+                  : "var(--tb-surface)",
+                color: "var(--tb-text)",
+                border: `1px solid ${rightPressed ? "var(--tb-text)" : "var(--tb-border)"}`,
+              }}
+              onTouchStart={handleRightStart}
+              onTouchEnd={handleRightEnd}
+              onTouchCancel={handleRightEnd}
+            >
+              {t("monitor.touchpadRightBtn")}
+            </button>
+          </div>
+        ) : (
+          /* 竖屏：左右键横排在底部 */
+          <div className="flex gap-2 px-4 pt-3 shrink-0" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px) + 16px, 24px)" }}>
+            <button
+              type="button"
+              className="flex-1 rounded-xl text-[15px] font-medium select-none transition-colors"
+              style={{
+                background: leftPressed
+                  ? "color-mix(in srgb, var(--tb-text) 18%, var(--tb-surface))"
+                  : "var(--tb-surface)",
+                color: "var(--tb-text)",
+                border: `1px solid ${leftPressed ? "var(--tb-text)" : "var(--tb-border)"}`,
+                paddingTop: "18px",
+                paddingBottom: "18px",
+              }}
+              onTouchStart={handleLeftStart}
+              onTouchEnd={handleLeftEnd}
+              onTouchCancel={handleLeftEnd}
+            >
+              {t("monitor.touchpadLeftBtn")}
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-xl text-[15px] font-medium select-none transition-colors"
+              style={{
+                background: rightPressed
+                  ? "color-mix(in srgb, var(--tb-text) 18%, var(--tb-surface))"
+                  : "var(--tb-surface)",
+                color: "var(--tb-text)",
+                border: `1px solid ${rightPressed ? "var(--tb-text)" : "var(--tb-border)"}`,
+                paddingTop: "18px",
+                paddingBottom: "18px",
+              }}
+              onTouchStart={handleRightStart}
+              onTouchEnd={handleRightEnd}
+              onTouchCancel={handleRightEnd}
+            >
+              {t("monitor.touchpadRightBtn")}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

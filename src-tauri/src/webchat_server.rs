@@ -504,6 +504,14 @@ struct KeyComboMsg {
 }
 
 #[derive(Debug, Deserialize)]
+struct ScreenshotMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
+    /// "screen" | "window"
+    kind: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct MouseMoveMsg {
     #[serde(rename = "userToken")]
     user_token: String,
@@ -685,6 +693,34 @@ async fn on_connect(socket: SocketRef) {
             }
             let combo = msg.combo.clone();
             let result = tokio::task::spawn_blocking(move || crate::injector::key_combo(&combo)).await;
+            let ok = match result {
+                Ok(Ok(())) => GenericAck { success: true, reason: None },
+                Ok(Err(e)) => GenericAck { success: false, reason: Some(e) },
+                Err(e) => GenericAck { success: false, reason: Some(e.to_string()) },
+            };
+            let _ = ack.send(&ok);
+        },
+    );
+
+    // screenshot：截图到剪贴板（kind = "screen" | "window"），有 ack
+    socket.on(
+        "screenshot",
+        |_socket: SocketRef, Data::<ScreenshotMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+            if let Err(e) = verify_user_token(&msg.user_token, &state) {
+                let _ = ack.send(&GenericAck { success: false, reason: Some(e) });
+                return;
+            }
+            touch_active(&msg.user_token, &state);
+            let kind = msg.kind.clone();
+            // 只允许 "screen" 和 "window"
+            if kind != "screen" && kind != "window" {
+                let _ = ack.send(&GenericAck {
+                    success: false,
+                    reason: Some(format!("unsupported screenshot kind: {kind}")),
+                });
+                return;
+            }
+            let result = tokio::task::spawn_blocking(move || crate::injector::screenshot(&kind)).await;
             let ok = match result {
                 Ok(Ok(())) => GenericAck { success: true, reason: None },
                 Ok(Err(e)) => GenericAck { success: false, reason: Some(e) },

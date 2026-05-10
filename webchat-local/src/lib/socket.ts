@@ -244,4 +244,26 @@ export class WebChatClient {
     if (!this.userToken) return;
     this.socket.emit("mouse_zoom", { userToken: this.userToken, delta });
   }
+
+  /** 截图：kind = "screen"（整屏）| "window"（当前窗口），截图结果存入剪贴板。 */
+  async sendScreenshot(kind: "screen" | "window"): Promise<MessageAck> {
+    if (!this.userToken) {
+      return { success: false, reason: t("socket.notHandshaked") };
+    }
+    return new Promise((resolve) => {
+      this.socket
+        .timeout(15000)
+        .emit(
+          "screenshot",
+          { userToken: this.userToken, kind },
+          (err: unknown, ack: MessageAck) => {
+            if (err) {
+              resolve({ success: false, reason: t("socket.timeout") });
+              return;
+            }
+            resolve(ack ?? { success: false, reason: t("socket.serverNoResponse") });
+          },
+        );
+    });
+  }
 }

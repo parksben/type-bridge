@@ -8,7 +8,7 @@ import {
   Redo2,
   CornerDownLeft,
   Delete,
-  Maximize2,
+  MousePointerClick,
   Copy,
   Scissors,
   ClipboardPaste,
@@ -20,8 +20,12 @@ import {
   ChevronsDown,
   Trash2,
   LogOut,
+  AppWindow,
+  Monitor,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
-import { WebChatClient } from "@/lib/socket";
+import type { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
 import { t, type TKey } from "@/i18n";
 
@@ -34,7 +38,8 @@ type CmdSpec =
   | { type: "key"; code: string }
   | { type: "text"; text: string }
   | { type: "combo"; combo: string }
-  | { type: "clear" };                 // SelectAll + Backspace
+  | { type: "clear" }
+  | { type: "screenshot"; kind: "screen" | "window" };
 
 type CmdDef = {
   labelKey: TKey;
@@ -43,9 +48,9 @@ type CmdDef = {
   accent?: boolean;
 };
 
-type TabId = "arrows" | "nav" | "edit" | "clipboard";
+type TabId = "screenshot" | "edit" | "nav";
 
-// ─── Arrows ────────────────────────────────────────────────────
+// ─── Arrow keys ────────────────────────────────────────────────
 const CMD_UP: CmdDef    = { labelKey: "monitor.cmdArrowUp",    Icon: ArrowUp,    spec: { type: "key", code: "ArrowUp" } };
 const CMD_DOWN: CmdDef  = { labelKey: "monitor.cmdArrowDown",  Icon: ArrowDown,  spec: { type: "key", code: "ArrowDown" } };
 const CMD_LEFT: CmdDef  = { labelKey: "monitor.cmdArrowLeft",  Icon: ArrowLeft,  spec: { type: "key", code: "ArrowLeft" } };
@@ -59,22 +64,25 @@ const CMD_PAGE_DOWN: CmdDef  = { labelKey: "monitor.cmdPageDown",  Icon: ArrowDo
 const CMD_DOC_TOP: CmdDef    = { labelKey: "monitor.cmdDocTop",    Icon: ChevronsUp,       spec: { type: "combo", combo: "DocTop" } };
 const CMD_DOC_BOTTOM: CmdDef = { labelKey: "monitor.cmdDocBottom", Icon: ChevronsDown,     spec: { type: "combo", combo: "DocBottom" } };
 
-// ─── Edit ──────────────────────────────────────────────────────
+// ─── Edit + Clipboard ──────────────────────────────────────────
 const EDIT_CMDS: CmdDef[] = [
-  { labelKey: "monitor.cmdUndo",    Icon: Undo2,         spec: { type: "combo", combo: "Undo" } },
-  { labelKey: "monitor.cmdRedo",    Icon: Redo2,         spec: { type: "combo", combo: "Redo" } },
-  { labelKey: "monitor.cmdNewline", Icon: CornerDownLeft, spec: { type: "key", code: "Enter" } },
-  { labelKey: "monitor.cmdDelete",  Icon: Delete,        spec: { type: "key", code: "Backspace" }, accent: true },
-  { labelKey: "monitor.cmdClear",   Icon: Trash2,        spec: { type: "clear" }, accent: true },
-  { labelKey: "monitor.cmdEscape",  Icon: LogOut,        spec: { type: "key", code: "Escape" } },
+  { labelKey: "monitor.cmdUndo",      Icon: Undo2,             spec: { type: "combo", combo: "Undo" } },
+  { labelKey: "monitor.cmdRedo",      Icon: Redo2,             spec: { type: "combo", combo: "Redo" } },
+  { labelKey: "monitor.cmdNewline",   Icon: CornerDownLeft,    spec: { type: "key", code: "Enter" } },
+  { labelKey: "monitor.cmdDelete",    Icon: Delete,            spec: { type: "key", code: "Backspace" }, accent: true },
+  { labelKey: "monitor.cmdClear",     Icon: Trash2,            spec: { type: "clear" }, accent: true },
+  { labelKey: "monitor.cmdEscape",    Icon: LogOut,            spec: { type: "key", code: "Escape" } },
+  { labelKey: "monitor.cmdSelectAll", Icon: MousePointerClick, spec: { type: "combo", combo: "SelectAll" } },
+  { labelKey: "monitor.cmdCopy",      Icon: Copy,              spec: { type: "combo", combo: "Copy" } },
+  { labelKey: "monitor.cmdCut",       Icon: Scissors,          spec: { type: "combo", combo: "Cut" } },
+  { labelKey: "monitor.cmdPaste",     Icon: ClipboardPaste,    spec: { type: "combo", combo: "Paste" } },
 ];
 
-// ─── Clipboard ─────────────────────────────────────────────────
-const CLIPBOARD_CMDS: CmdDef[] = [
-  { labelKey: "monitor.cmdSelectAll", Icon: Maximize2,      spec: { type: "combo", combo: "SelectAll" } },
-  { labelKey: "monitor.cmdCopy",      Icon: Copy,           spec: { type: "combo", combo: "Copy" } },
-  { labelKey: "monitor.cmdCut",       Icon: Scissors,       spec: { type: "combo", combo: "Cut" } },
-  { labelKey: "monitor.cmdPaste",     Icon: ClipboardPaste, spec: { type: "combo", combo: "Paste" } },
+// ─── Screenshot ────────────────────────────────────────────────
+const SCREENSHOT_CMDS: CmdDef[] = [
+  { labelKey: "monitor.cmdScreenshotWindow", Icon: AppWindow,      spec: { type: "screenshot", kind: "window" } },
+  { labelKey: "monitor.cmdScreenshotScreen", Icon: Monitor,        spec: { type: "screenshot", kind: "screen" } },
+  { labelKey: "monitor.cmdScreenshotPaste",  Icon: ClipboardPaste, spec: { type: "combo", combo: "Paste" } },
 ];
 
 // ─── CmdButton ─────────────────────────────────────────────────
@@ -113,11 +121,11 @@ function CmdButton({
           : "var(--tb-surface)",
         border: `1px solid ${pressed ? "var(--tb-text)" : "var(--tb-border)"}`,
         color: accent ? "var(--tb-danger)" : "var(--tb-text)",
-        minHeight: large ? "96px" : "88px",
-        padding: "14px 8px",
+        minHeight: large ? "96px" : "82px",
+        padding: "12px 8px",
       }}
     >
-      <Icon size={large ? 26 : 24} strokeWidth={2} />
+      <Icon size={large ? 26 : 23} strokeWidth={2} />
       <span
         className="text-[12px] leading-none text-center font-medium"
         style={{ color: accent ? "var(--tb-danger)" : "var(--tb-muted)" }}
@@ -128,29 +136,128 @@ function CmdButton({
   );
 }
 
+// ─── PairedButtons: 两个按钮视觉上一体化 ───────────────────────
+
+function PairedButtons({
+  left,
+  right,
+  onPress,
+  disabled,
+}: {
+  left: CmdDef;
+  right: CmdDef;
+  onPress: (cmd: CmdDef) => void;
+  disabled: boolean;
+}) {
+  const [lPressed, setLPressed] = useState(false);
+  const [rPressed, setRPressed] = useState(false);
+
+  function mkBtn(
+    cmd: CmdDef,
+    pressed: boolean,
+    setPressed: (v: boolean) => void,
+    side: "left" | "right",
+  ) {
+    const { Icon, labelKey } = cmd;
+    const borderColor = pressed ? "var(--tb-text)" : "var(--tb-border)";
+    return (
+      <button
+        type="button"
+        onTouchStart={(e) => { e.stopPropagation(); if (!disabled) setPressed(true); }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          setPressed(false);
+          if (!disabled) onPress(cmd);
+        }}
+        onTouchCancel={() => setPressed(false)}
+        onClick={() => { if (!disabled) onPress(cmd); }}
+        disabled={disabled}
+        className="flex-1 flex flex-col items-center justify-center gap-1.5 select-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{
+          background: pressed
+            ? "color-mix(in srgb, var(--tb-text) 12%, var(--tb-surface))"
+            : "var(--tb-surface)",
+          borderTop: `1px solid ${borderColor}`,
+          borderBottom: `1px solid ${borderColor}`,
+          borderLeft: side === "left" ? `1px solid ${borderColor}` : "none",
+          borderRight: side === "right" ? `1px solid ${borderColor}` : "none",
+          borderRadius: side === "left" ? "16px 0 0 16px" : "0 16px 16px 0",
+          minHeight: "72px",
+          padding: "10px 8px",
+          color: "var(--tb-text)",
+        }}
+      >
+        <Icon size={22} strokeWidth={2} />
+        <span
+          className="text-[11px] leading-none text-center font-medium"
+          style={{ color: "var(--tb-muted)" }}
+        >
+          {t(labelKey)}
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex w-full">
+      {mkBtn(left, lPressed, setLPressed, "left")}
+      <div style={{ width: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
+      {mkBtn(right, rPressed, setRPressed, "right")}
+    </div>
+  );
+}
+
+// ─── Screenshot feedback toast ──────────────────────────────────
+
+type ScreenshotFeedback = { success: boolean; msg: string } | null;
+
+function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
+  if (!feedback) return null;
+  const { success, msg } = feedback;
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium shrink-0"
+      style={{
+        background: success
+          ? "color-mix(in srgb, var(--tb-success) 12%, transparent)"
+          : "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+        color: success ? "var(--tb-success)" : "var(--tb-danger)",
+        border: `1px solid ${success
+          ? "color-mix(in srgb, var(--tb-success) 28%, transparent)"
+          : "color-mix(in srgb, var(--tb-danger) 22%, transparent)"}`,
+      }}
+    >
+      {success
+        ? <CheckCircle size={16} strokeWidth={2} />
+        : <XCircle size={16} strokeWidth={2} />}
+      {msg}
+    </div>
+  );
+}
+
 // ─── Main ──────────────────────────────────────────────────────
 
-const TAB_IDS: TabId[] = ["arrows", "nav", "edit", "clipboard"];
+const TAB_IDS: TabId[] = ["screenshot", "edit", "nav"];
 
 export default function QuickCommands({ client, disabled }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>("arrows");
+  const [activeTab, setActiveTab] = useState<TabId>("screenshot");
   const [error, setError] = useState<string | null>(null);
-  // 是否正在程序化滚动（点击 Tab 触发），期间暂停 scroll spy
+  const [screenshotFeedback, setScreenshotFeedback] = useState<ScreenshotFeedback>(null);
   const isProgrammaticScroll = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Record<TabId, HTMLDivElement | null>>({
-    arrows: null, nav: null, edit: null, clipboard: null,
+    screenshot: null, edit: null, nav: null,
   });
 
   const TABS: { id: TabId; label: string }[] = [
-    { id: "arrows",    label: t("monitor.cmdGroupArrows") },
-    { id: "nav",       label: t("monitor.cmdGroupNav") },
-    { id: "edit",      label: t("monitor.cmdGroupEdit") },
-    { id: "clipboard", label: t("monitor.cmdGroupClipboard") },
+    { id: "screenshot", label: t("monitor.cmdGroupScreenshot") },
+    { id: "edit",       label: t("monitor.cmdGroupEdit") },
+    { id: "nav",        label: t("monitor.cmdGroupNav") },
   ];
 
-  // ── Scroll spy（每屏等高，用 index 直接计算）────────────────
+  // ── Scroll spy ──────────────────────────────────────────────
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -168,7 +275,6 @@ export default function QuickCommands({ client, disabled }: Props) {
     return () => container.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ── Click tab → snap to section ─────────────────────────────
   function handleTabClick(id: TabId) {
     setActiveTab(id);
     const container = scrollRef.current;
@@ -201,6 +307,14 @@ export default function QuickCommands({ client, disabled }: Props) {
         const ack2 = await client.sendKey(newClientMessageId(), "Backspace");
         success = ack2.success; reason = ack2.reason;
       }
+    } else if (cmd.spec.type === "screenshot") {
+      const ack = await client.sendScreenshot(cmd.spec.kind);
+      const feedbackMsg = ack.success
+        ? t("monitor.cmdScreenshotSuccess")
+        : (ack.reason ?? t("monitor.cmdScreenshotFailed"));
+      setScreenshotFeedback({ success: ack.success, msg: feedbackMsg });
+      setTimeout(() => setScreenshotFeedback(null), 3000);
+      return;
     }
 
     if (!success) {
@@ -224,7 +338,7 @@ export default function QuickCommands({ client, disabled }: Props) {
         </div>
       )}
 
-      {/* ── Underline tab bar — sticky top ─────────────────── */}
+      {/* ── Tab bar ────────────────────────────────────────── */}
       <div
         className="flex shrink-0 overflow-x-auto scrollbar-none"
         style={{
@@ -241,7 +355,6 @@ export default function QuickCommands({ client, disabled }: Props) {
             style={{ color: activeTab === id ? "var(--tb-accent)" : "var(--tb-muted)" }}
           >
             {label}
-            {/* 下划线 */}
             <span
               className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full transition-all duration-200"
               style={{
@@ -254,73 +367,98 @@ export default function QuickCommands({ client, disabled }: Props) {
         ))}
       </div>
 
-      {/* ── Scrollable content — snap one screen per section ── */}
+      {/* ── Snap-scroll sections ───────────────────────────── */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto min-h-0"
         style={{ scrollSnapType: "y mandatory" }}
       >
 
-        {/* Arrows section */}
+        {/* ── Screenshot ────────────────────────────────────── */}
         <div
-          ref={(el) => { sectionRefs.current["arrows"] = el; }}
+          ref={(el) => { sectionRefs.current["screenshot"] = el; }}
+          className="flex flex-col justify-center gap-4 px-4"
+          style={{ height: "100%", scrollSnapAlign: "start" }}
+        >
+          {/* 截图反馈 toast */}
+          <ScreenshotToast feedback={screenshotFeedback} />
+
+          {/* 截取窗口 / 截取屏幕 */}
+          <div className="grid grid-cols-2 gap-3">
+            {SCREENSHOT_CMDS.slice(0, 2).map((cmd) => (
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
+            ))}
+          </div>
+
+          {/* 粘贴截图：独占半行居中 */}
+          <div className="flex justify-center">
+            <div className="w-1/2 pr-1.5">
+              <CmdButton cmd={SCREENSHOT_CMDS[2]} onPress={handlePress} disabled={disabled} large />
+            </div>
+          </div>
+
+          {/* 提示说明 */}
+          <p
+            className="text-center text-[11px] leading-relaxed"
+            style={{ color: "var(--tb-muted)" }}
+          >
+            截图自动存入剪贴板，再点「粘贴截图」插入当前输入框
+          </p>
+        </div>
+
+        {/* ── Edit + Clipboard ─────────────────────────────── */}
+        <div
+          ref={(el) => { sectionRefs.current["edit"] = el; }}
+          className="flex flex-col justify-center gap-3 px-4"
+          style={{ height: "100%", scrollSnapAlign: "start" }}
+        >
+          {/* 编辑操作：undo/redo/enter/delete/clear/escape */}
+          <div className="grid grid-cols-2 gap-3">
+            {EDIT_CMDS.slice(0, 6).map((cmd) => (
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+            ))}
+          </div>
+
+          {/* 分割线 */}
+          <div style={{ height: "1px", background: "var(--tb-border)", margin: "2px 0" }} />
+
+          {/* 剪贴板：selectAll/copy/cut/paste */}
+          <div className="grid grid-cols-2 gap-3">
+            {EDIT_CMDS.slice(6).map((cmd) => (
+              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Navigation ────────────────────────────────────── */}
+        <div
+          ref={(el) => { sectionRefs.current["nav"] = el; }}
           className="flex flex-col items-center justify-center gap-3 px-4"
           style={{ height: "100%", scrollSnapAlign: "start" }}
         >
-          <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
+          {/* 方向键 D-pad */}
+          <div className="grid grid-cols-3 gap-2.5 w-full max-w-[270px]">
             <div />
             <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
             <div />
           </div>
-          <div className="grid grid-cols-3 gap-3 w-full max-w-[300px]">
+          <div className="grid grid-cols-3 gap-2.5 w-full max-w-[270px]">
             <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
             <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
             <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
           </div>
-        </div>
 
-        {/* Nav section */}
-        <div
-          ref={(el) => { sectionRefs.current["nav"] = el; }}
-          className="flex flex-col justify-center gap-3 px-4"
-          style={{ height: "100%", scrollSnapAlign: "start" }}
-        >
-          <div className="grid grid-cols-2 gap-3">
-            <CmdButton cmd={CMD_HOME}      onPress={handlePress} disabled={disabled} large />
-            <CmdButton cmd={CMD_END}       onPress={handlePress} disabled={disabled} large />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-3">
-              <CmdButton cmd={CMD_PAGE_UP}    onPress={handlePress} disabled={disabled} large />
-              <CmdButton cmd={CMD_PAGE_DOWN}  onPress={handlePress} disabled={disabled} large />
-            </div>
-            <div className="flex flex-col gap-3">
-              <CmdButton cmd={CMD_DOC_TOP}    onPress={handlePress} disabled={disabled} large />
-              <CmdButton cmd={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} large />
-            </div>
-          </div>
-        </div>
+          {/* 分割线 */}
+          <div className="w-full" style={{ height: "1px", background: "var(--tb-border)", margin: "2px 0" }} />
 
-        {/* Edit section */}
-        <div
-          ref={(el) => { sectionRefs.current["edit"] = el; }}
-          className="grid grid-cols-2 content-center gap-3 px-4"
-          style={{ height: "100%", scrollSnapAlign: "start" }}
-        >
-          {EDIT_CMDS.map((cmd) => (
-            <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
-          ))}
-        </div>
+          {/* 行首 ↔ 行尾 */}
+          <PairedButtons left={CMD_HOME} right={CMD_END} onPress={handlePress} disabled={disabled} />
 
-        {/* Clipboard section */}
-        <div
-          ref={(el) => { sectionRefs.current["clipboard"] = el; }}
-          className="grid grid-cols-2 content-center gap-3 px-4"
-          style={{ height: "100%", scrollSnapAlign: "start" }}
-        >
-          {CLIPBOARD_CMDS.map((cmd) => (
-            <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} large />
-          ))}
+          {/* 上一页 ↔ 下一页 */}
+          <PairedButtons left={CMD_PAGE_UP} right={CMD_PAGE_DOWN} onPress={handlePress} disabled={disabled} />
+
+          {/* 页首 ↔ 页尾 */}
+          <PairedButtons left={CMD_DOC_TOP} right={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} />
         </div>
 
       </div>
