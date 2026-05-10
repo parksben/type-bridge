@@ -182,8 +182,11 @@ export default function TouchPad({ client, disabled }: Props) {
 
       if (!disabled) {
         const dir = scrollRevRef.current ? -1 : 1;
-        if (Math.abs(scrollDx) > 0.3 || Math.abs(scrollDy) > 0.3) {
-          client.sendMouseScroll(dir * scrollDx * SCROLL_MULTIPLIER, dir * scrollDy * SCROLL_MULTIPLIER);
+        // 横屏旋转 90° 后坐标轴对换，与单指移动保持一致：滚动X=scrollDy, 滚动Y=-scrollDx
+        const sx = landscapeRef.current ? scrollDy : scrollDx;
+        const sy = landscapeRef.current ? -scrollDx : scrollDy;
+        if (Math.abs(sx) > 0.3 || Math.abs(sy) > 0.3) {
+          client.sendMouseScroll(dir * sx * SCROLL_MULTIPLIER, dir * sy * SCROLL_MULTIPLIER);
         }
       }
 
