@@ -41,8 +41,8 @@ for arch in aarch64 x86_64; do
     --window-size 760 540 \
     --icon-size 128 \
     --text-size 13 \
-    --icon "TypeBridge.app" 205 247 \
-    --app-drop-link 555 247 \
+    --icon "TypeBridge.app" 205 175 \
+    --app-drop-link 555 175 \
     --icon "首次启动前必读.txt" 380 355 \
     --hide-extension "TypeBridge.app" \
     --no-internet-enable \
