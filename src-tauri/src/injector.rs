@@ -575,7 +575,8 @@ fn get_cursor_display_index() -> u32 {
 fn screenshot_window() -> Result<(), String> {
     ensure_screen_recording_permission()?;
 
-    let my_pid = std::process::id() as i32;
+    // 直接取前台应用 PID，不再排除 TypeBridge 自身——
+    // 用户有时就是想截 TypeBridge 自己的窗口。
     let target_pid = unsafe {
         use objc2_app_kit::NSWorkspace;
         let ws = NSWorkspace::sharedWorkspace();
@@ -583,8 +584,8 @@ fn screenshot_window() -> Result<(), String> {
     };
 
     let target_pid = match target_pid {
-        Some(pid) if pid != my_pid => pid,
-        _ => return screenshot_screen_inner(),
+        Some(pid) => pid,
+        None => return screenshot_screen_inner(),
     };
 
     // screencapture -l 需要真实的 CGWindowID（系统级窗口 ID）。
