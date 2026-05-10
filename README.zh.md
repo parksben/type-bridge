@@ -5,8 +5,8 @@
 </div>
 
 <p align="center">
-  <img src="https://typebridge.parksben.xyz/api/badge/version" alt="最新版本" />
-  <img src="https://typebridge.parksben.xyz/api/badge/downloads" alt="总下载量" />
+  <img src="https://typebridge.parksben.xyz/api/badge/version?v=1" alt="最新版本" />
+  <img src="https://typebridge.parksben.xyz/api/badge/downloads?v=1" alt="总下载量" />
 </p>
 
 <p align="center">

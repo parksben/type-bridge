@@ -5,8 +5,8 @@
 </div>
 
 <p align="center">
-  <img src="https://typebridge.parksben.xyz/api/badge/version" alt="latest version" />
-  <img src="https://typebridge.parksben.xyz/api/badge/downloads" alt="total downloads" />
+  <img src="https://typebridge.parksben.xyz/api/badge/version?v=1" alt="latest version" />
+  <img src="https://typebridge.parksben.xyz/api/badge/downloads?v=1" alt="total downloads" />
 </p>
 
 <p align="center">
