@@ -104,7 +104,15 @@ TopNav 导航项：
 - **配置方式**：完全由代码内 `netlify.toml` + Next.js 约定驱动，零 Netlify UI 手动配置
 - Next.js 15（App Router）+ Tailwind CSS v4 + lucide-react
 
-### 9.8 迁移状态
+### 9.8 下载量统计
+
+- 每次通过 `/dl/[arch]` 代理接口真实触发下载时，服务端自动对应架构计数 +1
+- 统计数据维护在 Netlify Blobs `stats` store，key `download-stats`，字段：`total`（总量）和 `by_arch.arm64` / `by_arch.x64`（分架构量）
+- 提供 `GET /api/badge/version` 和 `GET /api/badge/downloads` 两个 shields.io endpoint badge 接口，供 README 以徽标形式展示最新版本号和总下载量
+- README（中英文双版）标题下方居中展示：最新版本徽标 + 总下载量徽标
+- 不在 APP 内部单独上报（APP 内下载实际也走 `/dl/[arch]` 代理链路）
+
+### 9.9 迁移状态
 
 - **已完成**：旧版多页文档站已删除，新版单页落地页（原 `website-v2/`）已重命名为 `website/` 并作为唯一官网
 - 旧站的四渠道教程内容（`/docs/feishu` 等）目前不在新站中——后续如需恢复文档中心，另行规划

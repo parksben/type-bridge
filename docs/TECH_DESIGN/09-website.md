@@ -157,6 +157,35 @@ Netlify 函数以 `ReadableStream` 返回 body 时，运行时强制使用 `Tran
 - `layout.tsx` 顶部 inline script 在 React 水合前读取 localStorage 并同步 class，避免闪烁
 - 默认深色模式
 
+### 25.12 下载量统计与徽标 API
+
+**统计触发点**：`GET /dl/[arch]` Route Handler 在确认 upstream URL 存在、开始流式透传之前，fire-and-forget 调用 `incrementDownloadCount(arch)`。选此位置而非流完成后，原因是 serverless 函数在 streaming response 发出后即终止，无法在 "流结束" 时执行额外逻辑。
+
+**数据存储**：Netlify Blobs `stats` store，key `download-stats`：
+```json
+{ "total": 0, "by_arch": { "arm64": 0, "x64": 0 } }
+```
+read-modify-write 竞态在极低并发下误差可忽略（统计场景可接受）。
+
+**路由表新增：**
+
+| 路由 | 渲染方式 | 说明 |
+|------|---------|------|
+| `/api/badge/version` | ISR (1h) | shields.io endpoint badge 格式，返回最新正式版本号 |
+| `/api/badge/downloads` | ISR (1h) | shields.io endpoint badge 格式，返回总下载量 |
+
+**shields.io endpoint badge JSON 格式：**
+```json
+{
+  "schemaVersion": 1,
+  "label": "latest",
+  "message": "v0.2.1",
+  "color": "blue"
+}
+```
+
+**README 徽标**：shields.io `?url=` endpoint badge URL 引用上述两个接口，`cacheSeconds=3600` 控制 shields.io 端缓存。中英文两个 README 均在标题 `<h1>` 下方居中 `<p align="center">` 块内展示。
+
 ### 25.11 部署状态
 
 - 已部署至 Netlify：`typebridge.parksben.xyz`，base directory = `website/`

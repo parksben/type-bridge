@@ -12,6 +12,28 @@ import { getStore } from "@netlify/blobs";
 // 这是 serverless streaming 的固有限制，不要为此改用 302。
 
 const BLOB_KEY = "latest-release";
+const STATS_KEY = "download-stats";
+
+interface DownloadStats {
+  total: number;
+  by_arch: { arm64: number; x64: number };
+}
+
+// fire-and-forget：不阻塞响应流，计数失败只记日志，不影响下载。
+async function incrementDownloadCount(arch: "arm64" | "x64") {
+  try {
+    const store = getStore("stats");
+    const current: DownloadStats = (await store.get(STATS_KEY, {
+      type: "json",
+    })) ?? { total: 0, by_arch: { arm64: 0, x64: 0 } };
+    current.total = (current.total ?? 0) + 1;
+    current.by_arch = current.by_arch ?? { arm64: 0, x64: 0 };
+    current.by_arch[arch] = (current.by_arch[arch] ?? 0) + 1;
+    await store.setJSON(STATS_KEY, current);
+  } catch (err) {
+    console.error("Failed to increment download count:", err);
+  }
+}
 
 interface BlobReleaseData {
   download_urls: {
@@ -62,6 +84,9 @@ export async function GET(
         { status: 404 },
       );
     }
+
+    // ── 下载计数 +1（fire-and-forget，不阻塞响应）──
+    incrementDownloadCount(arch);
 
     // ── 从 GitHub CDN 流式拉取 ──
     const assetRes = await fetch(url, {
