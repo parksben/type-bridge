@@ -50,6 +50,10 @@ export async function GET() {
       );
     }
 
+    // 下载链接改为走 Netlify 代理（/dl/arm64、/dl/x64），
+    // 避免桌面 App 直连 GitHub CDN（国内网络访问不稳定）。
+    // 代理 URL 指向最新发布版本，与 blob 内存储的版本一致。
+    const BASE_URL = "https://typebridge.parksben.xyz";
     const payload: ResponsePayload = {
       version: data.version,
       tag_name: data.tag_name,
@@ -57,8 +61,8 @@ export async function GET() {
       notes: data.notes ?? null,
       published_at: data.published_at ?? null,
       download_urls: {
-        aarch64: data.download_urls.aarch64 ?? null,
-        x64: data.download_urls.x64 ?? null,
+        aarch64: data.download_urls.aarch64 ? `${BASE_URL}/dl/arm64` : null,
+        x64: data.download_urls.x64 ? `${BASE_URL}/dl/x64` : null,
       },
     };
 

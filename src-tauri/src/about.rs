@@ -275,7 +275,7 @@ async fn run_update_download_task(
     std::fs::create_dir_all(&downloads_dir)
         .map_err(|e| format!("创建 Downloads 目录失败：{}", e))?;
 
-    let filename = filename_from_url(download_url);
+    let filename = filename_from_url(download_url, version);
     let target_path: PathBuf = downloads_dir.join(filename);
 
     let outcome = download_to_file(app, download_url, version, &target_path, &cancel_token).await?;
@@ -323,12 +323,20 @@ fn remove_partial_file(target: &PathBuf) {
     }
 }
 
-fn filename_from_url(url: &str) -> String {
-    url.rsplit('/')
-        .next()
-        .filter(|s| !s.is_empty())
-        .unwrap_or("TypeBridge-update.dmg")
-        .to_string()
+fn filename_from_url(url: &str, version: &str) -> String {
+    // 优先从 URL 路径末段提取文件名（直链格式，末段含 .dmg 扩展名）
+    let last = url.rsplit('/').next().filter(|s| s.contains('.'));
+    if let Some(name) = last {
+        return name.to_string();
+    }
+    // 回退：代理 URL（如 /dl/arm64）没有文件名，按版本 + 架构构造
+    if cfg!(target_arch = "aarch64") {
+        format!("TypeBridge_{}_aarch64.dmg", version)
+    } else if cfg!(target_arch = "x86_64") {
+        format!("TypeBridge_{}_x64.dmg", version)
+    } else {
+        format!("TypeBridge_{}.dmg", version)
+    }
 }
 
 enum DownloadWriteOutcome {
