@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { RotateCw, Settings2, X } from "lucide-react";
+import { RectangleHorizontal, RectangleVertical, Settings2, X } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
 import { t } from "@/i18n";
 
@@ -359,7 +359,9 @@ export default function TouchPad({ client, disabled }: Props) {
                 backdropFilter: "blur(4px)",
               }}
             >
-              <RotateCw size={16} strokeWidth={2} />
+              {landscape
+                ? <RectangleVertical size={16} strokeWidth={2} />
+                : <RectangleHorizontal size={16} strokeWidth={2} />}
             </button>
             <button
               type="button"
