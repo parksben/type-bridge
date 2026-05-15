@@ -20,6 +20,17 @@ export interface SelftestResult {
   probes: ProbeResult[];
 }
 
+/// 飞书自建应用接收并响应消息所需的完整 scope 清单。
+/// 前 3 项由 REST API probe 动态校验；后 2 项是事件订阅级 scope，
+/// REST probe 探测不到，必须静态完整列出供用户对照配置。
+const FEISHU_REQUIRED_SCOPES: { scope: string; labelKey: string }[] = [
+  { scope: "im:message", labelKey: "selftest.feishuScopeImMessage" },
+  { scope: "im:message.p2p_msg:readonly", labelKey: "selftest.feishuScopeP2pReadonly" },
+  { scope: "im:message:readonly", labelKey: "selftest.feishuScopeReadonly" },
+  { scope: "im:message.reactions:write_only", labelKey: "selftest.feishuScopeReactions" },
+  { scope: "im:message:send_as_bot", labelKey: "selftest.feishuScopeSendAsBot" },
+];
+
 interface Props {
   result: SelftestResult;
   /// 渠道。P1 前是 feishu 默认；加进参数以支持钉钉 / 企微
@@ -130,51 +141,99 @@ function FooterGuide({
 }) {
   if (channel === "feishu") {
     return (
-      <div
-        className="flex items-start gap-2 px-3 py-2.5 text-[11.5px] leading-relaxed"
-        style={{
-          borderTop: "1px solid var(--border)",
-          background: "var(--surface)",
-        }}
-      >
-        <Info size={12} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
-        <div className="flex-1">
-          <div className="text-text font-medium">
-            {t("selftest.feishuFooterTitle")}
-          </div>
-          <div className="text-muted text-[11px] mt-0.5">
-            {t("selftest.feishuFooterDesc")}
-          </div>
-          <ol className="mt-1.5 flex flex-col gap-1 text-text">
-            <li className="flex items-baseline gap-1.5">
-              <span className="text-accent font-mono text-[10.5px]">①</span>
-              <span>
-                <span className="font-medium">{t("selftest.feishuStep1Title")}</span>：{t("selftest.feishuStep1Body")}
-              </span>
-            </li>
-            <li className="flex items-baseline gap-1.5">
-              <span className="text-accent font-mono text-[10.5px]">②</span>
-              <span>
-                <span className="font-medium">{t("selftest.feishuStep2Title")}</span>：{t("selftest.feishuStep2BodyPrefix")}
-                <span className="font-mono">im.message.receive_v1</span>{t("selftest.feishuStep2BodySuffix")}
-              </span>
-            </li>
-          </ol>
-          <div className="flex items-center gap-3 mt-2">
-            <button
-              onClick={() =>
-                onOpenUrl(
-                  `https://open.feishu.cn/app/${appIdOrEquivalent}/event`
-                )
-              }
-              className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
-            >
-              {t("selftest.feishuFooterCta")}
-              <ExternalLink size={10} strokeWidth={2} />
-            </button>
+      <>
+        {/* 块 1：完整 scope 清单 — API probe 只覆盖了 3 条，
+              另外两条（im:message、im:message.p2p_msg:readonly）
+              是事件订阅级的，REST probe 探测不到，必须静态提示。 */}
+        <div
+          className="flex items-start gap-2 px-3 py-2.5 text-[11.5px] leading-relaxed"
+          style={{
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface)",
+          }}
+        >
+          <Info size={12} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
+          <div className="flex-1">
+            <div className="text-text font-medium">
+              {t("selftest.feishuScopesTitle")}
+            </div>
+            <div className="text-muted text-[11px] mt-0.5">
+              {t("selftest.feishuScopesDesc")}
+            </div>
+            <ul className="mt-1.5 flex flex-col gap-1 text-text">
+              {FEISHU_REQUIRED_SCOPES.map((s) => (
+                <li key={s.scope} className="flex items-baseline gap-1.5">
+                  <span className="text-accent font-mono text-[10.5px]">•</span>
+                  <span className="flex-1">
+                    <span className="font-mono text-[11px]">{s.scope}</span>
+                    <span className="text-muted">　{t(s.labelKey as any)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                onClick={() =>
+                  onOpenUrl(
+                    `https://open.feishu.cn/app/${appIdOrEquivalent}/auth`
+                  )
+                }
+                className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
+              >
+                {t("selftest.feishuScopesCta")}
+                <ExternalLink size={10} strokeWidth={2} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* 块 2：事件订阅静态引导 — API probe 无法校验事件订阅状态 */}
+        <div
+          className="flex items-start gap-2 px-3 py-2.5 text-[11.5px] leading-relaxed"
+          style={{
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface)",
+          }}
+        >
+          <Info size={12} strokeWidth={1.75} className="shrink-0 mt-0.5 text-muted" />
+          <div className="flex-1">
+            <div className="text-text font-medium">
+              {t("selftest.feishuFooterTitle")}
+            </div>
+            <div className="text-muted text-[11px] mt-0.5">
+              {t("selftest.feishuFooterDesc")}
+            </div>
+            <ol className="mt-1.5 flex flex-col gap-1 text-text">
+              <li className="flex items-baseline gap-1.5">
+                <span className="text-accent font-mono text-[10.5px]">①</span>
+                <span>
+                  <span className="font-medium">{t("selftest.feishuStep1Title")}</span>：{t("selftest.feishuStep1Body")}
+                </span>
+              </li>
+              <li className="flex items-baseline gap-1.5">
+                <span className="text-accent font-mono text-[10.5px]">②</span>
+                <span>
+                  <span className="font-medium">{t("selftest.feishuStep2Title")}</span>：{t("selftest.feishuStep2BodyPrefix")}
+                  <span className="font-mono">im.message.receive_v1</span>{t("selftest.feishuStep2BodySuffix")}
+                </span>
+              </li>
+            </ol>
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                onClick={() =>
+                  onOpenUrl(
+                    `https://open.feishu.cn/app/${appIdOrEquivalent}/event`
+                  )
+                }
+                className="inline-flex items-center gap-1 text-accent hover:underline text-[11.5px] font-medium"
+              >
+                {t("selftest.feishuFooterCta")}
+                <ExternalLink size={10} strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
     );
   }
 

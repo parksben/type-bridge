@@ -134,6 +134,14 @@ src-tauri/src/
 │   ✓ 发表情反应      im:message.reactions:write_only
 │   ✗ 回复消息        im:message:send_as_bot    [去授权]
 │
+│   ⓘ 飞书自建应用需完整开通以下 5 项权限（指南）：
+│      • im:message                       获取与发送单聊、群组消息
+│      • im:message.p2p_msg:readonly      读取用户发给机器人的单聊消息
+│      • im:message:readonly              获取单聊、群组消息
+│      • im:message.reactions:write_only  发送、删除消息表情回复
+│      • im:message:send_as_bot           以应用的身份发消息
+│   [去权限管理页 ↗]
+│
 │   ⓘ 接收消息事件 需在飞书后台「事件配置」中单独完成
 │      ① 订阅方式：选择"使用长连接接收事件"并完成验证
 │      ② 添加事件：搜索 im.message.receive_v1 并勾选提交

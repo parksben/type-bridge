@@ -245,6 +245,14 @@ if anyNetworkErr := findNetworkErr(results); anyNetworkErr != nil {
 │  缺少 scope：im:message:send_as_bot / im:message     │
 │  [去飞书开发者后台授权 ↗]                            │
 ├──────────────────────────────────────────────────────┤
+│  ⓘ 飞书自建应用需完整开通以下 5 项权限                │
+│     • im:message                       获取与发送单聊、群组消息    │
+│     • im:message.p2p_msg:readonly      读取用户发给机器人的单聊消息 │
+│     • im:message:readonly              获取单聊、群组消息          │
+│     • im:message.reactions:write_only  发送、删除消息表情回复      │
+│     • im:message:send_as_bot           以应用的身份发消息          │
+│     [去权限管理页 ↗]                                              │
+├──────────────────────────────────────────────────────┤
 │  ⓘ 接收消息事件 需在飞书后台「事件配置」单独完成      │
 │     ① 订阅方式选"使用长连接接收事件"并完成验证        │
 │     ② 添加事件搜索 im.message.receive_v1 勾选提交     │
@@ -254,9 +262,12 @@ if anyNetworkErr := findNetworkErr(results); anyNetworkErr != nil {
 
 - 清单卡片**替代**原来那一行绿色/橙色 banner
 - 失败行的"去授权"按钮用 `openUrl`（tauri-plugin-opener）打开 probe 返回的 `help_url`；没有 `help_url` 时退化为 `https://open.feishu.cn/app/{app_id}/auth`
-- 最后一行（事件订阅）是**静态 info**——API probe 无法自动校验事件订阅的配置状态
-- 主按钮直达**应用本身的**事件配置页 `https://open.feishu.cn/app/{app_id}/event`，而不是公开文档页
-- 两步 checklist 对应飞书"事件配置"页的实际 UI 顺序：先选订阅方式（长连接 vs HTTP）+ 完成验证，再添加具体事件并勾选提交；飞书在「添加事件」时会自动把该事件依赖的 scope 加进应用，不需要用户手动到「权限管理」勾
+- 第二个 ⓘ 块是**静态完整 scope 清单**——前 3 项已被 API probe 动态校验，但 `im:message` / `im:message.p2p_msg:readonly` 是**事件订阅级 scope**（`im.message.receive_v1` 长连接的接收消息依赖），REST API probe 探测不到，必须在 UI 上完整罗列让用户对照后台勾选
+- 最后一行（事件订阅引导）是**静态 info**——API probe 无法自动校验事件订阅的配置状态
+- 主按钮直达**应用本身的**事件配置页 `https://open.feishu.cn/app/{app_id}/event` 和权限管理页 `https://open.feishu.cn/app/{app_id}/auth`，而不是公开文档页
+- 两步 checklist 对应飞书"事件配置"页的实际 UI 顺序：先选订阅方式（长连接 vs HTTP）+ 完成验证，再添加具体事件并勾选提交
+
+> **历史 issue（v0.2.2 修复）**：先前 UI 只透出 API probe 显式涉及的 3 个 scope，导致用户配置完后机器人能回复但收不到用户的私聊/群聊消息（缺 `im:message` / `im:message.p2p_msg:readonly`）。本次升级在 footer 增加 **5 项完整必备 scope 清单**作为静态对照，避免漏配。
 
 ### 23.7 为什么不单独做一个 probe 检查事件订阅
 
