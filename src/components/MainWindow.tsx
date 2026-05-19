@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   useAppStore,
   type ChannelId,
@@ -63,10 +64,17 @@ export default function MainWindow() {
   }, [silentCheckUpdate]);
 
   // 窗口重新获得焦点时再检查一次（用户切回应用时可感知到新版本）
+  // 用 Tauri 原生 onFocusChanged 而不是 DOM 的 window focus 事件——
+  // 在 macOS WKWebView 里 App 切前后台 ≠ WebView 内 focus，
+  // 用户从 Safari 切回 TypeBridge 但没点击 WebView 区域时，DOM focus 不会触发，
+  // 导致 NEW 徽标"必须先点进 About 页面才出现"。原生 window 事件无此问题。
   useEffect(() => {
-    const handleFocus = () => silentCheckUpdate();
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    const un = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+      if (focused) silentCheckUpdate();
+    });
+    return () => {
+      un.then((f) => f());
+    };
   }, [silentCheckUpdate]);
 
   // WebChat 是零配置渠道，"连接"语义是 phase === "bound"（至少一台手机绑定）。
