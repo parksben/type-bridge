@@ -24,9 +24,6 @@ import {
   Monitor,
   CheckCircle,
   ShieldAlert,
-  Camera,
-  PenLine,
-  Compass,
 } from "lucide-react";
 import type { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
@@ -89,9 +86,9 @@ const SCREENSHOT_CMDS: CmdDef[] = [
   { labelKey: "monitor.cmdScreenshotPaste",  Icon: ClipboardPaste, spec: { type: "combo", combo: "Paste" } },
 ];
 
-// ─── RowCmdButton: 全宽横排按钮（图标 + 文字左对齐）──────────────
-
-function RowCmdButton({
+// ─── ScreenshotTile: 大方块图标在上、文字在下的卡片样式 ──────────
+// 替代原 RowCmdButton 的细长全宽样式 —— 加大点击区、降低误触率。
+function ScreenshotTile({
   cmd,
   onPress,
   disabled,
@@ -116,25 +113,24 @@ function RowCmdButton({
       onTouchCancel={() => setPressed(false)}
       onClick={() => { if (!disabled) onPress(cmd); }}
       disabled={disabled}
-      className="flex items-center gap-3.5 w-full rounded-2xl select-none disabled:opacity-30 disabled:cursor-not-allowed"
+      className="flex flex-col items-center justify-center gap-2 w-full rounded-2xl select-none disabled:opacity-30 disabled:cursor-not-allowed"
       style={{
-        background: pressed
-          ? "#fff3ea"
-          : "#ffffff",
+        background: pressed ? "#fff3ea" : "#ffffff",
         border: `1px solid ${pressed ? "#f9b27a" : "var(--tb-border)"}`,
         color: accent ? "var(--tb-danger)" : "var(--tb-text)",
-        padding: "14px 16px",
+        minHeight: "96px",
+        padding: "16px 12px",
         boxShadow: pressed
           ? "0 1px 4px rgba(249,115,22,0.15)"
           : "0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05)",
         transition: "background 80ms ease, border-color 80ms ease, box-shadow 80ms ease",
       }}
     >
-      <span style={{ color: accent ? "var(--tb-danger)" : "var(--tb-accent)", flexShrink: 0, display: "flex" }}>
-        <Icon size={22} strokeWidth={1.8} />
+      <span style={{ color: accent ? "var(--tb-danger)" : "var(--tb-accent)", display: "flex" }}>
+        <Icon size={28} strokeWidth={1.8} />
       </span>
       <span
-        className="text-[15px] font-medium"
+        className="text-[12px] font-semibold text-center leading-tight"
         style={{ color: accent ? "var(--tb-danger)" : "var(--tb-text)" }}
       >
         {t(labelKey)}
@@ -374,6 +370,24 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
   );
 }
 
+// ─── PageTitle: 每屏顶部的小标题（淡色、居中、不抢戏）─────────
+
+function PageTitle({ label }: { label: string }) {
+  return (
+    <h2
+      className="text-center text-[12px] font-medium tracking-wide select-none shrink-0"
+      style={{
+        color: "var(--tb-muted)",
+        letterSpacing: "0.05em",
+        opacity: 0.7,
+        marginBottom: "4px",
+      }}
+    >
+      {label}
+    </h2>
+  );
+}
+
 // ─── Main ──────────────────────────────────────────────────────
 
 const TAB_IDS: TabId[] = ["screenshot", "edit", "nav"];
@@ -385,26 +399,35 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
   const isProgrammaticScroll = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Record<TabId, HTMLDivElement | null>>({
-    screenshot: null, edit: null, nav: null,
-  });
 
-  const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
-    { id: "screenshot", label: t("monitor.cmdGroupScreenshot"), Icon: Camera },
-    { id: "edit",       label: t("monitor.cmdGroupEdit"),       Icon: PenLine },
-    { id: "nav",        label: t("monitor.cmdGroupNav"),        Icon: Compass },
-  ];
+  const TAB_LABELS: Record<TabId, TKey> = {
+    screenshot: "monitor.cmdGroupScreenshot",
+    edit:       "monitor.cmdGroupEdit",
+    nav:        "monitor.cmdGroupNav",
+  };
 
-  // ── Scroll spy ──────────────────────────────────────────────
+  // ── 启动时滚动到 initialTab ──────────────────────────────
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const idx = TAB_IDS.indexOf(initialTab);
+    if (idx <= 0) return;
+    isProgrammaticScroll.current = true;
+    // 同步滚到位（无动画），避免初次渲染时闪一下
+    container.scrollLeft = idx * container.clientWidth;
+    setTimeout(() => { isProgrammaticScroll.current = false; }, 100);
+  }, []);
+
+  // ── Scroll spy：横向 snap，根据 scrollLeft 推算当前页 ──
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
 
     function onScroll() {
       if (isProgrammaticScroll.current) return;
-      const h = container!.clientHeight;
-      if (!h) return;
-      const idx = Math.round(container!.scrollTop / h);
+      const w = container!.clientWidth;
+      if (!w) return;
+      const idx = Math.round(container!.scrollLeft / w);
       const id = TAB_IDS[Math.min(idx, TAB_IDS.length - 1)];
       if (id) setActiveTab(id);
     }
@@ -413,13 +436,13 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
     return () => container.removeEventListener("scroll", onScroll);
   }, []);
 
-  function handleTabClick(id: TabId) {
+  function goToTab(id: TabId) {
     setActiveTab(id);
     const container = scrollRef.current;
     if (!container) return;
     const idx = TAB_IDS.indexOf(id);
     isProgrammaticScroll.current = true;
-    container.scrollTo({ top: idx * container.clientHeight, behavior: "smooth" });
+    container.scrollTo({ left: idx * container.clientWidth, behavior: "smooth" });
     setTimeout(() => { isProgrammaticScroll.current = false; }, 600);
   }
 
@@ -479,140 +502,152 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
         </div>
       )}
 
-      {/* ── Tab bar ────────────────────────────────────────── */}
-      <div
-        className="flex shrink-0 overflow-x-auto scrollbar-none"
-        style={{
-          borderBottom: "1px solid var(--tb-border)",
-          background: "var(--tb-surface)",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        }}
-      >
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => handleTabClick(id)}
-            className="flex-1 py-2.5 text-[12px] font-semibold whitespace-nowrap relative flex flex-col items-center gap-1 select-none"
-            style={{
-              color: activeTab === id ? "var(--tb-accent)" : "var(--tb-muted)",
-              transition: "color 150ms ease",
-            }}
-          >
-            <Icon size={18} strokeWidth={1.8} />
-            {label}
-            <span
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-full"
-              style={{
-                width: activeTab === id ? "70%" : "0%",
-                height: "2px",
-                background: "var(--tb-accent)",
-                boxShadow: activeTab === id ? "0 0 8px var(--tb-accent-glow)" : "none",
-                transition: "width 200ms ease, box-shadow 200ms ease",
-              }}
-            />
-          </button>
-        ))}
-      </div>
-
-      {/* ── Snap-scroll sections ───────────────────────────── */}
+      {/* ── 横向 snap pager：每屏 100% 宽 ────────────────── */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto min-h-0"
-        style={{ scrollSnapType: "y mandatory" }}
+        className="flex-1 overflow-x-auto overflow-y-hidden flex min-h-0 scrollbar-none"
+        style={{
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+        }}
       >
 
-        {/* ── Screenshot ────────────────────────────────────── */}
-        <div
-          ref={(el) => { sectionRefs.current["screenshot"] = el; }}
-          className="flex flex-col justify-center gap-4 px-4"
-          style={{ height: "100%", scrollSnapAlign: "start" }}
+        {/* ── Page 1: Screenshot ─────────────────────────── */}
+        <section
+          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
+          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
+          <PageTitle label={t(TAB_LABELS.screenshot)} />
+
           {/* 截图反馈 toast */}
           <ScreenshotToast feedback={screenshotFeedback} />
 
-          {/* 三个截图按钮：每个独占一行 */}
-          {SCREENSHOT_CMDS.map((cmd) => (
-            <RowCmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-          ))}
+          {/* 居中区：三个截图按钮，2x2 网格中第三个跨两列 */}
+          <div className="flex-1 flex flex-col justify-center gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <ScreenshotTile cmd={SCREENSHOT_CMDS[0]} onPress={handlePress} disabled={disabled} />
+              <ScreenshotTile cmd={SCREENSHOT_CMDS[1]} onPress={handlePress} disabled={disabled} />
+            </div>
+            <ScreenshotTile cmd={SCREENSHOT_CMDS[2]} onPress={handlePress} disabled={disabled} />
 
-          {/* 提示说明 */}
-          <p
-            className="text-center text-[11px] leading-relaxed"
-            style={{ color: "rgba(255,255,255,0.2)" }}
-          >
-            {t("monitor.cmdScreenshotHint")}
-          </p>
-        </div>
+            {/* 提示说明 */}
+            <p
+              className="text-center text-[11px] leading-relaxed mt-1"
+              style={{ color: "var(--tb-muted)", opacity: 0.55 }}
+            >
+              {t("monitor.cmdScreenshotHint")}
+            </p>
+          </div>
+        </section>
 
-        {/* ── Edit + Clipboard ─────────────────────────────── */}
-        <div
-          ref={(el) => { sectionRefs.current["edit"] = el; }}
-          className="flex flex-col justify-center gap-3 px-4"
-          style={{ height: "100%", scrollSnapAlign: "start" }}
+        {/* ── Page 2: Edit + Clipboard ──────────────────── */}
+        <section
+          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
+          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
-          {/* 编辑操作：undo/redo/enter/delete/clear/escape */}
-          <div className="grid grid-cols-2 gap-2.5">
-            {EDIT_CMDS.slice(0, 6).map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-            ))}
+          <PageTitle label={t(TAB_LABELS.edit)} />
+
+          <div className="flex-1 flex flex-col justify-center gap-3">
+            {/* 编辑操作：undo/redo/enter/delete/clear/escape */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {EDIT_CMDS.slice(0, 6).map((cmd) => (
+                <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              ))}
+            </div>
+
+            {/* 分割线 */}
+            <div
+              style={{
+                height: "1px",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
+                margin: "2px 0",
+              }}
+            />
+
+            {/* 剪贴板：selectAll/copy/cut/paste */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {EDIT_CMDS.slice(6).map((cmd) => (
+                <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              ))}
+            </div>
           </div>
+        </section>
 
-          {/* 分割线 */}
-          <div
-            style={{
-              height: "1px",
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
-              margin: "2px 0",
-            }}
-          />
-
-          {/* 剪贴板：selectAll/copy/cut/paste */}
-          <div className="grid grid-cols-2 gap-2.5">
-            {EDIT_CMDS.slice(6).map((cmd) => (
-              <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Navigation ────────────────────────────────────── */}
-        <div
-          ref={(el) => { sectionRefs.current["nav"] = el; }}
-          className="flex flex-col items-center justify-center gap-3 px-4"
-          style={{ height: "100%", scrollSnapAlign: "start" }}
+        {/* ── Page 3: Navigation ────────────────────────── */}
+        <section
+          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
+          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
-          {/* 方向键 D-pad */}
-          <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
-            <div />
-            <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
-            <div />
+          <PageTitle label={t(TAB_LABELS.nav)} />
+
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            {/* 方向键 D-pad */}
+            <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
+              <div />
+              <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
+              <div />
+            </div>
+            <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
+              <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
+              <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
+              <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
+            </div>
+
+            {/* 分割线 */}
+            <div
+              className="w-full"
+              style={{
+                height: "1px",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
+                margin: "2px 0",
+              }}
+            />
+
+            {/* 行首 ↔ 行尾 */}
+            <PairedButtons left={CMD_HOME} right={CMD_END} onPress={handlePress} disabled={disabled} />
+
+            {/* 上一页/下一页 ↕ 与 页首/页尾 ↕ 并列一行 */}
+            <div className="flex gap-2.5 w-full">
+              <VerticalPairedButtons top={CMD_PAGE_UP} bottom={CMD_PAGE_DOWN} onPress={handlePress} disabled={disabled} />
+              <VerticalPairedButtons top={CMD_DOC_TOP} bottom={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} />
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
-            <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
-            <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
-            <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
-          </div>
+        </section>
 
-          {/* 分割线 */}
-          <div
-            className="w-full"
-            style={{
-              height: "1px",
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
-              margin: "2px 0",
-            }}
-          />
+      </div>
 
-          {/* 行首 ↔ 行尾 */}
-          <PairedButtons left={CMD_HOME} right={CMD_END} onPress={handlePress} disabled={disabled} />
-
-          {/* 上一页/下一页 ↕ 与 页首/页尾 ↕ 并列一行 */}
-          <div className="flex gap-2.5 w-full">
-            <VerticalPairedButtons top={CMD_PAGE_UP} bottom={CMD_PAGE_DOWN} onPress={handlePress} disabled={disabled} />
-            <VerticalPairedButtons top={CMD_DOC_TOP} bottom={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} />
-          </div>
-        </div>
-
+      {/* ── 底部圆点 indicator（类似 iOS 桌面分页点）─────── */}
+      <div
+        className="flex items-center justify-center gap-2 shrink-0 select-none"
+        style={{
+          padding: "10px 0 12px",
+          background: "var(--tb-surface)",
+          borderTop: "1px solid var(--tb-border)",
+        }}
+      >
+        {TAB_IDS.map((id) => {
+          const isActive = activeTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => goToTab(id)}
+              aria-label={t(TAB_LABELS[id])}
+              className="select-none"
+              style={{
+                width: isActive ? "20px" : "8px",
+                height: "8px",
+                borderRadius: "999px",
+                background: isActive ? "var(--tb-accent)" : "rgba(0,0,0,0.18)",
+                boxShadow: isActive ? "0 0 6px var(--tb-accent-glow)" : "none",
+                transition: "width 200ms ease, background 200ms ease, box-shadow 200ms ease",
+                padding: 0,
+                border: "none",
+                cursor: "pointer",
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );
