@@ -42,16 +42,17 @@ TypeBridge does one thing well: **turn your phone into a wireless keyboard and t
 | **Trackpad mode** | Move the cursor with one finger, scroll with two, tap to click. No Bluetooth. No pairing. Scan and go. |
 | **Text input** | Type on your phone, text appears on your Mac — wherever the cursor is. Voice-to-text works too, using your phone's built-in input method. |
 | **Quick commands** | One-tap shortcuts: arrow keys, Cmd+Z/X/C/V, Enter, Escape, and more. No need to reach for the keyboard. |
-| **Built-in WebChat** | No bot setup needed. Start a local WebChat session, scan the QR code, enter the OTP, and you're connected. Traffic stays on your LAN. |
+| **Built-in WebChat** | No bot setup needed. Start a local WebChat session, scan the QR code, and you're connected — no code to type, the one-time password is baked into the QR. Traffic stays on your LAN. |
 | **IM bot support** | Feishu, DingTalk, and WeCom bots feed into the same FIFO queue. Messages are handled one at a time — no focus conflicts. |
 | **Works by pasting** | TypeBridge writes to the clipboard and simulates `Cmd+V`, keeping it compatible with VS Code, Terminal, browsers, Obsidian, Slack, and more. |
 | **Image support** | Images sent through IM channels are injected via the system clipboard. |
 | **Optional auto-submit** | After pasting, TypeBridge can press `Enter` or a custom key. Handy for chat windows, terminals, and AI assistants. |
+| **Smoother in-app updates** | The About panel embeds a status bar that shows download progress live, with cancel and retry on failure — and never blocks you from keeping using the app. |
 
 ## 🔄 How it works
 
 1. Launch TypeBridge on your Mac and start a WebChat session.
-2. Scan the QR code on your phone, enter the OTP, and switch to typing or trackpad mode.
+2. Scan the QR code on your phone — you're connected instantly, no code to type. Then switch to typing or trackpad mode.
 3. Type, use voice input, or control the cursor — your Mac responds instantly.
 4. With auto-submit enabled, TypeBridge sends `Enter` or your configured key after each paste.
 5. You can also use Feishu, DingTalk, or WeCom bots — messages go into the same FIFO queue.
@@ -82,18 +83,26 @@ On first launch, TypeBridge asks for **Accessibility** permission. It is used to
 | Go | 1.21+ |
 | Xcode Command Line Tools | required |
 
+> 📖 **First-time setup**: see [docs/DEV_SETUP.md](docs/DEV_SETUP.md) for the full environment bootstrap, common error fixes, and mirror configuration.
+
 ### Quick Start
 
 ```bash
-npm install
+# 1. Install npm deps (root + webchat-local subproject)
+npm install && cd webchat-local && npm install && cd ..
 
-# Build Go sidecars (aarch64)
+# 2. Build Go sidecars (three channels, aarch64)
+mkdir -p src-tauri/binaries
 for bridge in feishu-bridge dingtalk-bridge wecom-bridge; do
   (cd "$bridge" && GOPROXY=https://goproxy.cn,direct GOOS=darwin GOARCH=arm64 \
-    go build -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
+    go build -ldflags '-s -w' \
+      -o "../src-tauri/binaries/${bridge}-aarch64-apple-darwin" .)
 done
 
-# Start dev mode
+# 3. Build webchat-local static assets (tauri dev does not trigger this)
+cd webchat-local && npm run build && cd ..
+
+# 4. Start dev mode (first cold build ~5-10 min, subsequent rebuilds are incremental)
 npm run tauri dev
 ```
 
@@ -119,6 +128,7 @@ type-bridge/
 ### Development notes
 
 - **Go sidecars require manual rebuild** — `tauri dev` does not recompile Go. After editing `.go` files, run `go build` for the affected bridge, then restart `tauri dev`.
+- **webchat-local requires manual rebuild** — `tauri dev` does not trigger the Vite build for `webchat-local`. After editing files under `webchat-local/`, run `cd webchat-local && npm run build`.
 - **Frontend HMR** works automatically for `src/` changes.
 - **Rust changes** are picked up automatically by `tauri dev` (cargo rebuild).
 
