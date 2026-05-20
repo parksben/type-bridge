@@ -40,7 +40,7 @@ pub fn run() {
             sidecar::copy_image_to_clipboard,
             webchat::start_webchat,
             webchat::stop_webchat,
-            webchat::rotate_webchat_otp,
+            webchat::reset_webchat_binding,
             webchat::webchat_snapshot,
             injector::check_accessibility,
             injector::request_accessibility,
@@ -70,7 +70,10 @@ pub fn run() {
                             .get("submit_key")
                             .and_then(|v| serde_json::from_value::<store::SubmitKey>(v).ok())
                             .unwrap_or_default();
-                        sidecar::SubmitConfig { auto_submit, submit_key }
+                        sidecar::SubmitConfig {
+                            auto_submit,
+                            submit_key,
+                        }
                     }
                     None => sidecar::SubmitConfig::default(),
                 }
@@ -92,7 +95,9 @@ pub fn run() {
                     if let Err(e) = ctx.webchat.start(ctx.clone(), &handle).await {
                         tracing::error!("[webchat] auto-start failed: {e}");
                     }
-                    let snap = ctx.webchat.snapshot(webchat::current_lang(&handle).as_deref());
+                    let snap = ctx
+                        .webchat
+                        .snapshot(webchat::current_lang(&handle).as_deref());
                     let _ = handle.emit("typebridge://webchat-session-update", &snap);
                 });
             }
@@ -100,9 +105,10 @@ pub fn run() {
             // 启动后广播一次辅助功能权限状态，前端 ConnectionTab 据此决定是否
             // 展示 banner；前端后续会每 3s 主动 check_accessibility 轮询直到授予
             let granted = injector::check_accessibility();
-            let _ = app
-                .handle()
-                .emit("typebridge://accessibility", serde_json::json!({ "granted": granted }));
+            let _ = app.handle().emit(
+                "typebridge://accessibility",
+                serde_json::json!({ "granted": granted }),
+            );
 
             Ok(())
         })

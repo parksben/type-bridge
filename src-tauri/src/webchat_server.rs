@@ -39,7 +39,6 @@ use socketioxide::extract::{AckSender, Data, SocketRef, State};
 use socketioxide::socket::Sid;
 use socketioxide::SocketIo;
 use tokio::net::TcpListener;
-use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tower_http::services::{ServeDir, ServeFile};
@@ -55,8 +54,6 @@ use crate::sidecar::AppContext;
 
 const PORT_START: u16 = 8723;
 const PORT_RANGE: u16 = 10; // 8723..=8732 试十个
-const SESSION_TTL_SECS: u64 = 60; // 每个 OTP 活 60 秒，归零时桌面自动轮换（不重启 server）
-const MAX_OTP_ATTEMPTS: u8 = 5;
 /// binding 超过 150s（即 2.5 分钟）无任何消息就自动释放；手机端再发消息会收到未认证错误，提示用户重新扫码。
 const IDLE_TIMEOUT_MS: i64 = 150_000;
 /// idle 清理 task 扫描间隔
@@ -65,6 +62,17 @@ const IDLE_CHECK_INTERVAL_SECS: u64 = 30;
 // ──────────────────────────────────────────────────────────────
 // 公开类型
 // ──────────────────────────────────────────────────────────────
+
+/// 当前唯一绑定客户端的快照（外部供 snapshot / UI 显示用）。
+/// v3 协议下"一台 server = 至多一台手机"，bound_client 充当哨兵。
+#[derive(Debug, Clone, Serialize)]
+pub struct BoundClient {
+    #[serde(rename = "clientId")]
+    pub client_id: String,
+    pub ua: String,
+    #[serde(rename = "boundAt")]
+    pub bound_at_ms: i64,
+}
 
 /// 运行中的 server handle。调用 stop() 触发 cancellation token，后台优雅关闭。
 pub struct WebChatServer {
@@ -78,17 +86,21 @@ pub struct WebChatServer {
     pub port: u16,
     pub lan_ip: IpAddr,
     pub wifi_name: Option<String>,
+    /// 持久化 sessionId（来自上层 store，跨重启稳定）
     pub session_id: String,
 }
 
 impl WebChatServer {
     /// 启动一个新 server。
+    /// `session_id`：上层 (webchat.rs) 从 store 读取的持久化 sessionId；首次启动
+    ///   或用户显式重置后由调用方生成新 id 并写回 store。
     /// `notify_bind_change`：binding 数量变化（新设备接入 / 断开）时同步回调，
     /// 上层 bridge 在此回调里 emit typebridge://webchat-session-update 事件。
     /// `spa_dir` 指向 webchat-local 的构建产物目录（含 index.html），由外部 resolve
     /// tauri resource 后传进来。若目录不存在，server 也能起来，但静态资源路由会 404。
     pub async fn start(
         ctx: Arc<AppContext>,
+        session_id: String,
         spa_dir: PathBuf,
         notify_bind_change: Arc<dyn Fn() + Send + Sync + 'static>,
     ) -> Result<Self, String> {
@@ -96,27 +108,29 @@ impl WebChatServer {
             .ok_or_else(|| "未检测到可用的局域网 IP（请先连接 WiFi 或以太网）".to_string())?;
         let wifi_name = crate::webchat_net::current_wifi_ssid();
 
-        // 本地生成 sessionId / OTP / OTP hash
-        let session_id = generate_session_id();
-        let initial_otp = make_otp_state();
-
-        let (otp_refresh_tx, _) = broadcast::channel(8);
+        // v3：启动时枚举本机网卡（含 netmask），用于 handle_hello 的 LAN 校验。
+        // 切换 WiFi/网段后缓存的网卡会失效（QR 也会跟着变），用户重启 App / 重启 WebChat 自然解决。
+        let local_nics = crate::webchat_net::enumerate_local_nics();
+        tracing::info!(
+            "[webchat] start session_id={} lan_ip={} local_nics={}",
+            session_id,
+            lan_ip,
+            local_nics.len()
+        );
 
         let state = Arc::new(ServerState {
             session_id: session_id.clone(),
-            otp: SyncMutex::new(initial_otp),
+            local_nics,
+            bound_client: SyncMutex::new(None),
             bindings: SyncMutex::new(Vec::new()),
             injector: ctx.injector.clone(),
             history: ctx.history.clone(),
             pending_acks: SyncMutex::new(HashMap::new()),
             notify_bind_change,
-            otp_refresh: otp_refresh_tx,
         });
 
         // 构建 Socket.IO layer
-        let (io_layer, io) = SocketIo::builder()
-            .with_state(state.clone())
-            .build_layer();
+        let (io_layer, io) = SocketIo::builder().with_state(state.clone()).build_layer();
         io.ns("/", on_connect);
 
         // 端口递增 fallback —— 提到 router 构建之前，让 dev redirect handler 能拿到 port
@@ -170,8 +184,11 @@ impl WebChatServer {
         let cancel = CancellationToken::new();
         let cancel_clone = cancel.clone();
         let handle = tokio::spawn(async move {
-            let serve = axum::serve(listener, router.into_make_service())
-                .with_graceful_shutdown(async move { cancel_clone.cancelled().await });
+            let serve = axum::serve(
+                listener,
+                router.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+            )
+            .with_graceful_shutdown(async move { cancel_clone.cancelled().await });
             if let Err(e) = serve.await {
                 tracing::error!("[webchat] axum serve error: {}", e);
             }
@@ -190,9 +207,8 @@ impl WebChatServer {
             let cancel_for_idle = cancel.clone();
             let io_for_idle = io.clone();
             tokio::spawn(async move {
-                let mut interval = tokio::time::interval(
-                    std::time::Duration::from_secs(IDLE_CHECK_INTERVAL_SECS)
-                );
+                let mut interval =
+                    tokio::time::interval(std::time::Duration::from_secs(IDLE_CHECK_INTERVAL_SECS));
                 loop {
                     tokio::select! {
                         _ = interval.tick() => {}
@@ -216,6 +232,17 @@ impl WebChatServer {
                         before - bindings.len()
                     };
                     if removed > 0 {
+                        // v3：若清理后 bindings 已空，同步释放 bound_client（保险机制）
+                        let empty = state_for_idle
+                            .bindings
+                            .lock()
+                            .map(|b| b.is_empty())
+                            .unwrap_or(false);
+                        if empty {
+                            if let Ok(mut bc) = state_for_idle.bound_client.lock() {
+                                *bc = None;
+                            }
+                        }
                         tracing::info!(
                             "[webchat] idle cleanup: removed {} expired binding(s)",
                             removed
@@ -254,51 +281,12 @@ impl WebChatServer {
 
     /// 当前绑定设备数。server 内锁极短，同步查询安全。
     pub fn bound_devices_count(&self) -> usize {
-        self.state
-            .bindings
-            .lock()
-            .map(|v| v.len())
-            .unwrap_or(0)
+        self.state.bindings.lock().map(|v| v.len()).unwrap_or(0)
     }
 
-    /// 当前 OTP 明文（供 UI 展示）。
-    pub fn otp_plain(&self) -> String {
-        self.state
-            .otp
-            .lock()
-            .ok()
-            .map(|g| g.plain.clone())
-            .unwrap_or_default()
-    }
-
-    /// 当前 OTP 过期时间（unix ms）。
-    pub fn expires_at_ms(&self) -> i64 {
-        self.state
-            .otp
-            .lock()
-            .ok()
-            .map(|g| g.expires_at_ms)
-            .unwrap_or(0)
-    }
-
-    /// 轮换 OTP：生成新的 6 位 OTP + 重置倒计时 + 清空错误计数/锁定。
-    /// **保留 session_id、bindings、server task 本身**（已绑定手机继续通过
-    /// userToken 发消息，不受影响）。
-    ///
-    /// 触发场景：
-    /// - 倒计时归零（前端自动调）
-    /// - 用户在锁定态手动点「重置 OTP」
-    pub fn rotate_otp(&self) -> (String, i64) {
-        let fresh = make_otp_state();
-        let (plain, expires_at_ms) = (fresh.plain.clone(), fresh.expires_at_ms);
-        if let Ok(mut g) = self.state.otp.lock() {
-            *g = fresh;
-        }
-        tracing::info!("[webchat] OTP rotated, new expires_at_ms={}", expires_at_ms);
-        // 推送新 OTP 给所有已认证连接，让手机端实时刷新 URL 里的 OTP，
-        // 保证切换 App 后浏览器重载页面时仍能自动重连
-        let _ = self.state.otp_refresh.send(plain.clone());
-        (plain, expires_at_ms)
+    /// 当前绑定的客户端快照（v3 单设备模式）。None 表示尚未绑定。
+    pub fn bound_client(&self) -> Option<BoundClient> {
+        self.state.bound_client.lock().ok().and_then(|g| g.clone())
     }
 
     /// 外部触发：某条消息注入完成 / 失败 / 被取消，从 pending_acks 取出
@@ -334,29 +322,19 @@ impl WebChatServer {
         }
     }
 
-    /// 完整 QR 码 URL。OTP 明文嵌入 URL 参数，手机扫码后自动完成握手，无需手动输入。
+    /// 完整 QR 码 URL。v3：URL 中只携带 sessionId（不再嵌 OTP），
+    /// 手机扫码后通过 Socket.IO hello 完成握手 + LAN 校验。
     /// `lang` 来自桌面 Settings.language（`"zh"`/`"en"`/`""`）；
-    /// 为空时不附加 `lang` 参数，让移动端 SPA 走自己的语言检测（localStorage / navigator）。
+    /// 为空时不附加 `lang` 参数，让移动端 SPA 走自己的语言检测。
     pub fn qr_url(&self, lang: Option<&str>) -> String {
-        let otp = self.otp_plain();
         let base = format!(
-            "http://{}:{}/?s={}&otp={}",
-            self.lan_ip, self.port, self.session_id, otp
+            "http://{}:{}/?s={}",
+            self.lan_ip, self.port, self.session_id
         );
         match lang {
             Some(l) if l == "zh" || l == "en" => format!("{}&lang={}", base, l),
             _ => base,
         }
-    }
-
-    /// 会话是否锁定（OTP 5 次错）。
-    pub fn is_locked(&self) -> bool {
-        self.state
-            .otp
-            .lock()
-            .ok()
-            .map(|g| g.locked)
-            .unwrap_or(false)
     }
 }
 
@@ -375,10 +353,13 @@ impl Drop for WebChatServer {
 // ──────────────────────────────────────────────────────────────
 
 struct ServerState {
-    #[allow(dead_code)] // 后续 ack 回流 / 多 server 识别时会用到
+    /// 本 server 实例的 sessionId（v3：来自上层 store，跨重启稳定）
     session_id: String,
-    /// OTP 相关全量状态。rotate_otp 一把锁替换即可。
-    otp: SyncMutex<OtpState>,
+    /// v3：启动时缓存的本机网卡列表，handle_hello 用来做 LAN 同子网校验
+    local_nics: Vec<crate::webchat_net::LocalNic>,
+    /// v3：当前已绑定的唯一客户端（单设备模式）。None 表示尚未绑定。
+    /// 用作"占座"哨兵：不同 clientId 来 hello 时直接拒绝 ALREADY_BOUND。
+    bound_client: SyncMutex<Option<BoundClient>>,
     bindings: SyncMutex<Vec<Binding>>,
     injector: Arc<crate::queue::Injector>,
     history: Arc<crate::history::HistoryStore>,
@@ -389,31 +370,6 @@ struct ServerState {
     pending_acks: SyncMutex<HashMap<String, AckSender>>,
     /// binding 数量变化时（绑定 / 断开）通知上层 bridge 刷新快照并 emit 前端事件。
     notify_bind_change: Arc<dyn Fn() + Send + Sync + 'static>,
-    /// OTP 轮换广播：rotate_otp 将新 OTP 明文发入，hello 成功的连接各自订阅并推送给手机。
-    otp_refresh: broadcast::Sender<String>,
-}
-
-/// OTP 全量状态。rotate 时一把锁整体替换，避免字段间不一致。
-struct OtpState {
-    plain: String,
-    hash: [u8; 32],
-    expires_at_ms: i64,
-    attempts: u8,
-    locked: bool,
-}
-
-/// 生成一个新鲜的 OtpState（含 5 分钟 expires_at）。
-fn make_otp_state() -> OtpState {
-    let plain = generate_otp();
-    let hash = sha256_hash(plain.as_bytes());
-    let expires_at_ms = now_ms() + (SESSION_TTL_SECS as i64) * 1000;
-    OtpState {
-        plain,
-        hash,
-        expires_at_ms,
-        attempts: 0,
-        locked: false,
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -434,7 +390,10 @@ struct Binding {
 
 #[derive(Debug, Deserialize)]
 struct HelloMsg {
-    otp: String,
+    /// v3：手机端 localStorage 缓存的 sessionId（首次扫码时来自 QR 的 ?s= 参数）。
+    /// server 校验该值必须与自身 session_id 完全一致，否则 SESSION_NOT_FOUND。
+    #[serde(rename = "sessionId")]
+    session_id: String,
     #[serde(rename = "clientId")]
     client_id: String,
     #[serde(default)]
@@ -531,13 +490,15 @@ struct MouseScrollMsg {
 struct MouseClickMsg {
     #[serde(rename = "userToken")]
     user_token: String,
-    button: String,  // "left" | "right"
-    action: String,  // "down" | "up"
+    button: String, // "left" | "right"
+    action: String, // "down" | "up"
     #[serde(rename = "clickCount", default = "default_click_count")]
     click_count: u32,
 }
 
-fn default_click_count() -> u32 { 1 }
+fn default_click_count() -> u32 {
+    1
+}
 
 #[derive(Debug, Deserialize)]
 struct MouseZoomMsg {
@@ -565,9 +526,18 @@ const ALLOWED_KEY_CODES: &[&str] = &[
 
 /// key_combo 白名单（仅允许已知无害的编辑快捷键）。
 const ALLOWED_COMBOS: &[&str] = &[
-    "Undo", "Redo", "SelectAll", "Copy", "Cut", "Paste",
-    "DocTop", "DocBottom",
-    "DesktopLeft", "DesktopRight", "MissionControl", "AppExpose",
+    "Undo",
+    "Redo",
+    "SelectAll",
+    "Copy",
+    "Cut",
+    "Paste",
+    "DocTop",
+    "DocBottom",
+    "DesktopLeft",
+    "DesktopRight",
+    "MissionControl",
+    "AppExpose",
 ];
 
 fn default_image_mime() -> String {
@@ -588,31 +558,21 @@ struct GenericAck {
 async fn on_connect(socket: SocketRef) {
     tracing::info!("[webchat] client connected: sid={}", socket.id);
 
-    // hello：校验 OTP，签发 userToken。ack 必须保持 Ok/Err 形状让前端 discriminated union
+    // hello（v3）：校验 sessionId + LAN 同子网 + 单设备 bound_client 哨兵，签发 userToken。
+    // ack 保持 Ok/Err 形状供前端做 discriminated union。
     socket.on(
         "hello",
-        |socket: SocketRef, Data::<HelloMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+        |socket: SocketRef,
+         Data::<HelloMsg>(msg),
+         ack: AckSender,
+         State(state): State<Arc<ServerState>>| async move {
             let result = handle_hello(&socket, &msg, state.clone()).await;
             match result {
                 Ok(user_token) => {
                     let _ = ack.send(&HelloAck::Ok {
                         ok: true,
                         user_token,
-                        session_id: socket.ns().to_string(),
-                    });
-                    // 订阅 OTP 轮换广播：后台任务将每次新 OTP 推送给此 socket，
-                    // 手机端收到后实时更新 URL 里的 otp 参数，确保页面重载时能自动重连
-                    let mut rx = state.otp_refresh.subscribe();
-                    let socket_clone = socket.clone();
-                    tokio::spawn(async move {
-                        while let Ok(new_otp) = rx.recv().await {
-                            if socket_clone
-                                .emit("otp-refresh", &serde_json::json!({ "otp": new_otp }))
-                                .is_err()
-                            {
-                                break; // socket 已关闭，结束任务
-                            }
-                        }
+                        session_id: state.session_id.clone(),
                     });
                 }
                 Err(reason) => {
@@ -627,7 +587,10 @@ async fn on_connect(socket: SocketRef) {
     // 错），立即 ack 失败。
     socket.on(
         "text",
-        |_socket: SocketRef, Data::<TextMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+        |_socket: SocketRef,
+         Data::<TextMsg>(msg),
+         ack: AckSender,
+         State(state): State<Arc<ServerState>>| async move {
             match handle_text(&msg, state.clone()).await {
                 Ok(composite_id) => {
                     park_ack(&state, composite_id, ack);
@@ -645,7 +608,10 @@ async fn on_connect(socket: SocketRef) {
     // image
     socket.on(
         "image",
-        |_socket: SocketRef, Data::<ImageMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+        |_socket: SocketRef,
+         Data::<ImageMsg>(msg),
+         ack: AckSender,
+         State(state): State<Arc<ServerState>>| async move {
             match handle_image(&msg, state.clone()).await {
                 Ok(composite_id) => {
                     park_ack(&state, composite_id, ack);
@@ -664,7 +630,10 @@ async fn on_connect(socket: SocketRef) {
     // 严格按用户点击顺序串行注入，避免 Enter 插在粘贴中间提前提交。详见 TECH_DESIGN §35.11
     socket.on(
         "key",
-        |_socket: SocketRef, Data::<KeyMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+        |_socket: SocketRef,
+         Data::<KeyMsg>(msg),
+         ack: AckSender,
+         State(state): State<Arc<ServerState>>| async move {
             match handle_key(&msg, state.clone()).await {
                 Ok(composite_id) => {
                     park_ack(&state, composite_id, ack);
@@ -682,9 +651,15 @@ async fn on_connect(socket: SocketRef) {
     // key_combo：Undo/Redo/SelectAll/Copy/Cut/Paste — 直接调 injector，不走队列
     socket.on(
         "key_combo",
-        |_socket: SocketRef, Data::<KeyComboMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+        |_socket: SocketRef,
+         Data::<KeyComboMsg>(msg),
+         ack: AckSender,
+         State(state): State<Arc<ServerState>>| async move {
             if let Err(e) = verify_user_token(&msg.user_token, &state) {
-                let _ = ack.send(&GenericAck { success: false, reason: Some(e) });
+                let _ = ack.send(&GenericAck {
+                    success: false,
+                    reason: Some(e),
+                });
                 return;
             }
             touch_active(&msg.user_token, &state);
@@ -696,11 +671,21 @@ async fn on_connect(socket: SocketRef) {
                 return;
             }
             let combo = msg.combo.clone();
-            let result = tokio::task::spawn_blocking(move || crate::injector::key_combo(&combo)).await;
+            let result =
+                tokio::task::spawn_blocking(move || crate::injector::key_combo(&combo)).await;
             let ok = match result {
-                Ok(Ok(())) => GenericAck { success: true, reason: None },
-                Ok(Err(e)) => GenericAck { success: false, reason: Some(e) },
-                Err(e) => GenericAck { success: false, reason: Some(e.to_string()) },
+                Ok(Ok(())) => GenericAck {
+                    success: true,
+                    reason: None,
+                },
+                Ok(Err(e)) => GenericAck {
+                    success: false,
+                    reason: Some(e),
+                },
+                Err(e) => GenericAck {
+                    success: false,
+                    reason: Some(e.to_string()),
+                },
             };
             let _ = ack.send(&ok);
         },
@@ -709,9 +694,15 @@ async fn on_connect(socket: SocketRef) {
     // screenshot：截图到剪贴板（kind = "screen" | "window"），有 ack
     socket.on(
         "screenshot",
-        |_socket: SocketRef, Data::<ScreenshotMsg>(msg), ack: AckSender, State(state): State<Arc<ServerState>>| async move {
+        |_socket: SocketRef,
+         Data::<ScreenshotMsg>(msg),
+         ack: AckSender,
+         State(state): State<Arc<ServerState>>| async move {
             if let Err(e) = verify_user_token(&msg.user_token, &state) {
-                let _ = ack.send(&GenericAck { success: false, reason: Some(e) });
+                let _ = ack.send(&GenericAck {
+                    success: false,
+                    reason: Some(e),
+                });
                 return;
             }
             touch_active(&msg.user_token, &state);
@@ -724,11 +715,21 @@ async fn on_connect(socket: SocketRef) {
                 });
                 return;
             }
-            let result = tokio::task::spawn_blocking(move || crate::injector::screenshot(&kind)).await;
+            let result =
+                tokio::task::spawn_blocking(move || crate::injector::screenshot(&kind)).await;
             let ok = match result {
-                Ok(Ok(())) => GenericAck { success: true, reason: None },
-                Ok(Err(e)) => GenericAck { success: false, reason: Some(e) },
-                Err(e) => GenericAck { success: false, reason: Some(e.to_string()) },
+                Ok(Ok(())) => GenericAck {
+                    success: true,
+                    reason: None,
+                },
+                Ok(Err(e)) => GenericAck {
+                    success: false,
+                    reason: Some(e),
+                },
+                Err(e) => GenericAck {
+                    success: false,
+                    reason: Some(e.to_string()),
+                },
             };
             let _ = ack.send(&ok);
         },
@@ -799,13 +800,23 @@ async fn on_connect(socket: SocketRef) {
                     Ok(mut bindings) => {
                         let before = bindings.len();
                         bindings.retain(|b| b.socket_sid != sid);
-                        bindings.len() < before
+                        let now_len = bindings.len();
+                        // v3：bindings 空了 → 同步清 bound_client，允许新设备重新绑定
+                        if now_len == 0 {
+                            if let Ok(mut bc) = state.bound_client.lock() {
+                                *bc = None;
+                            }
+                        }
+                        now_len < before
                     }
                     Err(_) => false,
                 }
             };
             if removed {
-                tracing::info!("[webchat] binding removed for sid={}, notifying bridge", sid);
+                tracing::info!(
+                    "[webchat] binding removed for sid={}, notifying bridge",
+                    sid
+                );
                 (state.notify_bind_change)();
             }
         },
@@ -842,33 +853,77 @@ async fn handle_hello(
     msg: &HelloMsg,
     state: Arc<ServerState>,
 ) -> Result<String, &'static str> {
-    // 用 constant-time 对比哈希避免 timing attack。lock 一次拿所有检查需要的字段，
-    // 如果 OTP 错就原地 ++attempts / 置 locked；成功则 drop 锁后再签 userToken。
-    let submitted_hash = sha256_hash(msg.otp.as_bytes());
-    {
-        let mut otp = state.otp.lock().map_err(|_| "LOCK_POISONED")?;
-        if otp.locked {
-            return Err("OTP_LOCKED");
-        }
-        if now_ms() > otp.expires_at_ms {
-            return Err("SESSION_EXPIRED");
-        }
-        if !constant_time_eq(&submitted_hash, &otp.hash) {
-            otp.attempts = otp.attempts.saturating_add(1);
-            if otp.attempts >= MAX_OTP_ATTEMPTS {
-                otp.locked = true;
-                return Err("OTP_LOCKED");
-            }
-            return Err("OTP_INVALID");
-        }
-        // 通过：放锁，下面处理 bindings
+    // v3 协议：3 道关
+    //   1. sessionId 必须匹配本 server（否则手机连到的是旧实例 → SESSION_NOT_FOUND）
+    //   2. 客户端 peer IP 必须落在本机任一网卡的子网内（LAN 校验，防公网/异网段误用）
+    //   3. bound_client 单例：同 clientId 重连允许（手机刷新），不同 clientId 拒绝 ALREADY_BOUND
+
+    // 1. sessionId 校验
+    if msg.session_id != state.session_id {
+        tracing::warn!(
+            "[webchat] hello rejected SESSION_NOT_FOUND: msg.sid={} server.sid={}",
+            msg.session_id,
+            state.session_id
+        );
+        return Err("SESSION_NOT_FOUND");
     }
 
+    // 2. LAN 校验：从 socket 拿 peer 的 ConnectInfo<SocketAddr>，比对本机各网卡子网
+    let peer_ip = socket
+        .req_parts()
+        .extensions
+        .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+        .map(|ci| ci.0.ip());
+    match peer_ip {
+        Some(ip) if crate::webchat_net::is_in_lan(ip, &state.local_nics) => {
+            tracing::debug!("[webchat] hello LAN check passed: peer_ip={}", ip);
+        }
+        Some(ip) => {
+            tracing::warn!("[webchat] hello rejected OUT_OF_LAN: peer_ip={}", ip);
+            return Err("OUT_OF_LAN");
+        }
+        None => {
+            tracing::warn!("[webchat] hello rejected OUT_OF_LAN: peer_ip unknown");
+            return Err("OUT_OF_LAN");
+        }
+    }
+
+    // 3. bound_client 单设备哨兵
+    {
+        let mut bound = state.bound_client.lock().map_err(|_| "LOCK_POISONED")?;
+        match bound.as_ref() {
+            Some(existing) if existing.client_id == msg.client_id => {
+                // 同设备重连（手机刷新 / 重启浏览器）→ 更新元数据
+                if let Some(b) = bound.as_mut() {
+                    b.bound_at_ms = now_ms();
+                    if let Some(ua) = &msg.ua {
+                        b.ua = ua.clone();
+                    }
+                }
+            }
+            Some(existing) => {
+                tracing::warn!(
+                    "[webchat] hello rejected ALREADY_BOUND: existing_client_id={} incoming={}",
+                    existing.client_id,
+                    msg.client_id
+                );
+                return Err("ALREADY_BOUND");
+            }
+            None => {
+                *bound = Some(BoundClient {
+                    client_id: msg.client_id.clone(),
+                    ua: msg.ua.clone().unwrap_or_default(),
+                    bound_at_ms: now_ms(),
+                });
+            }
+        }
+    }
+
+    // 4. 签 userToken（与 v2 一致）
     let user_token = generate_token();
     let user_token_hash = sha256_hash(user_token.as_bytes());
     {
         let mut bindings = state.bindings.lock().map_err(|_| "LOCK_POISONED")?;
-        // 同一 clientId 二次握手（手机刷新）→ 替换旧 binding
         let socket_sid = socket.id;
         let now = now_ms();
         if let Some(existing) = bindings.iter_mut().find(|b| b.client_id == msg.client_id) {
@@ -926,7 +981,10 @@ fn verify_user_token(token: &str, state: &ServerState) -> Result<(), String> {
         .bindings
         .lock()
         .map_err(|_| "LOCK_POISONED".to_string())?;
-    if bindings.iter().any(|b| constant_time_eq(&b.user_token_hash, &h)) {
+    if bindings
+        .iter()
+        .any(|b| constant_time_eq(&b.user_token_hash, &h))
+    {
         Ok(())
     } else {
         Err("未认证或 token 已失效".into())
@@ -947,7 +1005,12 @@ fn touch_active(token: &str, state: &ServerState) {
     }
 }
 
-fn ingest_text(client_message_id: &str, text: &str, submit: bool, state: &ServerState) -> Result<String, String> {
+fn ingest_text(
+    client_message_id: &str,
+    text: &str,
+    submit: bool,
+    state: &ServerState,
+) -> Result<String, String> {
     // client_message_id 当前未用于 ack 回流（Socket.IO ack 由 composite_id 匹配），
     // 仅留作调试日志
     let _ = client_message_id;
@@ -980,18 +1043,16 @@ fn ingest_text(client_message_id: &str, text: &str, submit: bool, state: &Server
     // 入队
     // submit=true → no_auto_submit=false → worker 按 submit_config 配置的组合键提交
     // submit=false → no_auto_submit=true  → 仅注入文本，提交由手机端另行决定
-    state
-        .injector
-        .enqueue(QueuedMessage {
-            id: composite.clone(),
-            channel: ChannelId::WebChat,
-            source_message_id: source_id,
-            text: text.to_string(),
-            image_path: None,
-            image_mime: None,
-            key: None,
-            no_auto_submit: !submit,
-        })?;
+    state.injector.enqueue(QueuedMessage {
+        id: composite.clone(),
+        channel: ChannelId::WebChat,
+        source_message_id: source_id,
+        text: text.to_string(),
+        image_path: None,
+        image_mime: None,
+        key: None,
+        no_auto_submit: !submit,
+    })?;
 
     Ok(composite)
 }
@@ -1039,19 +1100,17 @@ fn ingest_image(
     state.history.append(msg);
 
     // 入队
-    state
-        .injector
-        .enqueue(QueuedMessage {
-            id: composite.clone(),
-            channel: ChannelId::WebChat,
-            source_message_id: source_id,
-            text: String::new(),
-            image_path: Some(rel_path),
-            image_mime: Some(mime.to_string()),
-            key: None,
-            // WebChat 由手机端选择是否发 Enter，不走桌面端「自动提交」
-            no_auto_submit: true,
-        })?;
+    state.injector.enqueue(QueuedMessage {
+        id: composite.clone(),
+        channel: ChannelId::WebChat,
+        source_message_id: source_id,
+        text: String::new(),
+        image_path: Some(rel_path),
+        image_mime: Some(mime.to_string()),
+        key: None,
+        // WebChat 由手机端选择是否发 Enter，不走桌面端「自动提交」
+        no_auto_submit: true,
+    })?;
 
     Ok(composite)
 }
@@ -1074,18 +1133,16 @@ fn ingest_key(client_message_id: &str, code: &str, state: &ServerState) -> Resul
     let source_id = format!("wc_{}", short_uid());
     let composite = crate::channel::composite_id(ChannelId::WebChat, &source_id);
 
-    state
-        .injector
-        .enqueue(QueuedMessage {
-            id: composite.clone(),
-            channel: ChannelId::WebChat,
-            source_message_id: source_id,
-            text: String::new(),
-            image_path: None,
-            image_mime: None,
-            key: Some(code.to_string()),
-            no_auto_submit: true, // key 事件走独立分支，此字段不生效但保持一致
-        })?;
+    state.injector.enqueue(QueuedMessage {
+        id: composite.clone(),
+        channel: ChannelId::WebChat,
+        source_message_id: source_id,
+        text: String::new(),
+        image_path: None,
+        image_mime: None,
+        key: Some(code.to_string()),
+        no_auto_submit: true, // key 事件走独立分支，此字段不生效但保持一致
+    })?;
 
     Ok(composite)
 }
@@ -1184,7 +1241,7 @@ fn constant_time_eq(a: &[u8; 32], b: &[u8; 32]) -> bool {
     diff == 0
 }
 
-fn generate_session_id() -> String {
+pub(crate) fn generate_session_id() -> String {
     // ses_<24-char base32ish>
     let mut bytes = [0u8; 15];
     rand::thread_rng().fill_bytes(&mut bytes);
@@ -1194,13 +1251,6 @@ fn generate_session_id() -> String {
         .map(|&b| alph[(b % 32) as usize] as char)
         .collect();
     format!("ses_{}", s)
-}
-
-fn generate_otp() -> String {
-    let mut bytes = [0u8; 4];
-    rand::thread_rng().fill_bytes(&mut bytes);
-    let n = u32::from_be_bytes(bytes);
-    format!("{:06}", n % 1_000_000)
 }
 
 fn generate_token() -> String {
