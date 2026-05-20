@@ -42,17 +42,18 @@ TypeBridge does one thing well: **turn your phone into a wireless keyboard and t
 | **Trackpad mode** | Move the cursor with one finger, scroll with two, tap to click. No Bluetooth. No pairing. Scan and go. |
 | **Text input** | Type on your phone, text appears on your Mac — wherever the cursor is. Voice-to-text works too, using your phone's built-in input method. |
 | **Quick commands** | One-tap shortcuts: arrow keys, Cmd+Z/X/C/V, Enter, Escape, and more. No need to reach for the keyboard. |
-| **Built-in WebChat** | No bot setup needed. Start a local WebChat session, scan the QR code, and you're connected — no code to type, the one-time password is baked into the QR. Traffic stays on your LAN. |
+| **Built-in WebChat** | No bot setup needed. Start a local WebChat session and scan the QR code to bind your phone — once bound, it stays paired across app restarts (LAN-only). Traffic stays on your LAN. |
 | **IM bot support** | Feishu, DingTalk, and WeCom bots feed into the same FIFO queue. Messages are handled one at a time — no focus conflicts. |
 | **Works by pasting** | TypeBridge writes to the clipboard and simulates `Cmd+V`, keeping it compatible with VS Code, Terminal, browsers, Obsidian, Slack, and more. |
 | **Image support** | Images sent through IM channels are injected via the system clipboard. |
 | **Optional auto-submit** | After pasting, TypeBridge can press `Enter` or a custom key. Handy for chat windows, terminals, and AI assistants. |
+| **Tactile mobile keyboard** | Five focused tabs (Direction · Edit · Clipboard · Navigation · Screenshot). Arrows and Backspace support long-press auto-repeat at iOS-keyboard cadence (16Hz). Every key has crisp pressed feedback with optional haptics on Android. |
 | **Smoother in-app updates** | The About panel embeds a status bar that shows download progress live, with cancel and retry on failure — and never blocks you from keeping using the app. |
 
 ## 🔄 How it works
 
 1. Launch TypeBridge on your Mac and start a WebChat session.
-2. Scan the QR code on your phone — you're connected instantly, no code to type. Then switch to typing or trackpad mode.
+2. Scan the QR code on your phone — the phone is paired instantly. The binding persists across app restarts as long as you're on the same Wi-Fi. Then switch to typing or trackpad mode.
 3. Type, use voice input, or control the cursor — your Mac responds instantly.
 4. With auto-submit enabled, TypeBridge sends `Enter` or your configured key after each paste.
 5. You can also use Feishu, DingTalk, or WeCom bots — messages go into the same FIFO queue.
