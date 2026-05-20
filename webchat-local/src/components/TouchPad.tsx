@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { RectangleHorizontal, RectangleVertical, Settings2, X } from "lucide-react";
 import { WebChatClient } from "@/lib/socket";
+import { haptic } from "@/lib/haptic";
 import { t } from "@/i18n";
 
 type Props = {
@@ -108,6 +109,7 @@ export default function TouchPad({ client, disabled, initialShowSettings = false
 
   async function fireMultiClick(count: 1 | 2 | 3) {
     if (disabled) return;
+    haptic("tap");
     for (let i = 0; i < count; i++) {
       const clickNum = (i + 1) as 1 | 2 | 3;
       client.sendMouseClick("left", "down", clickNum);
@@ -208,6 +210,7 @@ export default function TouchPad({ client, disabled, initialShowSettings = false
     if (remaining === 0 && maxTouchesRef.current >= 2 && !twoFingerMoved.current) {
       const duration = Date.now() - touchStartTimeRef.current;
       if (duration < TAP_MAX_DURATION + 80 && !disabled) {
+        haptic("tap");
         client.sendMouseClick("right", "down");
         client.sendMouseClick("right", "up");
       }
@@ -257,6 +260,7 @@ export default function TouchPad({ client, disabled, initialShowSettings = false
     e.stopPropagation(); e.preventDefault();
     setLeftPressed(true);
     leftHeldRef.current = true;
+    haptic("tap");
     // 检测双击：与上次抬起间隔在 MULTI_TAP_INTERVAL 内则计数递增
     const now = Date.now();
     if (now - lastLeftTapEndRef.current < MULTI_TAP_INTERVAL) {
@@ -280,6 +284,7 @@ export default function TouchPad({ client, disabled, initialShowSettings = false
   function handleRightStart(e: React.TouchEvent) {
     e.stopPropagation(); e.preventDefault();
     setRightPressed(true);
+    haptic("tap");
     if (!disabled) client.sendMouseClick("right", "down");
   }
   function handleRightEnd(e: React.TouchEvent) {

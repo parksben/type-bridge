@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LogOut } from "lucide-react";
 import ComposerBar from "./ComposerBar";
 import MessageBubble, { type ChatMessage } from "./MessageBubble";
 import TouchPad from "./TouchPad";
@@ -14,6 +15,8 @@ type Props = {
   initialMode?: PageMode;
   demoTouchpadSettings?: boolean;
   demoKeyboardTab?: "dpad" | "edit" | "clipboard" | "nav" | "screenshot";
+  /** v3：手机用户主动点断连按钮成功后回调，App 切到 user-disconnected 状态 */
+  onUserDisconnect?: () => void;
 };
 
 type WifiStatus = "connected" | "reconnecting" | "disconnected";
@@ -25,12 +28,28 @@ export default function ChatPage({
   initialMode,
   demoTouchpadSettings = false,
   demoKeyboardTab = "dpad",
+  onUserDisconnect,
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => initialMessages ?? []);
   const [wifi, setWifi] = useState<WifiStatus>("connected");
   const [imageError, setImageError] = useState<string | null>(null);
   const [mode, setMode] = useState<PageMode>(initialMode ?? "chat");
+  const [disconnecting, setDisconnecting] = useState(false);
   const listEndRef = useRef<HTMLDivElement | null>(null);
+
+  async function handleDisconnect() {
+    if (disconnecting) return;
+    setDisconnecting(true);
+    try {
+      // 不管 ack 成功失败都通知上层切到 user-disconnected：
+      //   - 成功：server 已清绑定 + 关 socket，桌面也即时刷新
+      //   - 失败（超时 / 未握手）：本地切断连状态，让用户重新扫码即可
+      await client.bye();
+    } finally {
+      client.disconnect();
+      onUserDisconnect?.();
+    }
+  }
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,19 +128,46 @@ export default function ChatPage({
           boxShadow: "0 1px 8px rgba(0,0,0,0.07)",
         }}
       >
-        {/* Connection dot */}
-        <div className="w-7 flex items-center shrink-0">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{
-              background: wifi === "connected" ? "var(--tb-success)" : "var(--tb-muted)",
-              boxShadow:
-                wifi === "connected"
-                  ? "0 0 0 3px rgba(34, 197, 94, 0.2), 0 0 8px rgba(34, 197, 94, 0.3)"
-                  : "none",
-              animation: wifi === "connected" ? "pulse-dot 2s ease-in-out infinite" : undefined,
-            }}
-          />
+        {/* Connection indicator (dot + disconnect button)
+            v4：去掉外层胶囊，绿点 + 红色断连按钮直接并排，不再套娃。
+            未连接态只显示灰点。 */}
+        <div className="shrink-0 flex items-center">
+          {wifi === "connected" ? (
+            <div className="flex items-center gap-1.5">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{
+                  background: "var(--tb-success)",
+                  boxShadow:
+                    "0 0 0 3px rgba(34, 197, 94, 0.2), 0 0 8px rgba(34, 197, 94, 0.3)",
+                  animation: "pulse-dot 2s ease-in-out infinite",
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                aria-label={t("chat.disconnectAriaLabel")}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium select-none transition-opacity"
+                style={{
+                  background: "rgba(239, 68, 68, 0.10)",
+                  color: "var(--tb-danger)",
+                  opacity: disconnecting ? 0.5 : 1,
+                  border: "none",
+                }}
+              >
+                <LogOut size={11} strokeWidth={2.5} />
+                <span>{t("chat.disconnect")}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="w-7 flex items-center">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ background: "var(--tb-muted)" }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Pill tab switcher */}

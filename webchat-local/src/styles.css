@@ -92,6 +92,12 @@ body,
 }
 .animate-fade-up { animation: fade-up 0.22s ease-out; }
 
+/* QuickCommands 动态 tab 标题切换淡入 */
+@keyframes tb-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 0.75; transform: translateY(0); }
+}
+
 /* 连接状态脉冲点 */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }

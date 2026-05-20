@@ -186,23 +186,6 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
   );
 }
 
-// ─── Page title (subtle header on each tab) ────────────────────────
-function PageTitle({ label }: { label: string }) {
-  return (
-    <h2
-      className="text-center text-[12px] font-medium tracking-wide select-none shrink-0"
-      style={{
-        color: "var(--tb-muted)",
-        letterSpacing: "0.05em",
-        opacity: 0.7,
-        marginBottom: "4px",
-      }}
-    >
-      {label}
-    </h2>
-  );
-}
-
 // ─── Main ──────────────────────────────────────────────────────────
 
 const TAB_IDS: TabId[] = ["dpad", "edit", "clipboard", "nav", "screenshot"];
@@ -333,8 +316,6 @@ export default function QuickCommands({ client, disabled, initialTab = "dpad" }:
           className="flex flex-col px-4 pt-3 pb-2 shrink-0"
           style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
-          <PageTitle label={t(TAB_LABELS.dpad)} />
-
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             {/* D-pad */}
             <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
@@ -371,8 +352,6 @@ export default function QuickCommands({ client, disabled, initialTab = "dpad" }:
           className="flex flex-col px-4 pt-3 pb-2 shrink-0"
           style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
-          <PageTitle label={t(TAB_LABELS.edit)} />
-
           <div className="flex-1 flex flex-col justify-center gap-3">
             <div className="grid grid-cols-2 gap-2.5">
               {EDIT_CMDS.map((cmd) => (
@@ -387,8 +366,6 @@ export default function QuickCommands({ client, disabled, initialTab = "dpad" }:
           className="flex flex-col px-4 pt-3 pb-2 shrink-0"
           style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
-          <PageTitle label={t(TAB_LABELS.clipboard)} />
-
           <div className="flex-1 flex flex-col justify-center gap-3">
             <div className="grid grid-cols-2 gap-2.5">
               {CLIPBOARD_CMDS.map((cmd) => (
@@ -403,8 +380,6 @@ export default function QuickCommands({ client, disabled, initialTab = "dpad" }:
           className="flex flex-col px-4 pt-3 pb-2 shrink-0"
           style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
-          <PageTitle label={t(TAB_LABELS.nav)} />
-
           <div className="flex-1 flex flex-col justify-center gap-3">
             <div className="grid grid-cols-2 gap-2.5">
               {NAV_CMDS.map((cmd) => (
@@ -419,8 +394,6 @@ export default function QuickCommands({ client, disabled, initialTab = "dpad" }:
           className="flex flex-col px-4 pt-3 pb-2 shrink-0"
           style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
-          <PageTitle label={t(TAB_LABELS.screenshot)} />
-
           <ScreenshotToast feedback={screenshotFeedback} />
 
           <div className="flex-1 flex flex-col justify-center gap-3">
@@ -441,38 +414,52 @@ export default function QuickCommands({ client, disabled, initialTab = "dpad" }:
 
       </div>
 
-      {/* ── Bottom page-dot indicator ──────────────────── */}
+      {/* ── Bottom indicator: dynamic title + page dots ─────── */}
       <div
-        className="flex items-center justify-center gap-2 shrink-0 select-none"
+        className="flex flex-col items-center shrink-0 select-none"
         style={{
-          padding: "10px 0 12px",
-          background: "var(--tb-surface)",
-          borderTop: "1px solid var(--tb-border)",
+          padding: "8px 0 12px",
+          background: "var(--tb-bg)",
         }}
       >
-        {TAB_IDS.map((id) => {
-          const isActive = activeTab === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => goToTab(id)}
-              aria-label={t(TAB_LABELS[id])}
-              className="select-none"
-              style={{
-                width: isActive ? "20px" : "8px",
-                height: "8px",
-                borderRadius: "999px",
-                background: isActive ? "var(--tb-accent)" : "rgba(0,0,0,0.18)",
-                boxShadow: isActive ? "0 0 6px var(--tb-accent-glow)" : "none",
-                transition: "width 200ms ease, background 200ms ease, box-shadow 200ms ease",
-                padding: 0,
-                border: "none",
-                cursor: "pointer",
-              }}
-            />
-          );
-        })}
+        <div
+          key={activeTab}
+          className="text-center text-[12px] font-medium tracking-wide select-none"
+          style={{
+            color: "var(--tb-muted)",
+            letterSpacing: "0.05em",
+            opacity: 0.75,
+            marginBottom: "8px",
+            animation: "tb-fade-in 220ms ease",
+          }}
+        >
+          {t(TAB_LABELS[activeTab])}
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          {TAB_IDS.map((id) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => goToTab(id)}
+                aria-label={t(TAB_LABELS[id])}
+                className="select-none"
+                style={{
+                  width: isActive ? "20px" : "8px",
+                  height: "8px",
+                  borderRadius: "999px",
+                  background: isActive ? "var(--tb-accent)" : "rgba(0,0,0,0.18)",
+                  boxShadow: isActive ? "0 0 6px var(--tb-accent-glow)" : "none",
+                  transition: "width 200ms ease, background 200ms ease, box-shadow 200ms ease",
+                  padding: 0,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -13,9 +13,9 @@
 type HapticStrength = "tick" | "tap" | "accent";
 
 const DURATIONS: Record<HapticStrength, number> = {
-  tick: 4, // repeat pulses while holding a key down
-  tap: 8, // standard key press
-  accent: 15, // strong actions: screenshot, clear, destructive
+  tick: 8, // repeat pulses while holding a key down
+  tap: 20, // standard key press
+  accent: 35, // strong actions: screenshot, clear, destructive
 };
 
 let cachedSupported: boolean | null = null;

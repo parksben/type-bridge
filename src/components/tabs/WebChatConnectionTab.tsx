@@ -9,7 +9,6 @@ import {
   RotateCw,
   ScanLine,
   Smartphone,
-  Wifi,
   WifiOff,
   Unlink,
 } from "lucide-react";
@@ -145,32 +144,9 @@ export default function WebChatConnectionTab() {
     }
   }
 
-  // 顶部 WiFi 提醒 banner（仅 pending 阶段展示）
-  const wifiBanner = phase === "pending" && (
-    <div
-      className="flex items-start gap-2 rounded-md px-3 py-2.5 text-[12px] leading-relaxed"
-      style={{
-        background: "var(--surface-2)",
-        border: "1px solid var(--border)",
-      }}
-    >
-      <Wifi size={13} strokeWidth={1.75} className="shrink-0 mt-0.5 text-accent" />
-      <div className="flex-1 text-text">
-        {t("webchat.wifiHint")}
-        {snap?.wifi_name && (
-          <>
-            ：<span className="font-medium">{snap.wifi_name}</span>
-          </>
-        )}
-      </div>
-    </div>
-  );
-
   return (
-    <div className="h-full overflow-y-auto thin-scroll px-10 py-8">
-      <div className="max-w-md mx-auto flex flex-col gap-5">
-        {wifiBanner}
-
+    <div className="h-full overflow-y-auto thin-scroll px-10 py-8 flex items-center justify-center">
+      <div className="w-full max-w-md flex flex-col gap-5">
         {/* snap 尚未加载 or 自动启动中（短暂 idle） */}
         {(snap === null || phase === "idle") && <LoadingView />}
 
@@ -185,9 +161,6 @@ export default function WebChatConnectionTab() {
         )}
 
         {phase === "error" && <ErrorView snap={snap} onRetry={retryStart} />}
-
-        {/* 连接状态 pill */}
-        {snap !== null && <ConnectionPill phase={phase} bound={snap?.bound_devices ?? 0} />}
       </div>
     </div>
   );
@@ -295,7 +268,7 @@ function BoundView({
         </dl>
       </div>
 
-      {/* 重置按钮 + 提示 */}
+      {/* 断开连接按钮 */}
       <div className="flex flex-col gap-2">
         <button
           onClick={onReset}
@@ -304,9 +277,6 @@ function BoundView({
           <Unlink size={14} strokeWidth={1.75} />
           {ti18n("webchat.resetBinding")}
         </button>
-        <p className="text-[11px] text-muted text-center">
-          {ti18n("webchat.resetBindingHint")}
-        </p>
       </div>
     </>
   );
@@ -399,25 +369,6 @@ function ErrorView({
         {ti18n("webchat.retry")}
       </button>
     </>
-  );
-}
-
-function ConnectionPill({ phase, bound }: { phase: Phase; bound: number }) {
-  const dotClass =
-    phase === "bound" ? "dot-connected" : phase === "pending" ? "dot-connecting" : "dot-idle";
-  const text =
-    phase === "bound"
-      ? ti18n("webchat.pillBound", { count: bound })
-      : phase === "pending"
-      ? ti18n("webchat.pillPending")
-      : phase === "idle"
-      ? ti18n("webchat.pillIdle")
-      : ti18n("webchat.pillError");
-  return (
-    <div className="flex items-center gap-2.5 px-0.5 py-1">
-      <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotClass}`} />
-      <span className="text-[12.5px] text-muted">{text}</span>
-    </div>
   );
 }
 
