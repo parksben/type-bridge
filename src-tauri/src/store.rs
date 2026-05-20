@@ -165,3 +165,49 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
 
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// WebChat v3 持久化 sessionId（独立于 Settings，因为这不是用户配置而是设备身份）
+// ---------------------------------------------------------------------------
+//
+// v3 安全模型把"手机第一次扫码绑定后，下次重启 App / 重启 server 都还是同一个
+// sessionId"作为核心契约。这样手机端 localStorage 缓存的 sessionId 在 visibility-
+// change 重连时可以直接复用，不需要重新扫码。
+//
+// 持久化 key 与 Settings 平级，存在同一个 config.json 文件里，避免再开新 store。
+// 重置时序：UI 显式点"重置 WebChat 绑定"按钮 → webchat::reset_webchat_binding
+//          command → 调本文件的 reset_webchat_session_id → 下次 server 启动会
+//          重新生成一个 fresh sessionId 并落盘。
+
+const WEBCHAT_SESSION_ID_KEY: &str = "webchat_session_id";
+
+/// 读取持久化的 webchat sessionId。
+/// None 表示尚未生成（首次启动 / 用户刚显式重置过），调用方应生成新 id 然后 `set_webchat_session_id` 写回。
+pub fn get_webchat_session_id(app: &tauri::AppHandle<Wry>) -> Option<String> {
+    let store = app.store(STORE_PATH).ok()?;
+    let v = store.get(WEBCHAT_SESSION_ID_KEY)?;
+    let s = v.as_str()?.trim().to_string();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
+/// 写入 webchat sessionId 并立即落盘。
+/// 失败时返回包含底层错误信息的 String（与本文件其他 command 风格一致）。
+pub fn set_webchat_session_id(app: &tauri::AppHandle<Wry>, session_id: &str) -> Result<(), String> {
+    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    store.set(WEBCHAT_SESSION_ID_KEY, session_id.to_string());
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// 清空持久化的 webchat sessionId（用户在 UI 点了"重置 WebChat 绑定"按钮）。
+/// 下次 server 启动会重新生成。
+pub fn reset_webchat_session_id(app: &tauri::AppHandle<Wry>) -> Result<(), String> {
+    let store = app.store(STORE_PATH).map_err(|e| e.to_string())?;
+    store.delete(WEBCHAT_SESSION_ID_KEY);
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
