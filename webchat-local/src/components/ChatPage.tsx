@@ -13,7 +13,7 @@ type Props = {
   initialMessages?: ChatMessage[];
   initialMode?: PageMode;
   demoTouchpadSettings?: boolean;
-  demoKeyboardTab?: "screenshot" | "edit" | "nav";
+  demoKeyboardTab?: "dpad" | "edit" | "clipboard" | "nav" | "screenshot";
 };
 
 type WifiStatus = "connected" | "reconnecting" | "disconnected";
@@ -24,7 +24,7 @@ export default function ChatPage({
   initialMessages,
   initialMode,
   demoTouchpadSettings = false,
-  demoKeyboardTab = "screenshot",
+  demoKeyboardTab = "dpad",
 }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => initialMessages ?? []);
   const [wifi, setWifi] = useState<WifiStatus>("connected");

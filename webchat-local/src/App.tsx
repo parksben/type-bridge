@@ -238,11 +238,16 @@ function DemoApp({ demo }: { demo: string }) {
       ? "keyboard"
       : "chat";
 
-  const demoKeyboardTab = demo === "keyboard-edit"
-    ? "edit"
-    : demo === "keyboard-nav"
-      ? "nav"
-      : "screenshot";
+  const demoKeyboardTab: "dpad" | "edit" | "clipboard" | "nav" | "screenshot" =
+    demo === "keyboard-edit"
+      ? "edit"
+      : demo === "keyboard-clipboard"
+        ? "clipboard"
+        : demo === "keyboard-nav"
+          ? "nav"
+          : demo === "keyboard-screenshot"
+            ? "screenshot"
+            : "dpad";
 
   const demoTouchpadSettings = demo === "touchpad-settings";
 

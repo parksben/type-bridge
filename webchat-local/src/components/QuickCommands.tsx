@@ -28,6 +28,7 @@ import {
 import type { WebChatClient } from "@/lib/socket";
 import { newClientMessageId } from "@/lib/storage";
 import { t, type TKey } from "@/i18n";
+import { PressableTile } from "./PressableTile";
 
 type Props = {
   client: WebChatClient;
@@ -35,6 +36,10 @@ type Props = {
   initialTab?: TabId;
 };
 
+// CmdSpec.repeatable (UX5): when true, holding the key fires onPress at
+// ~16Hz after a 400ms initial delay. Only safe for keys that have an
+// idempotent / additive effect when fired repeatedly — i.e. arrows,
+// Backspace. NOT safe for Undo, Copy, Screenshot, etc.
 type CmdSpec =
   | { type: "key"; code: string }
   | { type: "text"; text: string }
@@ -46,302 +51,113 @@ type CmdDef = {
   labelKey: TKey;
   Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   spec: CmdSpec;
+  /** Visual + haptic "accent" treatment (destructive / screenshot). */
   accent?: boolean;
+  /** Enable long-press auto-repeat on this key (UX5). */
+  repeatable?: boolean;
 };
 
-type TabId = "screenshot" | "edit" | "nav";
+// 5 tabs (UX1): dpad → edit → clipboard → nav → screenshot
+type TabId = "dpad" | "edit" | "clipboard" | "nav" | "screenshot";
 
-// ─── Arrow keys ────────────────────────────────────────────────
-const CMD_UP: CmdDef    = { labelKey: "monitor.cmdArrowUp",    Icon: ArrowUp,    spec: { type: "key", code: "ArrowUp" } };
-const CMD_DOWN: CmdDef  = { labelKey: "monitor.cmdArrowDown",  Icon: ArrowDown,  spec: { type: "key", code: "ArrowDown" } };
-const CMD_LEFT: CmdDef  = { labelKey: "monitor.cmdArrowLeft",  Icon: ArrowLeft,  spec: { type: "key", code: "ArrowLeft" } };
-const CMD_RIGHT: CmdDef = { labelKey: "monitor.cmdArrowRight", Icon: ArrowRight, spec: { type: "key", code: "ArrowRight" } };
+// ─── Direction tab keys (UX5: arrows + backspace = repeatable) ─────
+const CMD_UP: CmdDef        = { labelKey: "monitor.cmdArrowUp",    Icon: ArrowUp,        spec: { type: "key", code: "ArrowUp" },    repeatable: true };
+const CMD_DOWN: CmdDef      = { labelKey: "monitor.cmdArrowDown",  Icon: ArrowDown,      spec: { type: "key", code: "ArrowDown" },  repeatable: true };
+const CMD_LEFT: CmdDef      = { labelKey: "monitor.cmdArrowLeft",  Icon: ArrowLeft,      spec: { type: "key", code: "ArrowLeft" },  repeatable: true };
+const CMD_RIGHT: CmdDef     = { labelKey: "monitor.cmdArrowRight", Icon: ArrowRight,     spec: { type: "key", code: "ArrowRight" }, repeatable: true };
+const CMD_ENTER: CmdDef     = { labelKey: "monitor.cmdNewline",    Icon: CornerDownLeft, spec: { type: "key", code: "Enter" } };
+const CMD_BACKSPACE: CmdDef = { labelKey: "monitor.cmdDelete",     Icon: Delete,         spec: { type: "key", code: "Backspace" }, accent: true, repeatable: true };
 
-// ─── Navigation ────────────────────────────────────────────────
-const CMD_HOME: CmdDef       = { labelKey: "monitor.cmdHome",      Icon: ArrowLeftToLine,  spec: { type: "key",   code: "Home" } };
-const CMD_END: CmdDef        = { labelKey: "monitor.cmdEnd",       Icon: ArrowRightToLine, spec: { type: "key",   code: "End" } };
-const CMD_PAGE_UP: CmdDef    = { labelKey: "monitor.cmdPageUp",    Icon: ArrowUpToLine,    spec: { type: "key",   code: "PageUp" } };
-const CMD_PAGE_DOWN: CmdDef  = { labelKey: "monitor.cmdPageDown",  Icon: ArrowDownToLine,  spec: { type: "key",   code: "PageDown" } };
-const CMD_DOC_TOP: CmdDef    = { labelKey: "monitor.cmdDocTop",    Icon: ChevronsUp,       spec: { type: "combo", combo: "DocTop" } };
-const CMD_DOC_BOTTOM: CmdDef = { labelKey: "monitor.cmdDocBottom", Icon: ChevronsDown,     spec: { type: "combo", combo: "DocBottom" } };
-
-// ─── Edit + Clipboard ──────────────────────────────────────────
+// ─── Edit tab (4 core actions) ─────────────────────────────────────
 const EDIT_CMDS: CmdDef[] = [
-  { labelKey: "monitor.cmdUndo",      Icon: Undo2,             spec: { type: "combo", combo: "Undo" } },
-  { labelKey: "monitor.cmdRedo",      Icon: Redo2,             spec: { type: "combo", combo: "Redo" } },
-  { labelKey: "monitor.cmdNewline",   Icon: CornerDownLeft,    spec: { type: "key", code: "Enter" } },
-  { labelKey: "monitor.cmdDelete",    Icon: Delete,            spec: { type: "key", code: "Backspace" }, accent: true },
-  { labelKey: "monitor.cmdClear",     Icon: Trash2,            spec: { type: "clear" }, accent: true },
-  { labelKey: "monitor.cmdEscape",    Icon: LogOut,            spec: { type: "key", code: "Escape" } },
+  { labelKey: "monitor.cmdUndo",   Icon: Undo2,  spec: { type: "combo", combo: "Undo" } },
+  { labelKey: "monitor.cmdRedo",   Icon: Redo2,  spec: { type: "combo", combo: "Redo" } },
+  { labelKey: "monitor.cmdClear",  Icon: Trash2, spec: { type: "clear" }, accent: true },
+  { labelKey: "monitor.cmdEscape", Icon: LogOut, spec: { type: "key", code: "Escape" } },
+];
+
+// ─── Clipboard tab (4 actions) ─────────────────────────────────────
+const CLIPBOARD_CMDS: CmdDef[] = [
   { labelKey: "monitor.cmdSelectAll", Icon: MousePointerClick, spec: { type: "combo", combo: "SelectAll" } },
   { labelKey: "monitor.cmdCopy",      Icon: Copy,              spec: { type: "combo", combo: "Copy" } },
   { labelKey: "monitor.cmdCut",       Icon: Scissors,          spec: { type: "combo", combo: "Cut" } },
   { labelKey: "monitor.cmdPaste",     Icon: ClipboardPaste,    spec: { type: "combo", combo: "Paste" } },
 ];
 
-// ─── Screenshot ────────────────────────────────────────────────
+// ─── Navigation tab (6 jump targets) ───────────────────────────────
+const NAV_CMDS: CmdDef[] = [
+  { labelKey: "monitor.cmdHome",      Icon: ArrowLeftToLine,  spec: { type: "key",   code: "Home" } },
+  { labelKey: "monitor.cmdEnd",       Icon: ArrowRightToLine, spec: { type: "key",   code: "End" } },
+  { labelKey: "monitor.cmdPageUp",    Icon: ArrowUpToLine,    spec: { type: "key",   code: "PageUp" } },
+  { labelKey: "monitor.cmdPageDown",  Icon: ArrowDownToLine,  spec: { type: "key",   code: "PageDown" } },
+  { labelKey: "monitor.cmdDocTop",    Icon: ChevronsUp,       spec: { type: "combo", combo: "DocTop" } },
+  { labelKey: "monitor.cmdDocBottom", Icon: ChevronsDown,     spec: { type: "combo", combo: "DocBottom" } },
+];
+
+// ─── Screenshot tab (unchanged) ────────────────────────────────────
 const SCREENSHOT_CMDS: CmdDef[] = [
-  { labelKey: "monitor.cmdScreenshotWindow", Icon: AppWindow,      spec: { type: "screenshot", kind: "window" } },
-  { labelKey: "monitor.cmdScreenshotScreen", Icon: Monitor,        spec: { type: "screenshot", kind: "screen" } },
+  { labelKey: "monitor.cmdScreenshotWindow", Icon: AppWindow,      spec: { type: "screenshot", kind: "window" }, accent: true },
+  { labelKey: "monitor.cmdScreenshotScreen", Icon: Monitor,        spec: { type: "screenshot", kind: "screen" }, accent: true },
   { labelKey: "monitor.cmdScreenshotPaste",  Icon: ClipboardPaste, spec: { type: "combo", combo: "Paste" } },
 ];
 
-// ─── ScreenshotTile: 大方块图标在上、文字在下的卡片样式 ──────────
-// 替代原 RowCmdButton 的细长全宽样式 —— 加大点击区、降低误触率。
-function ScreenshotTile({
+// ─── Reusable tile renderer ────────────────────────────────────────
+// Wraps PressableTile with the consistent icon-above-label layout used by
+// every command button. Layout density is controlled by `density`:
+//   - 'normal' — 2-col grids in edit/clipboard/nav
+//   - 'dpad'   — chunky tile for direction pad
+//   - 'wide'   — full-width tile in screenshot grid
+function CmdTile({
   cmd,
   onPress,
   disabled,
+  density = "normal",
 }: {
   cmd: CmdDef;
   onPress: (cmd: CmdDef) => void;
   disabled: boolean;
+  density?: "normal" | "dpad" | "wide";
 }) {
-  const [pressed, setPressed] = useState(false);
-  const { Icon, labelKey, accent } = cmd;
+  const { Icon, labelKey, accent, repeatable } = cmd;
+
+  const iconSize = density === "wide" ? 28 : density === "dpad" ? 26 : 22;
+  const minHeight =
+    density === "wide" ? 96 : density === "dpad" ? 76 : 72;
 
   return (
-    <button
-      type="button"
-      onTouchStart={(e) => { e.stopPropagation(); if (!disabled) setPressed(true); }}
-      onTouchEnd={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        setPressed(false);
-        if (!disabled) onPress(cmd);
-      }}
-      onTouchCancel={() => setPressed(false)}
-      onClick={() => { if (!disabled) onPress(cmd); }}
+    <PressableTile
+      onPress={() => onPress(cmd)}
+      variant={accent ? "accent" : "default"}
+      repeatable={repeatable}
       disabled={disabled}
-      className="flex flex-col items-center justify-center gap-2 w-full rounded-2xl select-none disabled:opacity-30 disabled:cursor-not-allowed"
+      ariaLabel={t(labelKey)}
       style={{
-        background: pressed ? "#fff3ea" : "#ffffff",
-        border: `1px solid ${pressed ? "#f9b27a" : "var(--tb-border)"}`,
-        color: accent ? "var(--tb-danger)" : "var(--tb-text)",
-        minHeight: "96px",
-        padding: "16px 12px",
-        boxShadow: pressed
-          ? "0 1px 4px rgba(249,115,22,0.15)"
-          : "0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05)",
-        transition: "background 80ms ease, border-color 80ms ease, box-shadow 80ms ease",
+        width: "100%",
+        minHeight: `${minHeight}px`,
+        flexDirection: "column",
+        gap: density === "wide" ? "8px" : "6px",
+        padding: density === "wide" ? "16px 12px" : "10px 8px",
       }}
     >
-      <span style={{ color: accent ? "var(--tb-danger)" : "var(--tb-accent)", display: "flex" }}>
-        <Icon size={28} strokeWidth={1.8} />
+      <span
+        style={{
+          color: accent ? "var(--tb-danger)" : "var(--tb-accent)",
+          display: "flex",
+        }}
+      >
+        <Icon size={iconSize} strokeWidth={1.8} />
       </span>
       <span
-        className="text-[12px] font-semibold text-center leading-tight"
+        className="text-[12px] font-semibold text-center leading-tight tracking-wide"
         style={{ color: accent ? "var(--tb-danger)" : "var(--tb-text)" }}
       >
         {t(labelKey)}
       </span>
-    </button>
+    </PressableTile>
   );
 }
 
-// ─── CmdButton ─────────────────────────────────────────────────
-
-function CmdButton({
-  cmd,
-  onPress,
-  disabled,
-  large = false,
-}: {
-  cmd: CmdDef;
-  onPress: (cmd: CmdDef) => void;
-  disabled: boolean;
-  large?: boolean;
-}) {
-  const { Icon, labelKey, accent } = cmd;
-
-  return (
-    <button
-      type="button"
-      onTouchStart={(e) => { e.stopPropagation(); }}
-      onTouchEnd={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (!disabled) onPress(cmd);
-      }}
-      onClick={() => { if (!disabled) onPress(cmd); }}
-      disabled={disabled}
-      className={`keycap flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed${large ? " rounded-full" : " rounded-2xl"}`}
-      style={{
-        color: accent ? "var(--tb-danger)" : "var(--tb-text)",
-        minHeight: large ? "80px" : "76px",
-        minWidth: large ? "80px" : undefined,
-        padding: "10px 8px",
-      }}
-    >
-      <span style={{ color: accent ? "var(--tb-danger)" : "var(--tb-accent)" }}>
-        <Icon size={large ? 26 : 22} strokeWidth={1.8} />
-      </span>
-      <span
-        className="text-[11px] leading-none text-center font-semibold tracking-wide"
-        style={{ color: accent ? "var(--tb-danger)" : "var(--tb-muted)" }}
-      >
-        {t(labelKey)}
-      </span>
-    </button>
-  );
-}
-
-// ─── PairedButtons: 两个按钮视觉上一体化 ───────────────────────
-
-function PairedButtons({
-  left,
-  right,
-  onPress,
-  disabled,
-}: {
-  left: CmdDef;
-  right: CmdDef;
-  onPress: (cmd: CmdDef) => void;
-  disabled: boolean;
-}) {
-  const [lPressed, setLPressed] = useState(false);
-  const [rPressed, setRPressed] = useState(false);
-
-  function mkBtn(
-    cmd: CmdDef,
-    pressed: boolean,
-    setPressed: (v: boolean) => void,
-    side: "left" | "right",
-  ) {
-    const { Icon, labelKey } = cmd;
-    const isActive = pressed;
-    return (
-      <button
-        type="button"
-        onTouchStart={(e) => { e.stopPropagation(); if (!disabled) setPressed(true); }}
-        onTouchEnd={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          setPressed(false);
-          if (!disabled) onPress(cmd);
-        }}
-        onTouchCancel={() => setPressed(false)}
-        onClick={() => { if (!disabled) onPress(cmd); }}
-        disabled={disabled}
-        className="flex-1 flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed"
-        style={{
-          background: isActive
-            ? "#fff3ea"
-            : "#ffffff",
-          borderTop: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
-          borderBottom: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
-          borderLeft: side === "left" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
-          borderRight: side === "right" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
-          borderRadius: side === "left" ? "16px 0 0 16px" : "0 16px 16px 0",
-          minHeight: "68px",
-          padding: "10px 8px",
-          boxShadow: isActive
-            ? "0 1px 6px rgba(249,115,22,0.15)"
-            : "0 1px 3px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.04)",
-          transition: "background 80ms ease, box-shadow 80ms ease",
-        }}
-      >
-        <span style={{ color: "var(--tb-accent)", display: "flex" }}>
-          <Icon size={22} strokeWidth={1.8} />
-        </span>
-        <span
-          className="text-[11px] leading-none text-center font-semibold tracking-wide"
-          style={{ color: "var(--tb-muted)" }}
-        >
-          {t(labelKey)}
-        </span>
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex w-full">
-      {mkBtn(left, lPressed, setLPressed, "left")}
-      <div style={{ width: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
-      {mkBtn(right, rPressed, setRPressed, "right")}
-    </div>
-  );
-}
-
-// ─── VerticalPairedButtons: 两个按钮上下一体化 ─────────────────
-
-function VerticalPairedButtons({
-  top,
-  bottom,
-  onPress,
-  disabled,
-}: {
-  top: CmdDef;
-  bottom: CmdDef;
-  onPress: (cmd: CmdDef) => void;
-  disabled: boolean;
-}) {
-  const [tPressed, setTPressed] = useState(false);
-  const [bPressed, setRPressed] = useState(false);
-
-  function mkBtn(
-    cmd: CmdDef,
-    pressed: boolean,
-    setPressed: (v: boolean) => void,
-    side: "top" | "bottom",
-  ) {
-    const { Icon, labelKey } = cmd;
-    const isActive = pressed;
-    return (
-      <button
-        type="button"
-        onTouchStart={(e) => { e.stopPropagation(); if (!disabled) setPressed(true); }}
-        onTouchEnd={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          setPressed(false);
-          if (!disabled) onPress(cmd);
-        }}
-        onTouchCancel={() => setPressed(false)}
-        onClick={() => { if (!disabled) onPress(cmd); }}
-        disabled={disabled}
-        className="flex flex-col items-center justify-center gap-1.5 select-none disabled:opacity-30 disabled:cursor-not-allowed"
-        style={{
-          background: isActive
-            ? "#fff3ea"
-            : "#ffffff",
-          borderLeft: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
-          borderRight: `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}`,
-          borderTop: side === "top" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
-          borderBottom: side === "bottom" ? `1px solid ${isActive ? "#f9b27a" : "var(--tb-border)"}` : "none",
-          borderRadius: side === "top" ? "16px 16px 0 0" : "0 0 16px 16px",
-          minHeight: "60px",
-          padding: "10px 8px",
-          boxShadow: isActive
-            ? "0 1px 6px rgba(249,115,22,0.15)"
-            : "0 1px 3px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.04)",
-          transition: "background 80ms ease, box-shadow 80ms ease",
-        }}
-      >
-        <span style={{ color: "var(--tb-accent)", display: "flex" }}>
-          <Icon size={22} strokeWidth={1.8} />
-        </span>
-        <span
-          className="text-[11px] leading-none text-center font-semibold tracking-wide"
-          style={{ color: "var(--tb-muted)" }}
-        >
-          {t(labelKey)}
-        </span>
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex flex-col flex-1">
-      {mkBtn(top, tPressed, setTPressed, "top")}
-      <div style={{ height: "1px", background: "var(--tb-border)", flexShrink: 0 }} />
-      {mkBtn(bottom, bPressed, setRPressed, "bottom")}
-    </div>
-  );
-}
-
-// ─── Screenshot feedback toast ──────────────────────────────────
-
+// ─── Screenshot feedback toast ─────────────────────────────────────
 type ScreenshotFeedback = { success: boolean; msg: string } | null;
 
 function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
@@ -370,8 +186,7 @@ function ScreenshotToast({ feedback }: { feedback: ScreenshotFeedback }) {
   );
 }
 
-// ─── PageTitle: 每屏顶部的小标题（淡色、居中、不抢戏）─────────
-
+// ─── Page title (subtle header on each tab) ────────────────────────
 function PageTitle({ label }: { label: string }) {
   return (
     <h2
@@ -388,11 +203,11 @@ function PageTitle({ label }: { label: string }) {
   );
 }
 
-// ─── Main ──────────────────────────────────────────────────────
+// ─── Main ──────────────────────────────────────────────────────────
 
-const TAB_IDS: TabId[] = ["screenshot", "edit", "nav"];
+const TAB_IDS: TabId[] = ["dpad", "edit", "clipboard", "nav", "screenshot"];
 
-export default function QuickCommands({ client, disabled, initialTab = "screenshot" }: Props) {
+export default function QuickCommands({ client, disabled, initialTab = "dpad" }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [error, setError] = useState<string | null>(null);
   const [screenshotFeedback, setScreenshotFeedback] = useState<ScreenshotFeedback>(null);
@@ -401,24 +216,26 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const TAB_LABELS: Record<TabId, TKey> = {
-    screenshot: "monitor.cmdGroupScreenshot",
+    dpad:       "monitor.cmdGroupDpad",
     edit:       "monitor.cmdGroupEdit",
+    clipboard:  "monitor.cmdGroupClipboard",
     nav:        "monitor.cmdGroupNav",
+    screenshot: "monitor.cmdGroupScreenshot",
   };
 
-  // ── 启动时滚动到 initialTab ──────────────────────────────
+  // Initial scroll to initialTab — synchronous to avoid flash.
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
     const idx = TAB_IDS.indexOf(initialTab);
     if (idx <= 0) return;
     isProgrammaticScroll.current = true;
-    // 同步滚到位（无动画），避免初次渲染时闪一下
     container.scrollLeft = idx * container.clientWidth;
     setTimeout(() => { isProgrammaticScroll.current = false; }, 100);
   }, []);
 
-  // ── Scroll spy：横向 snap，根据 scrollLeft 推算当前页 ──
+  // Scroll spy — derive active tab from scrollLeft. Snap CSS guarantees
+  // alignment; we just observe.
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -488,7 +305,6 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Error banner */}
       {error && (
         <div
           className="mx-4 mt-3 px-3 py-2 rounded-xl text-[12px] text-center shrink-0"
@@ -502,7 +318,7 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
         </div>
       )}
 
-      {/* ── 横向 snap pager：每屏 100% 宽 ────────────────── */}
+      {/* ── Horizontal snap pager ──────────────────────── */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-x-auto overflow-y-hidden flex min-h-0 scrollbar-none"
@@ -512,25 +328,108 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
         }}
       >
 
-        {/* ── Page 1: Screenshot ─────────────────────────── */}
+        {/* ── Page 1: Direction (D-pad + Enter + Backspace) ── */}
+        <section
+          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
+          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
+        >
+          <PageTitle label={t(TAB_LABELS.dpad)} />
+
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            {/* D-pad */}
+            <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
+              <div />
+              <CmdTile cmd={CMD_UP}    onPress={handlePress} disabled={disabled} density="dpad" />
+              <div />
+            </div>
+            <div className="grid grid-cols-3 gap-2 w-full max-w-[260px]">
+              <CmdTile cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} density="dpad" />
+              <CmdTile cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} density="dpad" />
+              <CmdTile cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} density="dpad" />
+            </div>
+
+            {/* Divider */}
+            <div
+              className="w-full max-w-[260px]"
+              style={{
+                height: "1px",
+                background: "linear-gradient(90deg, transparent, var(--tb-border), transparent)",
+                margin: "2px 0",
+              }}
+            />
+
+            {/* Enter + Backspace (Backspace is repeatable for fast delete) */}
+            <div className="grid grid-cols-2 gap-2.5 w-full max-w-[260px]">
+              <CmdTile cmd={CMD_ENTER}     onPress={handlePress} disabled={disabled} />
+              <CmdTile cmd={CMD_BACKSPACE} onPress={handlePress} disabled={disabled} />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Page 2: Edit ─────────────────────────────── */}
+        <section
+          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
+          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
+        >
+          <PageTitle label={t(TAB_LABELS.edit)} />
+
+          <div className="flex-1 flex flex-col justify-center gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
+              {EDIT_CMDS.map((cmd) => (
+                <CmdTile key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Page 3: Clipboard ────────────────────────── */}
+        <section
+          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
+          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
+        >
+          <PageTitle label={t(TAB_LABELS.clipboard)} />
+
+          <div className="flex-1 flex flex-col justify-center gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
+              {CLIPBOARD_CMDS.map((cmd) => (
+                <CmdTile key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Page 4: Navigation ───────────────────────── */}
+        <section
+          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
+          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
+        >
+          <PageTitle label={t(TAB_LABELS.nav)} />
+
+          <div className="flex-1 flex flex-col justify-center gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
+              {NAV_CMDS.map((cmd) => (
+                <CmdTile key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Page 5: Screenshot ───────────────────────── */}
         <section
           className="flex flex-col px-4 pt-3 pb-2 shrink-0"
           style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
         >
           <PageTitle label={t(TAB_LABELS.screenshot)} />
 
-          {/* 截图反馈 toast */}
           <ScreenshotToast feedback={screenshotFeedback} />
 
-          {/* 居中区：三个截图按钮，2x2 网格中第三个跨两列 */}
           <div className="flex-1 flex flex-col justify-center gap-3">
             <div className="grid grid-cols-2 gap-3">
-              <ScreenshotTile cmd={SCREENSHOT_CMDS[0]} onPress={handlePress} disabled={disabled} />
-              <ScreenshotTile cmd={SCREENSHOT_CMDS[1]} onPress={handlePress} disabled={disabled} />
+              <CmdTile cmd={SCREENSHOT_CMDS[0]} onPress={handlePress} disabled={disabled} density="wide" />
+              <CmdTile cmd={SCREENSHOT_CMDS[1]} onPress={handlePress} disabled={disabled} density="wide" />
             </div>
-            <ScreenshotTile cmd={SCREENSHOT_CMDS[2]} onPress={handlePress} disabled={disabled} />
+            <CmdTile cmd={SCREENSHOT_CMDS[2]} onPress={handlePress} disabled={disabled} density="wide" />
 
-            {/* 提示说明 */}
             <p
               className="text-center text-[11px] leading-relaxed mt-1"
               style={{ color: "var(--tb-muted)", opacity: 0.55 }}
@@ -540,83 +439,9 @@ export default function QuickCommands({ client, disabled, initialTab = "screensh
           </div>
         </section>
 
-        {/* ── Page 2: Edit + Clipboard ──────────────────── */}
-        <section
-          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
-          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
-        >
-          <PageTitle label={t(TAB_LABELS.edit)} />
-
-          <div className="flex-1 flex flex-col justify-center gap-3">
-            {/* 编辑操作：undo/redo/enter/delete/clear/escape */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {EDIT_CMDS.slice(0, 6).map((cmd) => (
-                <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-              ))}
-            </div>
-
-            {/* 分割线 */}
-            <div
-              style={{
-                height: "1px",
-                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
-                margin: "2px 0",
-              }}
-            />
-
-            {/* 剪贴板：selectAll/copy/cut/paste */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {EDIT_CMDS.slice(6).map((cmd) => (
-                <CmdButton key={cmd.labelKey} cmd={cmd} onPress={handlePress} disabled={disabled} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Page 3: Navigation ────────────────────────── */}
-        <section
-          className="flex flex-col px-4 pt-3 pb-2 shrink-0"
-          style={{ width: "100%", height: "100%", scrollSnapAlign: "start", scrollSnapStop: "always" }}
-        >
-          <PageTitle label={t(TAB_LABELS.nav)} />
-
-          <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            {/* 方向键 D-pad */}
-            <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
-              <div />
-              <CmdButton cmd={CMD_UP}    onPress={handlePress} disabled={disabled} large />
-              <div />
-            </div>
-            <div className="grid grid-cols-3 gap-2 w-full max-w-[240px]">
-              <CmdButton cmd={CMD_LEFT}  onPress={handlePress} disabled={disabled} large />
-              <CmdButton cmd={CMD_DOWN}  onPress={handlePress} disabled={disabled} large />
-              <CmdButton cmd={CMD_RIGHT} onPress={handlePress} disabled={disabled} large />
-            </div>
-
-            {/* 分割线 */}
-            <div
-              className="w-full"
-              style={{
-                height: "1px",
-                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
-                margin: "2px 0",
-              }}
-            />
-
-            {/* 行首 ↔ 行尾 */}
-            <PairedButtons left={CMD_HOME} right={CMD_END} onPress={handlePress} disabled={disabled} />
-
-            {/* 上一页/下一页 ↕ 与 页首/页尾 ↕ 并列一行 */}
-            <div className="flex gap-2.5 w-full">
-              <VerticalPairedButtons top={CMD_PAGE_UP} bottom={CMD_PAGE_DOWN} onPress={handlePress} disabled={disabled} />
-              <VerticalPairedButtons top={CMD_DOC_TOP} bottom={CMD_DOC_BOTTOM} onPress={handlePress} disabled={disabled} />
-            </div>
-          </div>
-        </section>
-
       </div>
 
-      {/* ── 底部圆点 indicator（类似 iOS 桌面分页点）─────── */}
+      {/* ── Bottom page-dot indicator ──────────────────── */}
       <div
         className="flex items-center justify-center gap-2 shrink-0 select-none"
         style={{
