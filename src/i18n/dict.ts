@@ -7,7 +7,7 @@
 export const ZH = {
   // 渠道品牌名（注：飞书/钉钉/企微在英文环境下保留官方英文名）
   channel: {
-    webchat: "WebChat",
+    webchat: "手机",
     feishu: "飞书",
     dingtalk: "钉钉",
     wecom: "企微",
@@ -153,12 +153,12 @@ export const ZH = {
   },
 
   webchat: {
-    serverStarted: "WebChat 本机 server 已启动，等待手机扫码",
-    serverStartFailed: "WebChat 启动失败：{error}",
-    serverStopped: "WebChat server 已停止",
-    serverStopFailed: "WebChat 停止失败：{error}",
-    bindingReset: "WebChat 绑定已重置，可重新扫码",
-    bindingResetFailed: "WebChat 重置绑定失败：{error}",
+    serverStarted: "本机已就绪，等待手机扫码",
+    serverStartFailed: "启动失败：{error}",
+    serverStopped: "本机服务已停止",
+    serverStopFailed: "停止失败：{error}",
+    bindingReset: "绑定已重置，可重新扫码",
+    bindingResetFailed: "重置绑定失败：{error}",
     wifiHint: "扫码之前确保手机与本机连接到同一 WiFi",
     starting: "启动中",
     scanHint: "扫一扫，手机变键鼠",
@@ -357,7 +357,7 @@ export type Dict = typeof ZH;
 
 export const EN: Dict = {
   channel: {
-    webchat: "WebChat",
+    webchat: "Phone",
     feishu: "Feishu",
     dingtalk: "DingTalk",
     wecom: "WeCom",
@@ -503,12 +503,12 @@ export const EN: Dict = {
   },
 
   webchat: {
-    serverStarted: "WebChat local server started, waiting for phone to scan",
-    serverStartFailed: "WebChat start failed: {error}",
-    serverStopped: "WebChat server stopped",
-    serverStopFailed: "WebChat stop failed: {error}",
-    bindingReset: "WebChat binding cleared — ready to scan a new device",
-    bindingResetFailed: "WebChat reset failed: {error}",
+    serverStarted: "Local service ready, waiting for phone to scan",
+    serverStartFailed: "Start failed: {error}",
+    serverStopped: "Local service stopped",
+    serverStopFailed: "Stop failed: {error}",
+    bindingReset: "Binding cleared — ready to scan a new device",
+    bindingResetFailed: "Reset failed: {error}",
     wifiHint: "Make sure your phone and this computer are on the same WiFi before scanning",
     starting: "Starting",
     scanHint: "Scan & turn your phone into a wireless keyboard + trackpad",
@@ -518,7 +518,7 @@ export const EN: Dict = {
 
     // ── v3 bound view: device card ──
     boundTitle: "Device bound",
-    boundSubtitle: "This device is bound to the current WebChat session. No other device can take over while it's active.",
+    boundSubtitle: "This device is bound to the current session. No other device can take over while it's active.",
     boundDevicePrefix: "Current device: ",
     boundUaLabel: "User-Agent",
     boundAtLabel: "Bound at",

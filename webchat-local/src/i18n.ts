@@ -20,21 +20,21 @@ const ZH = {
     titleSessionNotFound: "二维码已失效",
     titleOutOfLan: "请回到同一 WiFi",
     titleAlreadyBound: "已被其他设备绑定",
-    titleServerClosed: "桌面端 WebChat 已关闭",
+    titleServerClosed: "桌面端已关闭",
     titleUserDisconnected: "已断开连接",
     titleUnknown: "出错了",
     bodyNoSession:
       "请在桌面端打开 TypeBridge，进入「连接手机」，扫描页面中的二维码。",
     bodySessionNotFound:
-      "这个二维码对应的会话已经失效（可能是桌面端重置过绑定，或者重启了 WebChat）。请回到桌面 TypeBridge，重新生成二维码后扫描。",
+      "这个二维码对应的会话已经失效（可能是桌面端重置过绑定，或者重启了桌面 App）。请回到桌面 TypeBridge，重新生成二维码后扫描。",
     bodyOutOfLan:
-      "你的手机当前不在桌面所在的 WiFi 局域网里。WebChat 只在同一 WiFi 下工作 —— 请把手机切回桌面所在的 WiFi（关掉 4G/5G 数据也可以），然后重新打开本页面。",
+      "你的手机当前不在桌面所在的 WiFi 局域网里。本服务只在同一 WiFi 下工作 —— 请把手机切回桌面所在的 WiFi（关掉 4G/5G 数据也可以），然后重新打开本页面。",
     bodyAlreadyBound:
-      "桌面端 WebChat 已经绑定了另一台手机。如果要换设备，请在桌面 TypeBridge 的 WebChat 面板上点「重置绑定」，然后再用这台手机重新扫码。",
+      "桌面端已经绑定了另一台手机。如果要换设备，请在桌面 TypeBridge 的「连接手机」面板上点「重置绑定」，然后再用这台手机重新扫码。",
     bodyServerClosed:
-      "桌面端 TypeBridge 已断开 WebChat 连接或应用已退出。请在桌面重新「启动会话」后扫码。",
+      "桌面端 TypeBridge 已断开连接或应用已退出。请在桌面重新「启动会话」后扫码。",
     bodyUserDisconnected: "你已主动断开本次连接。重新扫描桌面二维码即可继续使用。",
-    bodyUnknown: "会话状态异常，请在桌面重新启动 WebChat 会话。",
+    bodyUnknown: "会话状态异常，请在桌面重新启动会话。",
   },
 
   chat: {
@@ -133,7 +133,7 @@ const ZH = {
     bodyPart2: " —— 在手机上发消息，桌面端自动输入到焦点输入框。",
     bodyPart3: "用电脑打开本页面没有意义，请用手机扫描桌面 TypeBridge 上的二维码。",
     howTitle: "怎么扫？",
-    howStep1: "在桌面打开 TypeBridge，进入「连接 TypeBridge → WebChat」",
+    howStep1: "在桌面打开 TypeBridge，进入「连接手机」",
     howStep2: "点「启动会话」生成二维码",
     howStep3: "确保手机和电脑在同一个 WiFi 下，用手机相机扫码",
   },
@@ -159,21 +159,21 @@ const EN: Dict = {
     titleSessionNotFound: "QR code no longer valid",
     titleOutOfLan: "Rejoin the same WiFi",
     titleAlreadyBound: "Another phone is bound",
-    titleServerClosed: "Desktop WebChat closed",
+    titleServerClosed: "Desktop disconnected",
     titleUserDisconnected: "Disconnected",
     titleUnknown: "Something went wrong",
     bodyNoSession:
-      "Open TypeBridge on your desktop, go to \"Connect phone\", and scan the QR code on the page.",
+      "Open TypeBridge on your desktop, go to \"Connect Phone\", and scan the QR code on the page.",
     bodySessionNotFound:
-      "This QR code's session is no longer valid — the desktop probably reset its binding or restarted WebChat. Generate a fresh QR in desktop TypeBridge and scan again.",
+      "This QR code's session is no longer valid — the desktop probably reset its binding or restarted the desktop app. Generate a fresh QR in desktop TypeBridge and scan again.",
     bodyOutOfLan:
-      "Your phone isn't on the same WiFi as the desktop right now. WebChat only works on the same LAN — switch your phone back to the desktop's WiFi (turn off mobile data if needed), then reopen this page.",
+      "Your phone isn't on the same WiFi as the desktop right now. It only works when both devices are on the same LAN — switch your phone back to the desktop's WiFi (turn off mobile data if needed), then reopen this page.",
     bodyAlreadyBound:
-      "Desktop WebChat is already bound to a different phone. To switch devices, click \"Reset binding\" in the desktop WebChat panel, then re-scan with this phone.",
+      "The desktop is already bound to a different phone. To switch devices, click \"Reset binding\" in the desktop \"Connect Phone\" panel, then re-scan with this phone.",
     bodyServerClosed:
-      "Desktop TypeBridge has disconnected the WebChat session or the app has quit. Restart the session on the desktop and scan again.",
+      "Desktop TypeBridge has disconnected the session or the app has quit. Restart the session on the desktop and scan again.",
     bodyUserDisconnected: "You disconnected this session. Scan the desktop QR again to reconnect.",
-    bodyUnknown: "Session in an unexpected state — restart the WebChat session on the desktop.",
+    bodyUnknown: "Session in an unexpected state — restart the session on the desktop.",
   },
 
   chat: {
@@ -272,7 +272,7 @@ const EN: Dict = {
     bodyPart2: " — type on your phone and it auto-enters into your focused desktop input.",
     bodyPart3: "This page is designed for mobile use only. Scan the QR shown in desktop TypeBridge with your phone.",
     howTitle: "How to scan?",
-    howStep1: "Open TypeBridge on your desktop, go to \"Connect TypeBridge → WebChat\"",
+    howStep1: "Open TypeBridge on your desktop, go to \"Connect Phone\"",
     howStep2: "Click \"Start session\" to generate a QR",
     howStep3: "Make sure phone & computer are on the same WiFi, then scan with your phone camera",
   },

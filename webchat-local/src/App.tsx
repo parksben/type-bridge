@@ -320,8 +320,8 @@ function buildDemoMessages(
   imageB: string,
 ): ChatMessage[] {
   const textOnly = english
-    ? "This is the new mobile WebChat style."
-    : "这是新版手机端 WebChat 的样式。";
+    ? "This is the new mobile companion style."
+    : "这是新版手机端的样式。";
   const followUp = english
     ? "It stays readable, compact, and easy to scan."
     : "气泡、留白和底栏都更紧凑，截图也更清楚。";
