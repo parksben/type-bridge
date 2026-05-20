@@ -59,6 +59,7 @@ pub struct UpdateCheckResult {
     pub latest: Option<String>,
     pub has_update: bool,
     pub download_url: Option<String>,
+    pub download_size: Option<u64>,
     pub notes: Option<String>,
 }
 
@@ -78,6 +79,10 @@ struct DownloadUrls {
     aarch64: Option<String>,
     #[serde(default)]
     x64: Option<String>,
+    #[serde(default)]
+    aarch64_size: Option<u64>,
+    #[serde(default)]
+    x64_size: Option<u64>,
 }
 
 #[tauri::command]
@@ -88,7 +93,11 @@ pub async fn check_update() -> Result<UpdateCheckResult, String> {
         env!("CARGO_PKG_VERSION").to_string()
     };
 
+    // .no_proxy()：禁用系统代理探测。
+    // parksben 等用户长期开 PAC（ClashX/Verge）会让 reqwest 把请求转到失效代理，
+    // 报 "error sending request for url"；本接口走国内 CDN，直连最稳。
     let client = reqwest::Client::builder()
+        .no_proxy()
         .timeout(std::time::Duration::from_secs(NETWORK_TIMEOUT_SECS))
         .build()
         .map_err(|e| format!("初始化 HTTP client 失败：{}", e))?;
@@ -109,6 +118,7 @@ pub async fn check_update() -> Result<UpdateCheckResult, String> {
         .map_err(|e| format!("解析最新版本响应失败：{}", e))?;
 
     let download_url = pick_download_url(&payload.download_urls);
+    let download_size = pick_download_size(&payload.download_urls);
     let has_update = if cfg!(debug_assertions) {
         // DEV 联调模式：只要能拿到可下载的新包信息，就强制展示为"可更新"。
         // 这样每次都能走完整的下载/取消/失败/重试链路验证。
@@ -123,6 +133,7 @@ pub async fn check_update() -> Result<UpdateCheckResult, String> {
         latest: Some(payload.version),
         has_update,
         download_url,
+        download_size,
         notes: payload.notes,
     })
 }
@@ -132,6 +143,16 @@ fn pick_download_url(urls: &DownloadUrls) -> Option<String> {
         urls.aarch64.clone()
     } else if cfg!(target_arch = "x86_64") {
         urls.x64.clone()
+    } else {
+        None
+    }
+}
+
+fn pick_download_size(urls: &DownloadUrls) -> Option<u64> {
+    if cfg!(target_arch = "aarch64") {
+        urls.aarch64_size
+    } else if cfg!(target_arch = "x86_64") {
+        urls.x64_size
     } else {
         None
     }
@@ -211,6 +232,7 @@ pub fn start_update_download(
     app: AppHandle,
     download_url: String,
     version: String,
+    known_size: Option<u64>,
 ) -> Result<(), String> {
     let cancel_token = CancellationToken::new();
     {
@@ -226,7 +248,8 @@ pub fn start_update_download(
     }
 
     tauri::async_runtime::spawn(async move {
-        let result = run_update_download_task(&app, &download_url, &version, cancel_token).await;
+        let result =
+            run_update_download_task(&app, &download_url, &version, known_size, cancel_token).await;
         if let Err(reason) = result {
             emit_update_download_state(
                 &app,
@@ -260,6 +283,7 @@ async fn run_update_download_task(
     app: &AppHandle,
     download_url: &str,
     version: &str,
+    known_size: Option<u64>,
     cancel_token: CancellationToken,
 ) -> Result<(), String> {
     emit_update_download_state(
@@ -278,7 +302,15 @@ async fn run_update_download_task(
     let filename = filename_from_url(download_url, version);
     let target_path: PathBuf = downloads_dir.join(filename);
 
-    let outcome = download_to_file(app, download_url, version, &target_path, &cancel_token).await?;
+    let outcome = download_to_file(
+        app,
+        download_url,
+        version,
+        &target_path,
+        known_size,
+        &cancel_token,
+    )
+    .await?;
     let (downloaded, total) = match outcome {
         DownloadWriteOutcome::Cancelled => {
             remove_partial_file(&target_path);
@@ -359,7 +391,9 @@ fn compute_chunk_count() -> u64 {
 }
 
 fn build_client() -> Result<reqwest::Client, String> {
+    // .no_proxy()：同 check_update，国内 CDN 直连，绕开 PAC/系统代理误路由。
     reqwest::Client::builder()
+        .no_proxy()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(60 * 10))
         .build()
@@ -371,6 +405,7 @@ async fn download_to_file(
     url: &str,
     version: &str,
     target: &PathBuf,
+    known_size: Option<u64>,
     cancel_token: &CancellationToken,
 ) -> Result<DownloadWriteOutcome, String> {
     let client = build_client()?;
@@ -389,13 +424,15 @@ async fn download_to_file(
     };
 
     let is_partial = probe.status().as_u16() == 206;
-    let total_opt: Option<u64> = if is_partial {
-        // Content-Range: bytes 0-0/总字节数 — 最可靠的文件大小来源
+    // total_opt 优先级：known_size（官网 /api/latest-version 返回的精确 size）
+    // > Content-Range 解析 > Content-Length。known_size 总是最权威的，
+    // 即使 CDN 不给 Content-Length 也能保证进度条能算百分比。
+    let probed_total: Option<u64> = if is_partial {
         parse_content_range_total(probe.headers())
     } else {
-        // 服务器不支持 Range，尝试从 Content-Length 拿大小（可能 None）
         probe.content_length()
     };
+    let total_opt: Option<u64> = known_size.or(probed_total);
     drop(probe); // 释放连接（只拉了 1 字节）
 
     let use_parallel = is_partial

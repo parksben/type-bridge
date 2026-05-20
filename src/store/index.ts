@@ -74,6 +74,8 @@ export type TabId =
 export interface LatestVersionInfo {
   latest: string;
   downloadUrl: string;
+  /** 安装包字节数；可能为 null（旧 release 或 API 未透出时） */
+  downloadSize: number | null;
 }
 
 export interface SubmitKey {

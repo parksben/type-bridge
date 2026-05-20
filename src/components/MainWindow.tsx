@@ -22,6 +22,7 @@ interface UpdateCheckResult {
   has_update: boolean;
   latest: string | null;
   download_url: string | null;
+  download_size: number | null;
 }
 
 export default function MainWindow() {
@@ -36,6 +37,7 @@ export default function MainWindow() {
         const info: LatestVersionInfo = {
           latest: result.latest,
           downloadUrl: result.download_url,
+          downloadSize: result.download_size,
         };
         setLatestVersionInfo(info);
       }

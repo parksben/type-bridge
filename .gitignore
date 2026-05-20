@@ -36,6 +36,9 @@ src-tauri/binaries/wecom-bridge-*-apple-darwin
 .venv-*/
 .idea
 .DS_Store
+
+# Marketing assets / scratch (never commit; keep on marketing-revamp branch only)
+marketing/
 *.suo
 *.ntvs*
 *.njsproj

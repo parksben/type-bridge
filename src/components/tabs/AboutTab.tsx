@@ -23,6 +23,8 @@ interface UpdateCheckResult {
   latest: string | null;
   has_update: boolean;
   download_url: string | null;
+  /** 安装包字节数，由官网 /api/latest-version 直接透传；进度条精确计算的权威来源 */
+  download_size: number | null;
   notes: string | null;
 }
 
@@ -30,7 +32,13 @@ type CheckStatus =
   | { kind: "idle" }
   | { kind: "checking" }
   | { kind: "up-to-date"; current: string; isDev: boolean }
-  | { kind: "has-update"; current: string; latest: string; downloadUrl: string }
+  | {
+      kind: "has-update";
+      current: string;
+      latest: string;
+      downloadUrl: string;
+      downloadSize: number | null;
+    }
   | { kind: "error"; message: string };
 
 type DownloadState =
@@ -79,6 +87,7 @@ export default function AboutTab() {
         current: ver,
         latest: info.latest,
         downloadUrl: info.downloadUrl,
+        downloadSize: info.downloadSize,
       });
     }).catch(() => {
       setStatus({
@@ -86,6 +95,7 @@ export default function AboutTab() {
         current: "unknown",
         latest: info.latest,
         downloadUrl: info.downloadUrl,
+        downloadSize: info.downloadSize,
       });
     });
   }, []);
@@ -204,9 +214,14 @@ export default function AboutTab() {
           current: result.current,
           latest: result.latest,
           downloadUrl: result.download_url,
+          downloadSize: result.download_size,
         });
         // 同步更新 store，保持一致
-        setLatestVersionInfo({ latest: result.latest, downloadUrl: result.download_url });
+        setLatestVersionInfo({
+          latest: result.latest,
+          downloadUrl: result.download_url,
+          downloadSize: result.download_size,
+        });
       }
     } catch (e) {
       setStatus({ kind: "error", message: String(e) });
@@ -229,6 +244,8 @@ export default function AboutTab() {
       await invoke("start_update_download", {
         downloadUrl: status.downloadUrl,
         version: status.latest,
+        // 把官网 API 透传的精确包体积带给后端，绕开 CDN 302 跳转后 Content-Length 丢失的问题
+        knownSize: status.downloadSize,
       });
     } catch (e) {
       setDownloadState({

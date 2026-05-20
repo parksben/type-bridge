@@ -25,6 +25,8 @@ interface BlobReleaseData {
 interface DownloadUrls {
   aarch64: string | null;
   x64: string | null;
+  aarch64_size: number | null;
+  x64_size: number | null;
 }
 
 interface ResponsePayload {
@@ -63,6 +65,9 @@ export async function GET() {
       download_urls: {
         aarch64: data.download_urls.aarch64 ? `${BASE_URL}/dl/arm64` : null,
         x64: data.download_urls.x64 ? `${BASE_URL}/dl/x64` : null,
+        // 包体积透传给桌面 App，用于进度条精确计算（绕开 302 跳转后 Content-Length 丢失的问题）
+        aarch64_size: data.download_urls.aarch64_size ?? null,
+        x64_size: data.download_urls.x64_size ?? null,
       },
     };
 
