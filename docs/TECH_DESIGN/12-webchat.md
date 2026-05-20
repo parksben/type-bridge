@@ -203,7 +203,7 @@ let app = axum::Router::new()
 - `handle_disconnect`（socket 掉线）后**显式 emit** `webchat-session-update { phase: pending }`
 - 桌面端 `MainWindow.tsx` 的 `un4` 订阅同时维护 `channelConnected.webchat`（已实现）+ 新增 `webchatPhase` 给 ConnectionHub 切换主视觉用
 
-### 35.5 webchat_net.rs（LAN IP + WiFi SSID）
+### 35.5 webchat_net.rs（LAN IP + WiFi SSID + LAN 子网校验）
 
 ```rust
 pub fn primary_lan_ip() -> Result<IpAddr> {
@@ -227,6 +227,39 @@ pub fn current_wifi_ssid() -> Result<String> {
     { core_wlan_ffi::current_ssid() }
 }
 ```
+
+**LAN 子网校验**（v3 安全模型 §35.8 第一道防线"LAN-only 绑定"的实现基石）：
+
+`local-ip-address` 只能枚举 IP，**拿不到 netmask**，无法判断"远端 IP 是否落在本机网卡的子网"。因此引入两个依赖：
+
+- `if-addrs = "0.13"` — 列出本机所有网卡及其 IPv4 / IPv6 + netmask
+- `ipnet = "2.10"` — 基于 (ip, prefix_len) 做 `contains(remote)` 判断；后续 `webchat_server.rs` 的 hello handler 也会复用
+
+```rust
+/// 表示本机一张网卡的 LAN 信息（IP + 子网掩码）。
+pub struct LocalNic {
+    pub ip: IpAddr,
+    pub prefix_len: u8,
+    pub name: String,
+}
+
+/// 枚举本机可用网卡（IPv4-only），过滤掉 loopback / link-local / VPN（utun/awdl/llw/bridge/anpi/ap 前缀）。
+pub fn enumerate_local_nics() -> Vec<LocalNic>;
+
+/// 判断 remote 是否落在 nics 中任一网卡声明的子网内。
+/// IPv4-only；IPv6 remote 直接返回 false；nics 为空直接 false。
+pub fn is_in_lan(remote: IpAddr, nics: &[LocalNic]) -> bool;
+```
+
+**过滤策略**与 `primary_lan_ip()` 保持一致：
+- 跳过 loopback、link-local（169.254/16）、IPv6
+- 网卡名前缀过滤 `utun*`（VPN）、`awdl*`（Apple Wireless Direct Link）、`llw*`、`bridge*`、`anpi*`、`ap*`
+
+**prefix_len 计算**：使用 `if-addrs` 返回的 netmask（4 字节），等价于 `ipnet::Ipv4Net::with_netmask(ip, mask)?.prefix_len()`。
+
+**契约约束**：
+- `enumerate_local_nics()` 依赖运行环境（网卡数量 / IP / VPN 状态因机器而异），**不进单元测试**——仅在 dev 启动时 `tracing::debug!` 打印筛选结果供排查
+- `is_in_lan()` 是纯函数（无 I/O 无副作用），单元测试覆盖至少 8 个用例：同 /24 命中/不命中、/16 大子网命中/不命中、多 nic 第二张命中、空 nics、跨网段公网 IP、IPv6 remote
 
 ### 35.6 前端工程（webchat-local/）
 
