@@ -85,14 +85,6 @@ body,
 .safe-area-left   { padding-left:   env(safe-area-inset-left); }
 .safe-area-right  { padding-right:  env(safe-area-inset-right); }
 
-/* OTP 抖动 */
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60%  { transform: translateX(-6px); }
-  40%, 80%  { transform: translateX(6px); }
-}
-.animate-shake { animation: shake 0.4s ease-in-out; }
-
 /* 底部面板淡入上移 */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(10px); }

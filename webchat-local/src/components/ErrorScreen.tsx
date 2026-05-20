@@ -1,11 +1,11 @@
-import { AlertCircle, QrCode, RefreshCw } from "lucide-react";
+import { AlertCircle, QrCode, Wifi, ShieldAlert, RefreshCw } from "lucide-react";
 import { t } from "@/i18n";
 
 type Reason =
   | "no-session"
-  | "otp-locked"
-  | "otp-expired"
-  | "session-expired"
+  | "session-not-found"
+  | "out-of-lan"
+  | "already-bound"
   | "server-closed"
   | "unknown";
 
@@ -17,9 +17,9 @@ type Props = {
 function titleOf(r: Reason): string {
   switch (r) {
     case "no-session": return t("error.titleNoSession");
-    case "otp-locked": return t("error.titleOtpLocked");
-    case "otp-expired": return t("error.titleOtpExpired");
-    case "session-expired": return t("error.titleSessionExpired");
+    case "session-not-found": return t("error.titleSessionNotFound");
+    case "out-of-lan": return t("error.titleOutOfLan");
+    case "already-bound": return t("error.titleAlreadyBound");
     case "server-closed": return t("error.titleServerClosed");
     default: return t("error.titleUnknown");
   }
@@ -28,37 +28,62 @@ function titleOf(r: Reason): string {
 function bodyOf(r: Reason): string {
   switch (r) {
     case "no-session": return t("error.bodyNoSession");
-    case "otp-locked": return t("error.bodyOtpLocked");
-    case "otp-expired": return t("error.bodyOtpExpired");
-    case "session-expired": return t("error.bodySessionExpired");
+    case "session-not-found": return t("error.bodySessionNotFound");
+    case "out-of-lan": return t("error.bodyOutOfLan");
+    case "already-bound": return t("error.bodyAlreadyBound");
     case "server-closed": return t("error.bodyServerClosed");
     default: return t("error.bodyUnknown");
   }
 }
 
 export default function ErrorScreen({ reason, detail }: Props) {
-  const isRescan = reason === "otp-expired";
+  // 图标 + 配色：no-session/session-not-found 用 QR 提示重扫；out-of-lan 用 WiFi 警告；
+  // already-bound 用 Shield；server-closed 用 RefreshCw；其他 fallback AlertCircle。
+  const iconSlot = (() => {
+    switch (reason) {
+      case "no-session":
+      case "session-not-found":
+        return {
+          Icon: QrCode,
+          tone: "var(--tb-accent-soft)",
+          color: "text-[var(--tb-accent)]",
+        };
+      case "out-of-lan":
+        return {
+          Icon: Wifi,
+          tone: "color-mix(in srgb, var(--tb-accent) 12%, transparent)",
+          color: "text-[var(--tb-accent)]",
+        };
+      case "already-bound":
+        return {
+          Icon: ShieldAlert,
+          tone: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+          color: "text-[var(--tb-danger)]",
+        };
+      case "server-closed":
+        return {
+          Icon: RefreshCw,
+          tone: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+          color: "text-[var(--tb-danger)]",
+        };
+      default:
+        return {
+          Icon: AlertCircle,
+          tone: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
+          color: "text-[var(--tb-danger)]",
+        };
+    }
+  })();
+  const { Icon, tone, color } = iconSlot;
+
   return (
     <main className="min-h-[100dvh] flex items-center justify-center px-6 py-10 safe-area-top safe-area-bottom">
       <div className="max-w-sm w-full text-center">
         <div
           className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-5"
-          style={{
-            background:
-              reason === "no-session"
-                ? "var(--tb-accent-soft)"
-                : isRescan
-                ? "color-mix(in srgb, var(--tb-accent) 12%, transparent)"
-                : "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
-          }}
+          style={{ background: tone }}
         >
-          {reason === "no-session" ? (
-            <QrCode size={28} strokeWidth={1.8} className="text-[var(--tb-accent)]" />
-          ) : isRescan ? (
-            <RefreshCw size={28} strokeWidth={1.8} className="text-[var(--tb-accent)]" />
-          ) : (
-            <AlertCircle size={28} strokeWidth={1.8} className="text-[var(--tb-danger)]" />
-          )}
+          <Icon size={28} strokeWidth={1.8} className={color} />
         </div>
         <h1 className="text-[18px] font-semibold tracking-tight mb-2">
           {titleOf(reason)}

@@ -9,8 +9,8 @@ import ChatPage from "@/components/ChatPage";
 import type { ChatMessage } from "@/components/MessageBubble";
 import ErrorScreen from "@/components/ErrorScreen";
 
-// 会话 id 格式（与 Rust server 生成的一致）：ses_ + 15 个 base32 字符
-const SESSION_ID_REGEX = /^ses_[A-Z2-7]{15,24}$/;
+// 会话 id 格式（与 Rust server 生成的一致）：ses_ + 15+ 个 base32/base62 字符
+const SESSION_ID_REGEX = /^ses_[A-Za-z0-9]{15,32}$/;
 
 type State =
   | { kind: "loading" }
@@ -19,7 +19,12 @@ type State =
   | { kind: "chat"; sessionId: string }
   | { kind: "error"; reason: ErrorReason; detail?: string };
 
-type ErrorReason = "otp-locked" | "otp-expired" | "server-closed" | "unknown";
+type ErrorReason =
+  | "session-not-found"
+  | "out-of-lan"
+  | "already-bound"
+  | "server-closed"
+  | "unknown";
 
 export default function App() {
   const demo = new URLSearchParams(window.location.search).get("demo");
@@ -36,9 +41,9 @@ function NormalApp() {
   const clientRef = useRef<WebChatClient | null>(null);
   const [socketStatus, setSocketStatus] = useState<ClientStatus>("connecting");
 
-  // 从 URL 解析出的会话信息
-  const sessionInfoRef = useRef<{ sessionId: string; otp: string } | null>(null);
-  // 防止 auto-hello 被多次触发
+  // 从 URL 解析出的会话信息（v3：只有 sessionId）
+  const sessionInfoRef = useRef<{ sessionId: string } | null>(null);
+  // 防止 auto-hello 被多次触发（每次重连完成后会被重置）
   const helloAttemptedRef = useRef(false);
 
   // 启动：UA 分流 + URL 解析
@@ -50,16 +55,15 @@ function NormalApp() {
       return;
     }
 
-    // URL ?s=sessionId&otp=XXXXXX
+    // v3 URL：?s=sessionId（不再有 otp，sessionId 是手机绑定的唯一凭证）
     const params = new URLSearchParams(window.location.search);
     const sid = params.get("s") ?? "";
-    const otp = params.get("otp") ?? "";
-    if (!sid || !SESSION_ID_REGEX.test(sid) || !otp) {
+    if (!sid || !SESSION_ID_REGEX.test(sid)) {
       setState({ kind: "no-session" });
       return;
     }
 
-    sessionInfoRef.current = { sessionId: sid, otp };
+    sessionInfoRef.current = { sessionId: sid };
 
     // dev 模式下，Rust server 会 302 把页面重定向到 Vite dev (5173) 并在 query 里
     // 加 apiPort=<rust_port>。这里读出来后让 socket.io-client 显式连那个端口
@@ -72,7 +76,13 @@ function NormalApp() {
     // 创建 client 并 connect；state 保持 loading 直到 hello 完成
     const client = new WebChatClient({
       url: apiUrl,
-      onStatusChange: (s) => setSocketStatus(s),
+      onStatusChange: (s) => {
+        setSocketStatus(s);
+        // 重新连上后允许再握手一次（visibilitychange 重连流程）
+        if (s === "connected") {
+          helloAttemptedRef.current = false;
+        }
+      },
     });
     clientRef.current = client;
     client.connect();
@@ -82,11 +92,12 @@ function NormalApp() {
     };
   }, []);
 
-  // Socket 连接后自动发送 hello（OTP 来自 URL 参数，无需用户手动输入）
+  // Socket 连接后自动发送 hello（v3：sessionId 来自 URL，无需用户手动输入 OTP）
   useEffect(() => {
-    if (state.kind !== "loading") return;
     if (socketStatus !== "connected") return;
     if (helloAttemptedRef.current) return;
+    // 已经在 chat 态时（visibilitychange 重连）也要重做 hello 刷 userToken
+    if (state.kind !== "loading" && state.kind !== "chat") return;
 
     const client = clientRef.current;
     const info = sessionInfoRef.current;
@@ -94,37 +105,34 @@ function NormalApp() {
 
     helloAttemptedRef.current = true;
 
-    client.hello(info.otp, getOrCreateClientId()).then((ack) => {
+    client.hello(info.sessionId, getOrCreateClientId()).then((ack) => {
       if (ack.ok) {
         saveBinding({
           sessionId: info.sessionId,
           userToken: ack.userToken,
           issuedAt: Date.now(),
         });
-        setState({ kind: "chat", sessionId: info.sessionId });
-
-        // 监听 server 推送的 OTP 轮换通知，实时刷新 URL 里的 otp 参数。
-        // 这样当 iOS Safari 在后台杀掉页面后，用户重新打开浏览器时
-        // 页面能以最新 OTP 重新握手，无需用户重新扫码。
-        client.onOtpRefresh((newOtp) => {
-          try {
-            const url = new URL(window.location.href);
-            url.searchParams.set("otp", newOtp);
-            history.replaceState(null, "", url.toString());
-          } catch {
-            // URL 操作失败时静默忽略，不影响正常收发消息
-          }
-        });
+        // 维持 chat 态（如果已经在 chat 态就不重渲染）
+        setState((cur) =>
+          cur.kind === "chat" && cur.sessionId === info.sessionId
+            ? cur
+            : { kind: "chat", sessionId: info.sessionId },
+        );
         return;
       }
 
-      // 失败：按 reason 分流
+      // v3 reason 分流
       const reason = ack.reason;
-      if (reason === "OTP_LOCKED") {
-        setState({ kind: "error", reason: "otp-locked" });
-      } else if (reason === "SESSION_EXPIRED" || reason === "OTP_INVALID") {
-        // OTP 已过期或不匹配（可能扫到刚轮换过的旧 QR）→ 提示重扫
-        setState({ kind: "error", reason: "otp-expired" });
+      if (reason === "SESSION_NOT_FOUND") {
+        // 桌面端重置过绑定 / 换了 server 实例 → 让用户重扫
+        clearBinding();
+        setState({ kind: "error", reason: "session-not-found" });
+      } else if (reason === "OUT_OF_LAN") {
+        // 手机切到了其他 WiFi → 提示回到同一 WiFi
+        setState({ kind: "error", reason: "out-of-lan" });
+      } else if (reason === "ALREADY_BOUND") {
+        // 另一台手机已占座
+        setState({ kind: "error", reason: "already-bound" });
       } else {
         setState({ kind: "error", reason: "unknown", detail: reason });
       }
@@ -132,19 +140,59 @@ function NormalApp() {
   }, [state.kind, socketStatus]);
 
   // socket 状态变 "disconnected" 且已在 chat 态 → 判定桌面关闭
+  // 给 8s 让 io-client 自动重连（手机 5G/WiFi 切换 + iOS 唤醒）
   useEffect(() => {
     if (state.kind !== "chat") return;
     if (socketStatus === "disconnected") {
-      // 等 5s 看是否 auto-reconnect，如果没恢复就判定桌面关闭
       const id = window.setTimeout(() => {
         if (clientRef.current && socketStatus === "disconnected") {
           clearBinding();
           setState({ kind: "error", reason: "server-closed" });
         }
-      }, 5000);
+      }, 8000);
       return () => window.clearTimeout(id);
     }
   }, [state.kind, socketStatus]);
+
+  // visibilitychange / pageshow / online 重连
+  // ─────────────────────────────────────────
+  // 手机切前台时主动唤醒 socket，避免 iOS Safari 把 WebSocket 冻僵：
+  //   - visibilitychange visible → 已断 → connect()
+  //   - pageshow (bfcache 唤醒)   → 已断 → connect()
+  //   - online (网络恢复)         → 已断 → connect()
+  // io-client 自带指数退避重连，但 iOS 后台冻结后通常 reconnect_attempt 不会自动触发，
+  // 因此我们在用户操作回到前台的时刻显式 connect() 兜底。
+  useEffect(() => {
+    if (state.kind !== "chat") return;
+
+    const wake = () => {
+      const client = clientRef.current;
+      if (!client) return;
+      if (document.visibilityState !== "visible") return;
+      // 允许重连完成后重做 hello（覆盖跨网段切换 / userToken 过期场景）
+      helloAttemptedRef.current = false;
+      // 如果已经连着就 no-op
+      client.connect();
+    };
+
+    const onVisibility = () => wake();
+    const onPageShow = (e: PageTransitionEvent) => {
+      // bfcache 恢复时 e.persisted=true，最值得 wake 的场景
+      if (e.persisted) wake();
+      else wake();
+    };
+    const onOnline = () => wake();
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("online", onOnline);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [state.kind]);
 
   // ─────────────── render ───────────────
 
@@ -212,9 +260,6 @@ function DemoApp({ demo }: { demo: string }) {
 const DEMO_CLIENT = {
   connect() {},
   disconnect() {},
-  onOtpRefresh() {
-    return () => {};
-  },
   async hello() {
     return { ok: true, userToken: "demo-user-token", sessionId: "demo-session" };
   },

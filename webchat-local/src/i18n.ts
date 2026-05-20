@@ -11,35 +11,25 @@ export type Lang = "zh" | "en";
 
 const ZH = {
   app: {
-    otpInvalid: "验证码错误，请重试",
-    otpLocked: "验证码已锁定",
-    sessionExpired: "会话已过期",
     handshakeFailed: "连接验证失败",
     socketNotReady: "连接未就绪",
   },
 
-  handshake: {
-    title: "输入验证码",
-    desc: "在桌面 TypeBridge 的 WebChat 面板上查看 6 位数字",
-    verifying: "验证中",
-    confirm: "确认",
-  },
-
   error: {
     titleNoSession: "请用桌面 App 扫码",
-    titleOtpLocked: "验证码已锁定",
-    titleOtpExpired: "二维码已过期",
-    titleSessionExpired: "会话已过期",
+    titleSessionNotFound: "二维码已失效",
+    titleOutOfLan: "请回到同一 WiFi",
+    titleAlreadyBound: "已被其他设备绑定",
     titleServerClosed: "桌面端 WebChat 已关闭",
     titleUnknown: "出错了",
     bodyNoSession:
       "当前链接没有会话信息。请在桌面打开 TypeBridge，进入「连接 TypeBridge → WebChat」，点「启动会话」后用这台手机扫描桌面上的二维码。",
-    bodyOtpLocked:
-      "验证码错误次数过多，会话已锁定。请在桌面 TypeBridge 上点「重启会话」生成新的验证码。",
-    bodyOtpExpired:
-      "二维码已过期，请重新扫描桌面 TypeBridge 上的新二维码。",
-    bodySessionExpired:
-      "5 分钟内未完成验证，会话已过期。请在桌面 TypeBridge 上点「重启会话」生成新的二维码。",
+    bodySessionNotFound:
+      "这个二维码对应的会话已经失效（可能是桌面端重置过绑定，或者重启了 WebChat）。请回到桌面 TypeBridge，重新生成二维码后扫描。",
+    bodyOutOfLan:
+      "你的手机当前不在桌面所在的 WiFi 局域网里。WebChat 只在同一 WiFi 下工作 —— 请把手机切回桌面所在的 WiFi（关掉 4G/5G 数据也可以），然后重新打开本页面。",
+    bodyAlreadyBound:
+      "桌面端 WebChat 已经绑定了另一台手机。如果要换设备，请在桌面 TypeBridge 的 WebChat 面板上点「重置绑定」，然后再用这台手机重新扫码。",
     bodyServerClosed:
       "桌面端 TypeBridge 已断开 WebChat 连接或应用已退出。请在桌面重新「启动会话」后扫码。",
     bodyUnknown: "会话状态异常，请在桌面重新启动 WebChat 会话。",
@@ -154,35 +144,25 @@ type Dict = typeof ZH;
 
 const EN: Dict = {
   app: {
-    otpInvalid: "Wrong code, please try again",
-    otpLocked: "Code locked",
-    sessionExpired: "Session expired",
     handshakeFailed: "Verification failed",
     socketNotReady: "Connection not ready",
   },
 
-  handshake: {
-    title: "Enter the code",
-    desc: "Find the 6-digit code in the desktop TypeBridge WebChat panel",
-    verifying: "Verifying",
-    confirm: "Confirm",
-  },
-
   error: {
     titleNoSession: "Scan from desktop app",
-    titleOtpLocked: "Code locked",
-    titleOtpExpired: "QR code expired",
-    titleSessionExpired: "Session expired",
+    titleSessionNotFound: "QR code no longer valid",
+    titleOutOfLan: "Rejoin the same WiFi",
+    titleAlreadyBound: "Another phone is bound",
     titleServerClosed: "Desktop WebChat closed",
     titleUnknown: "Something went wrong",
     bodyNoSession:
       "No session info in this link. Open TypeBridge on your desktop, go to \"Connect TypeBridge → WebChat\", click \"Start session\", and scan the QR with this phone.",
-    bodyOtpLocked:
-      "Too many wrong codes — the session is locked. Click \"Restart session\" in desktop TypeBridge to generate a new code.",
-    bodyOtpExpired:
-      "The QR code has expired. Please re-scan the new QR code on your desktop TypeBridge.",
-    bodySessionExpired:
-      "Verification not completed within 5 minutes — the session expired. Click \"Restart session\" in desktop TypeBridge for a new QR.",
+    bodySessionNotFound:
+      "This QR code's session is no longer valid — the desktop probably reset its binding or restarted WebChat. Generate a fresh QR in desktop TypeBridge and scan again.",
+    bodyOutOfLan:
+      "Your phone isn't on the same WiFi as the desktop right now. WebChat only works on the same LAN — switch your phone back to the desktop's WiFi (turn off mobile data if needed), then reopen this page.",
+    bodyAlreadyBound:
+      "Desktop WebChat is already bound to a different phone. To switch devices, click \"Reset binding\" in the desktop WebChat panel, then re-scan with this phone.",
     bodyServerClosed:
       "Desktop TypeBridge has disconnected the WebChat session or the app has quit. Restart the session on the desktop and scan again.",
     bodyUnknown: "Session in an unexpected state — restart the WebChat session on the desktop.",

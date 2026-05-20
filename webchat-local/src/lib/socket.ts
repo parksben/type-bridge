@@ -1,8 +1,10 @@
 // socket.io 客户端封装。
 //
-// 与 Rust 侧 webchat_server.rs 的协议对齐：
-//   connect → emit("hello", {otp, clientId, ua}) with ack → {ok, userToken, sessionId} 或 {ok:false, reason}
-//   emit("text", {userToken, clientMessageId, text}) with ack → {success, reason?}
+// 与 Rust 侧 webchat_server.rs 的 v3 协议对齐（去 OTP）：
+//   connect → emit("hello", {sessionId, clientId, ua}) with ack →
+//     成功：{ok:true, userToken, sessionId}
+//     失败：{ok:false, reason: SESSION_NOT_FOUND | OUT_OF_LAN | ALREADY_BOUND | ...}
+//   emit("text",  {userToken, clientMessageId, text})  with ack → {success, reason?}
 //   emit("image", {userToken, clientMessageId, data, mime}) with ack → {success, reason?}
 //
 // 内置：重连（io-client 默认指数退避）、心跳（engine.io 协议自带）、断开回调。
@@ -63,23 +65,15 @@ export class WebChatClient {
   }
 
   /**
-   * 监听 server 推送的 OTP 轮换通知（每 60s 一次）。
-   * 回调接收新 OTP 明文，调用方负责更新 URL。
-   * 仅认证成功（hello ok）的连接才会收到此事件。
+   * v3 握手：送 sessionId + clientId 给 server 校验，返回 userToken。
+   *
+   * Server 端做 3 道关：sessionId 匹配 → LAN 同子网 → bound_client 单设备哨兵。
+   * 失败 reason：`SESSION_NOT_FOUND` / `OUT_OF_LAN` / `ALREADY_BOUND` / `LOCK_POISONED`。
    */
-  onOtpRefresh(callback: (newOtp: string) => void): () => void {
-    const handler = (payload: { otp: string }) => {
-      if (payload?.otp) callback(payload.otp);
-    };
-    this.socket.on("otp-refresh", handler);
-    return () => this.socket.off("otp-refresh", handler);
-  }
-
-  /** 握手：送 OTP 给 server 校验，返回 userToken */
-  async hello(otp: string, clientId: string): Promise<HelloAck> {
+  async hello(sessionId: string, clientId: string): Promise<HelloAck> {
     return new Promise((resolve) => {
       const payload = {
-        otp,
+        sessionId,
         clientId,
         ua: simplifyDeviceLabel(),
       };
