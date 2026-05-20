@@ -24,6 +24,7 @@ type ErrorReason =
   | "out-of-lan"
   | "already-bound"
   | "server-closed"
+  | "user-disconnected"
   | "unknown";
 
 export default function App() {
@@ -82,6 +83,14 @@ function NormalApp() {
         if (s === "connected") {
           helloAttemptedRef.current = false;
         }
+      },
+      onKicked: () => {
+        // v4：桌面端主动停止 / 重置绑定 → server 广播 `kicked`。
+        // 走跟用户主动断完全相同的清理：清本地 binding + 清 URL ?s=
+        // （刷新页面不会用旧 sessionId 自动重连）+ 跳 server-closed 错误页。
+        clearBinding();
+        window.history.replaceState(null, "", window.location.pathname);
+        setState({ kind: "error", reason: "server-closed" });
       },
     });
     clientRef.current = client;
@@ -217,7 +226,18 @@ function NormalApp() {
     if (!clientRef.current) {
       return <ErrorScreen reason="unknown" detail={t("app.socketNotReady")} />;
     }
-    return <ChatPage client={clientRef.current} />;
+    return (
+      <ChatPage
+        client={clientRef.current}
+        onUserDisconnect={() => {
+          // v3：用户在 ChatPage 主动断连后，本地清 binding 并切到 user-disconnected 错误页
+          clearBinding();
+          // v4：同时把 URL 里的 ?s=<sid> 清掉，避免刷新页面后又用旧 sessionId 自动重连
+          window.history.replaceState(null, "", window.location.pathname);
+          setState({ kind: "error", reason: "user-disconnected" });
+        }}
+      />
+    );
   }
 
   return <ErrorScreen reason={state.reason} detail={state.detail} />;

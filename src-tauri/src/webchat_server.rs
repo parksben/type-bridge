@@ -82,6 +82,8 @@ pub struct WebChatServer {
     cancel: CancellationToken,
     /// server 主 task（stop 时 take 出来 await）
     handle: SyncMutex<Option<JoinHandle<()>>>,
+    /// Socket.IO 句柄，stop 时用来主动踢掉所有连着的手机 socket
+    io: SocketIo,
     /// 启动后对外可见的元数据
     pub port: u16,
     pub lan_ip: IpAddr,
@@ -258,6 +260,7 @@ impl WebChatServer {
             state,
             cancel,
             handle: SyncMutex::new(Some(handle)),
+            io,
             port,
             lan_ip,
             wifi_name,
@@ -269,6 +272,13 @@ impl WebChatServer {
     pub async fn stop(&self) {
         // 先把 pending 的 ack 都以"已停止"回掉，避免手机一直转圈
         self.cancel_all_pending_acks();
+        // v4：桌面端主动停止 → 显式给所有连着的手机 socket 广播 `kicked` 事件，
+        // 紧接着主动 disconnect 这些 socket。这样手机端能立刻收到信号跳到
+        // server-closed 错误页 + 清掉 URL 上的 sessionId，刷新也不会再连回来。
+        // 不靠 axum graceful shutdown 的 TCP RST，避免某些环境下手机 io-client
+        // 不立刻察觉的问题。
+        let _ = self.io.emit("kicked", &());
+        let _ = self.io.disconnect();
         self.cancel.cancel();
         let h = {
             let mut guard = self.handle.lock().unwrap();
@@ -414,6 +424,13 @@ enum HelloAck {
         ok: bool,
         reason: &'static str,
     },
+}
+
+/// v3：手机端主动断连协议消息。userToken 用来防止其他设备恶意触发断连。
+#[derive(Debug, Deserialize)]
+struct ByeMsg {
+    #[serde(rename = "userToken")]
+    user_token: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -577,6 +594,36 @@ async fn on_connect(socket: SocketRef) {
                 }
                 Err(reason) => {
                     let _ = ack.send(&HelloAck::Err { ok: false, reason });
+                }
+            }
+        },
+    );
+
+    // bye（v3）：手机端用户主动断连。校验 userToken 后立即清 bindings + bound_client，
+    // 通知桌面 UI 即时刷新（不必等 on_disconnect 的 ~3-5s socket close 延迟），
+    // 然后关闭手机 socket。失败时 ack 失败但不动状态。
+    socket.on(
+        "bye",
+        |socket: SocketRef,
+         Data::<ByeMsg>(msg),
+         ack: AckSender,
+         State(state): State<Arc<ServerState>>| async move {
+            match handle_bye(&msg, state.clone()) {
+                Ok(()) => {
+                    let _ = ack.send(&GenericAck {
+                        success: true,
+                        reason: None,
+                    });
+                    // 通知桌面 UI 状态变化
+                    (state.notify_bind_change)();
+                    // 主动关闭 socket，确保手机端立刻拿到 disconnected 信号
+                    let _ = socket.disconnect();
+                }
+                Err(reason) => {
+                    let _ = ack.send(&GenericAck {
+                        success: false,
+                        reason: Some(reason),
+                    });
                 }
             }
         },
@@ -951,7 +998,42 @@ async fn handle_hello(
         );
     }
 
+    // v3 fix（BUG1+4）：hello 成功也要通知桌面 UI 刷新快照。
+    // 此前只在 on_disconnect / idle-evict 时回调，导致手机扫码成功 / 刷新重连后
+    // 桌面端 UI 直到切 tab 触发重渲染才看到新的 bound_client 状态。
+    (state.notify_bind_change)();
+
     Ok(user_token)
+}
+
+/// v3：手机端主动断连处理。校验 userToken 后清掉对应 binding，
+/// 若 bindings 已空则释放 bound_client（允许其他设备重新绑定）。
+/// 注意：socket 关闭和 notify_bind_change 由调用方负责。
+fn handle_bye(msg: &ByeMsg, state: Arc<ServerState>) -> Result<(), String> {
+    // 1. 校验 userToken 必须属于当前 bindings 中的某条记录
+    verify_user_token(&msg.user_token, &state)?;
+
+    // 2. 移除对应 binding，并在 bindings 清空时同步释放 bound_client
+    let token_hash = sha256_hash(msg.user_token.as_bytes());
+    {
+        let mut bindings = state.bindings.lock().map_err(|_| "LOCK_POISONED")?;
+        let before = bindings.len();
+        bindings.retain(|b| b.user_token_hash != token_hash);
+        let after = bindings.len();
+        tracing::info!(
+            "[webchat] bye: bindings shrank from {} to {}",
+            before,
+            after
+        );
+
+        if after == 0 {
+            if let Ok(mut bc) = state.bound_client.lock() {
+                *bc = None;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 async fn handle_text(msg: &TextMsg, state: Arc<ServerState>) -> Result<String, String> {

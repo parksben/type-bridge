@@ -29,6 +29,12 @@ export interface ConnectOptions {
   /** socket.io server 绝对地址；默认同源（空字符串让 client 连 window.location） */
   url?: string;
   onStatusChange?: (s: ClientStatus) => void;
+  /**
+   * v4：桌面端主动停止 server / 重置绑定时会广播 `kicked` 事件。
+   * 收到后调用方应：清本地 binding + 清 URL ?s= + 跳 server-closed 错误页。
+   * 这是单向通知，无 ack。
+   */
+  onKicked?: () => void;
 }
 
 export class WebChatClient {
@@ -53,6 +59,10 @@ export class WebChatClient {
       this.socket.on("disconnect", () => s("disconnected"));
       this.socket.io.on("reconnect_attempt", () => s("reconnecting"));
       this.socket.io.on("reconnect", () => s("connected"));
+    }
+
+    if (opts.onKicked) {
+      this.socket.on("kicked", opts.onKicked);
     }
   }
 
@@ -89,6 +99,34 @@ export class WebChatClient {
           }
           resolve(ack);
         });
+    });
+  }
+
+  /**
+   * v3：手机端主动断连。校验 userToken 后 server 会立即清掉对应 binding +
+   * 通知桌面 UI + 关闭 socket。无需依赖 socket close 的 3-5s 延迟。
+   *
+   * 行为：调用方应在 ack 成功后切到 user-disconnected 状态。
+   * 失败时（极少：未握手 / 网络超时）也建议本地清 binding 让用户重新扫码。
+   */
+  async bye(): Promise<MessageAck> {
+    if (!this.userToken) {
+      return { success: false, reason: t("socket.notHandshaked") };
+    }
+    return new Promise((resolve) => {
+      this.socket
+        .timeout(5000)
+        .emit(
+          "bye",
+          { userToken: this.userToken },
+          (err: unknown, ack: MessageAck) => {
+            if (err) {
+              resolve({ success: false, reason: t("socket.timeout") });
+              return;
+            }
+            resolve(ack ?? { success: false, reason: t("socket.serverNoResponse") });
+          },
+        );
     });
   }
 

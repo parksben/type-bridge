@@ -15,7 +15,7 @@ export const ZH = {
 
   sidebar: {
     connection: "连接手机",
-    link: "连接聊天应用",
+    link: "连接聊天",
     input: "自动提交",
     history: "历史消息",
     logs: "系统日志",
@@ -61,7 +61,6 @@ export const ZH = {
   },
 
   connectionHub: {
-    introWebchat: "扫码配对，手机变身桌面鼠标键盘",
     introIM: "给聊天应用的机器人发消息，自动写入桌面当前聚焦输入框",
   },
 
@@ -169,13 +168,12 @@ export const ZH = {
 
     // ── v3 已绑定态：设备卡片 ──
     boundTitle: "已绑定设备",
-    boundSubtitle: "一次扫码长期生效，下次直接连上不用再扫。",
+    boundSubtitle: "仅支持单台设备连接",
     boundDevicePrefix: "当前设备：",
     boundUaLabel: "User-Agent",
     boundAtLabel: "绑定时间",
     boundClientIdLabel: "客户端 ID",
-    resetBinding: "解除绑定并重新扫码",
-    resetBindingHint: "解除后需要用手机重新扫码才能继续使用。",
+    resetBinding: "断开连接",
 
     // ── 实时连线徽标 ──
     liveOnline: "手机在线",
@@ -413,7 +411,6 @@ export const EN: Dict = {
   },
 
   connectionHub: {
-    introWebchat: "Scan to pair — turn your phone into a mouse and keyboard",
     introIM: "Send a message to your bot — it types into the focused input for you",
   },
 
@@ -521,13 +518,12 @@ export const EN: Dict = {
 
     // ── v3 bound view: device card ──
     boundTitle: "Device bound",
-    boundSubtitle: "One scan, long-lived binding. Reconnect automatically next time.",
+    boundSubtitle: "This device is bound to the current WebChat session. No other device can take over while it's active.",
     boundDevicePrefix: "Current device: ",
     boundUaLabel: "User-Agent",
     boundAtLabel: "Bound at",
     boundClientIdLabel: "Client ID",
-    resetBinding: "Unbind & re-scan",
-    resetBindingHint: "Unbinding requires scanning the QR with your phone again.",
+    resetBinding: "Disconnect",
 
     // ── live indicator ──
     liveOnline: "Phone online",

@@ -21,9 +21,10 @@ const ZH = {
     titleOutOfLan: "请回到同一 WiFi",
     titleAlreadyBound: "已被其他设备绑定",
     titleServerClosed: "桌面端 WebChat 已关闭",
+    titleUserDisconnected: "已断开连接",
     titleUnknown: "出错了",
     bodyNoSession:
-      "当前链接没有会话信息。请在桌面打开 TypeBridge，进入「连接 TypeBridge → WebChat」，点「启动会话」后用这台手机扫描桌面上的二维码。",
+      "请在桌面端打开 TypeBridge，进入「连接手机」，扫描页面中的二维码。",
     bodySessionNotFound:
       "这个二维码对应的会话已经失效（可能是桌面端重置过绑定，或者重启了 WebChat）。请回到桌面 TypeBridge，重新生成二维码后扫描。",
     bodyOutOfLan:
@@ -32,6 +33,7 @@ const ZH = {
       "桌面端 WebChat 已经绑定了另一台手机。如果要换设备，请在桌面 TypeBridge 的 WebChat 面板上点「重置绑定」，然后再用这台手机重新扫码。",
     bodyServerClosed:
       "桌面端 TypeBridge 已断开 WebChat 连接或应用已退出。请在桌面重新「启动会话」后扫码。",
+    bodyUserDisconnected: "你已主动断开本次连接。重新扫描桌面二维码即可继续使用。",
     bodyUnknown: "会话状态异常，请在桌面重新启动 WebChat 会话。",
   },
 
@@ -45,6 +47,8 @@ const ZH = {
     sendTextOnly: "仅发送内容",
     sendTextAndEnter: "发送并提交",
     cancelSend: "暂不发送",
+    disconnect: "断开",
+    disconnectAriaLabel: "断开与桌面的连接",
   },
 
   composer: {
@@ -156,9 +160,10 @@ const EN: Dict = {
     titleOutOfLan: "Rejoin the same WiFi",
     titleAlreadyBound: "Another phone is bound",
     titleServerClosed: "Desktop WebChat closed",
+    titleUserDisconnected: "Disconnected",
     titleUnknown: "Something went wrong",
     bodyNoSession:
-      "No session info in this link. Open TypeBridge on your desktop, go to \"Connect TypeBridge → WebChat\", click \"Start session\", and scan the QR with this phone.",
+      "Open TypeBridge on your desktop, go to \"Connect phone\", and scan the QR code on the page.",
     bodySessionNotFound:
       "This QR code's session is no longer valid — the desktop probably reset its binding or restarted WebChat. Generate a fresh QR in desktop TypeBridge and scan again.",
     bodyOutOfLan:
@@ -167,6 +172,7 @@ const EN: Dict = {
       "Desktop WebChat is already bound to a different phone. To switch devices, click \"Reset binding\" in the desktop WebChat panel, then re-scan with this phone.",
     bodyServerClosed:
       "Desktop TypeBridge has disconnected the WebChat session or the app has quit. Restart the session on the desktop and scan again.",
+    bodyUserDisconnected: "You disconnected this session. Scan the desktop QR again to reconnect.",
     bodyUnknown: "Session in an unexpected state — restart the WebChat session on the desktop.",
   },
 
@@ -180,6 +186,8 @@ const EN: Dict = {
     sendTextOnly: "Send only",
     sendTextAndEnter: "Send & submit",
     cancelSend: "Cancel",
+    disconnect: "Disconnect",
+    disconnectAriaLabel: "Disconnect from desktop",
   },
 
   composer: {

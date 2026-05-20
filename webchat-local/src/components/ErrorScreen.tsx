@@ -1,4 +1,4 @@
-import { AlertCircle, QrCode, Wifi, ShieldAlert, RefreshCw } from "lucide-react";
+import { AlertCircle, QrCode, Wifi, ShieldAlert, RefreshCw, LogOut } from "lucide-react";
 import { t } from "@/i18n";
 
 type Reason =
@@ -7,6 +7,7 @@ type Reason =
   | "out-of-lan"
   | "already-bound"
   | "server-closed"
+  | "user-disconnected"
   | "unknown";
 
 type Props = {
@@ -21,6 +22,7 @@ function titleOf(r: Reason): string {
     case "out-of-lan": return t("error.titleOutOfLan");
     case "already-bound": return t("error.titleAlreadyBound");
     case "server-closed": return t("error.titleServerClosed");
+    case "user-disconnected": return t("error.titleUserDisconnected");
     default: return t("error.titleUnknown");
   }
 }
@@ -32,6 +34,7 @@ function bodyOf(r: Reason): string {
     case "out-of-lan": return t("error.bodyOutOfLan");
     case "already-bound": return t("error.bodyAlreadyBound");
     case "server-closed": return t("error.bodyServerClosed");
+    case "user-disconnected": return t("error.bodyUserDisconnected");
     default: return t("error.bodyUnknown");
   }
 }
@@ -65,6 +68,12 @@ export default function ErrorScreen({ reason, detail }: Props) {
           Icon: RefreshCw,
           tone: "color-mix(in srgb, var(--tb-danger) 10%, transparent)",
           color: "text-[var(--tb-danger)]",
+        };
+      case "user-disconnected":
+        return {
+          Icon: LogOut,
+          tone: "var(--tb-accent-soft)",
+          color: "text-[var(--tb-accent)]",
         };
       default:
         return {
