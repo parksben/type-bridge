@@ -46,7 +46,7 @@
 
 | event | payload | ack | 备注 |
 |---|---|---|---|
-| `hello` | `{otp, clientId}` | `{ok:true,userToken,wifiName}` 或 `{ok:false,reason}` | OTP 握手，签发 userToken |
+| `hello` | `{clientId, ua?}` | `{ok:true,userToken,wifiName,deviceName}` 或 `{ok:false,reason}` | LAN 绑定握手；server 校验来源 IP 同子网 + sessionId 未被占用，通过后签发 userToken |
 | `text` | `{clientMessageId, text, submit?}` | `{success, reason?}` | `submit:true` → 注入后额外执行一次提交组合键；缺省视为 `false` |
 | `image` | `{clientMessageId, data:base64, mime}` | `{success, reason?}` | |
 | `key` | `{clientMessageId, code}` | `{success, reason?}` | 单键，`code` 受 `ALLOWED_KEY_CODES` 白名单，入队，详见 §35.11 |
@@ -61,7 +61,20 @@
 
 | event | payload |
 |---|---|
-| `session_closed` | `{reason:"server_stopped"\|"session_expired"\|"kicked"}` |
+| `session_closed` | `{reason:"server_stopped"\|"session_reset"\|"kicked"}` |
+
+**`hello` 拒绝 reason 取值**（前端按值给用户对应提示）：
+
+| reason | 说明 | 前端提示 |
+|---|---|---|
+| `OUT_OF_LAN` | 请求来源 IP 不在本机任一网卡所在子网内 | "请确保手机与电脑连同一 WiFi" |
+| `ALREADY_BOUND` | sessionId 已被其他设备绑定 | "该会话已绑定其他设备，请桌面端点'重置二维码'后再扫" |
+| `SESSION_NOT_FOUND` | sessionId 与 server 当前不匹配（极端情况：旧 QR 截图扫到新会话） | "二维码已失效，请用桌面端最新的二维码" |
+
+**协议变化 vs. v2**：
+- `hello` payload 去掉 `otp` 字段
+- 不再有 `session_expired` 类 reason —— sessionId 长期稳定，没有"过期"概念
+- 新增 `OUT_OF_LAN` / `ALREADY_BOUND` 两个 reason，对应新安全模型
 
 **好处 vs. 原生 WebSocket**：
 - 重连：`io.connect({reconnection: true})` 内置指数退避
@@ -69,77 +82,104 @@
 - ack：`socket.emit(event, data, ackCb)` 自带 RPC 语义，替代自定义 clientMessageId 追踪
 - 多设备：服务端 `io.to("session_xxx").emit(...)` 房间机制 broadcast
 
-### 35.3 内存模型（Rust 侧）
+### 35.3 内存模型 + 持久化（Rust 侧）
 
-**Session**（单会话单 instance；启动会话即创建，停止即销毁）：
+**v3 关键变化**：sessionId 持久化到 settings.json，OTP 整套移除。
+
+**持久化字段**（`Settings.webchat_session_id`）：
+- 首次启动时 server 生成 `ses_<random>` 并写入 settings；之后启动始终复用
+- 用户主动"重置二维码"才重新生成并落盘
+- 这是"二维码长期稳定"的实现基础
+
+**Session**（单会话单 instance；启动会话即从 settings 加载，停止即销毁内存态）：
 
 ```rust
 struct WebChatSession {
-    session_id: String,           // ses_<random>
-    otp_hash: [u8; 32],           // sha256(otp)
-    otp_plain: String,            // 仅在内存，UI 展示用
-    otp_attempts: u8,             // 0..5
-    otp_locked: bool,
+    session_id: String,           // 从 settings.webchat_session_id 加载
     created_at: Instant,
-    expires_at: Instant,          // created + 5min（未握手前）
-    bindings: HashMap<String, ClientBinding>, // clientId -> 绑定信息
+    bound_client: Option<ClientBinding>, // 至多一台（一次绑定语义）
 }
 
 struct ClientBinding {
+    client_id: String,            // 手机端生成的稳定 ID
     user_token_hash: [u8; 32],
     bound_at: Instant,
+    bound_from_ip: IpAddr,        // 记录绑定来源 IP，仅日志/UI 展示
     ua: String,                   // 简化展示用
     socket_id: Option<String>,    // socketioxide 的 SocketRef
 }
 ```
 
-**不持久化**：进程退出全部消失。
+**OtpState 整体移除**：v2 的 `Mutex<OtpState>` 字段、`rotate_otp()` 方法、`otp_attempts` 锁定逻辑、OTP 60s 轮换定时器全部删除。
+
 
 ### 35.4 桌面端 webchat.rs + webchat_server.rs
 
 **生命周期管理**：
-- 启动："启动会话" command → `WebChatServer::start`
-- 停止："停止会话" command → `stop()` + drop session
+- 启动：`start_webchat` command → 读 `settings.webchat_session_id`（若空则生成并落盘）→ `WebChatServer::start(session_id)`
+- 停止：`stop_webchat` command → `stop()` + drop session（**不**清 settings 里的 sessionId）
 - 应用退出：`tauri::Builder.on_window_event(CloseRequested)` → 调 `stop()`
 - Drop：`impl Drop for WebChatServer` 调 `cancel.cancel()`（同步，tokio task 会在后台清理）
 - 端口冲突：8723→8732 递增尝试；全占报错给 UI
 
-**OTP 轮换语义（vs. server 重启）**：
+**sessionId 重置语义**（替代 v2 的 OTP 轮换）：
 
-把"轮换 OTP"和"重启 server"拆成两个独立操作：
-
-| 操作 | 改动 | 保留 |
-|---|---|---|
-| `rotate_otp` | 新 `otp_plain` / `otp_hash` / `expires_at_unix_ms` + 重置 `otp_attempts` / `otp_locked` | `session_id`、`bindings`、`port`、`lan_ip`、server task 本身 |
-| `stop_webchat` | 整个 server drop，所有 bindings 清空，`pending_acks` 全部以 failure 回调 | 无 |
-
-`session_id` 是绑在 QR URL 里（`/?s=ses_XXX&otp=XXXXXX`）的，**OTP 也随 QR 一起刷新**：轮换 OTP 时 `qr_url()` 返回带新 OTP 的 URL，桌面自动重新渲染 QR，手机只要重新扫码即可完成握手，**无需手动输入验证码**。
-
-**QR 过期场景**（极罕见）：如果手机扫码成功但在 Socket.IO 握手前 OTP 恰好换轮，server 会返回 `SESSION_EXPIRED`，移动端 SPA 自动显示"二维码已过期，请重新扫码"提示，不需要用户做任何其他操作。
-
-实现上把 OTP 相关字段合并进一个 `Mutex<OtpState>`，`rotate_otp()` 一把锁全量替换：
-
-```rust
-struct OtpState {
-    plain: String,
-    hash: [u8; 32],
-    expires_at_ms: i64,
-    attempts: u8,
-    locked: bool,
-}
-
-impl WebChatServer {
-    pub fn rotate_otp(&self) {
-        let plain = generate_otp();
-        let hash = sha256_hash(plain.as_bytes());
-        let expires_at_ms = now_ms() + SESSION_TTL_SECS as i64 * 1000;
-        let mut g = self.state.otp.lock().unwrap();
-        *g = OtpState { plain, hash, expires_at_ms, attempts: 0, locked: false };
-    }
-}
+```
+[bound 状态] 点击「重置二维码」
+    │
+    ▼ Tauri command: webchat_reset_session
+    │
+    ├─ 1. server.emit(session_closed { reason: "session_reset" }) 给当前 socket
+    ├─ 2. server.bound_client = None（解绑）
+    ├─ 3. 生成新 ses_<random>
+    ├─ 4. settings.webchat_session_id = new_id（落盘）
+    ├─ 5. server.session_id = new_id
+    └─ 6. emit `typebridge://webchat-session-update` 给桌面前端 → 切回 QR 主视觉
 ```
 
-UI 触发：前端 `WebChatConnectionTab` 用 setInterval 维持 1Hz 倒计时（用于驱动 QR 周围的进度环动画），`remainingSecs === 0` 时自动 `invoke("webchat_rotate_otp")`，Tauri command 调 `rotate_otp()` + emit `typebridge://webchat-session-update` 刷新 snapshot，前端拿到新 `qr_url`（含新 OTP），重新渲染 QR + 进度环回满。**桌面 UI 不再展示 OTP 数字/倒计时文字**，仅凭进度环暗示有效期。
+**handle_hello 流程**（替代 v2 的 OTP 校验）：
+
+```rust
+async fn handle_hello(
+    sock: SocketRef,
+    payload: HelloPayload,
+    state: Arc<WebChatState>,
+) -> HelloAck {
+    // 1. LAN-only 校验
+    let remote_ip = sock.req_parts().and_then(extract_client_ip);
+    if !lan::is_same_subnet(&remote_ip, &state.local_ips) {
+        log::warn!("[webchat] reject hello from {remote_ip:?}: OUT_OF_LAN");
+        return HelloAck::reject("OUT_OF_LAN");
+    }
+
+    // 2. 一次绑定校验
+    let mut guard = state.session.lock().unwrap();
+    if guard.bound_client.is_some() {
+        return HelloAck::reject("ALREADY_BOUND");
+    }
+
+    // 3. 签发 userToken + 写入 bound_client
+    let user_token = generate_user_token();
+    guard.bound_client = Some(ClientBinding {
+        client_id: payload.client_id,
+        user_token_hash: sha256(user_token.as_bytes()),
+        bound_at: Instant::now(),
+        bound_from_ip: remote_ip,
+        ua: payload.ua.unwrap_or_default(),
+        socket_id: Some(sock.id.to_string()),
+    });
+    drop(guard);
+
+    // 4. 触发 phase 事件给桌面前端 → 主视觉切「已连接」
+    state.emit_session_update(SessionPhase::Bound);
+
+    HelloAck::ok(HelloOk {
+        user_token,
+        wifi_name: state.wifi_name.clone(),
+        device_name: derive_device_name(&payload.ua),
+    })
+}
+```
 
 **axum router 关键顺序**：
 
@@ -154,6 +194,14 @@ let app = axum::Router::new()
 ```
 
 **ack 回流**：queue worker 注入完成后 emit 全局 `typebridge://message-status` 事件，webchat_server 订阅该事件根据 clientMessageId 找到对应 `AckSender` 回调给手机。
+
+**phase 事件可靠性（修 v0.2.x B 段录制时发现的 bug）**：
+
+桌面前端依赖 `typebridge://webchat-session-update` event 切换主视觉。**v2 实现里这个 event 只在 `rotate_otp` / `start` / `stop` 时 emit，绑定成功瞬间没有显式 emit**，导致手机已绑定但桌面 UI 仍停留在 pending 主视觉。v3 修复：
+
+- `handle_hello` 成功签发 token 后**显式 emit** `webchat-session-update { phase: bound }`
+- `handle_disconnect`（socket 掉线）后**显式 emit** `webchat-session-update { phase: pending }`
+- 桌面端 `MainWindow.tsx` 的 `un4` 订阅同时维护 `channelConnected.webchat`（已实现）+ 新增 `webchatPhase` 给 ConnectionHub 切换主视觉用
 
 ### 35.5 webchat_net.rs（LAN IP + WiFi SSID）
 
@@ -208,11 +256,17 @@ webchat-local/
 ```
 loading → 读 URL ?s=<sessionId> 并 UA 检查
   ├─ PC UA           → PCBlockView
-  └─ Mobile UA       → Handshake
-                        └─ OTP 正确 → Chat
-                        └─ OTP 错 5 次 → ErrorScreen("locked")
-                        └─ 桌面断开 → ErrorScreen("disconnected")
+  └─ Mobile UA       → 直接发 hello（无 OTP 输入页）
+                        ├─ ok                → ConnectedHero 动效（脉冲圈 → ✓，~1.2s） → Chat
+                        ├─ OUT_OF_LAN        → ErrorScreen("not_lan")
+                        ├─ ALREADY_BOUND     → ErrorScreen("already_bound")
+                        ├─ SESSION_NOT_FOUND → ErrorScreen("session_invalid")
+                        └─ 桌面断开          → ErrorScreen("disconnected")
 ```
+
+**保活（visibilitychange）**：手机锁屏 / 切后台时 Socket.IO 不会主动断，但有些 OS / WiFi 路由器会回收空闲 TCP；前端在 `document.visibilitychange === "visible"` 时检查 socket 状态，断了就 `socket.connect()` 重连一次，复用已有 userToken 不需要重新走 hello。
+
+**`HandshakeForm.tsx` 整组件移除**：v3 不再有 OTP 输入页，6 位输入框 / 验证逻辑 / `OTP_LOCKED` 错误态全部砍。
 
 **语音入口已下线**：早期版本曾在输入栏内放 `VoiceButton`，点击弹 `VoiceHintModal` 引导用户用输入法麦克风。该按钮 + 弹层均已**整体移除**——它本身不做任何事，只起"教用户去点系统键盘麦克风"的作用，但反而让 WebChat 看起来像有语音功能、点了又什么都没发生，造成误解。
 
@@ -263,12 +317,27 @@ SPA 内 socket.io-client 看到 ?apiPort=8723 → 显式连 8723
 - 命中 → `WebChatClient({ url: "http://" + window.location.hostname + ":" + apiPort })`
 - 缺失（生产）→ `WebChatClient({})` 同源连接
 
-### 35.8 安全模型
+### 35.8 安全模型（v3）
 
-- OTP 只在桌面内存（明文 + hash）；进程退出即消失
+**两道防线**：
+
+1. **LAN-only 绑定**：`handle_hello` 校验请求来源 IP 是否落在本机任一网卡的子网内。实现：
+   - `webchat_net.rs` 启动时枚举所有 IPv4 网卡，记录 `(ip, prefix_len)` 列表
+   - hello 时取 socket remote IP，遍历本机网卡判断是否同 /24（或网卡声明的实际 prefix）
+   - 不在任何子网内的请求 → `OUT_OF_LAN` 拒绝
+   - **拒绝粒度**：仅拒绝 hello（绑定握手），HTTP 静态资源不拦截（不影响他人查看 PCBlockView 的友好引导）
+2. **一次绑定 + 显式重置**：sessionId 至多绑一台手机，桌面 UI 提供"重置二维码"按钮显式解绑 + 换 ID。
+
+**其他安全约束**：
 - ownerToken 概念删除（不再有 owner/user 对等关系，桌面直接持 session 状态）
 - userToken 每次握手独立签发（32 字节 base64url），仅通过 Socket.IO ack 传回给对应设备；中间人无法劫持（局域网 ARP 攻击除外，视作可接受风险）
 - server 绑 LAN IP 不绑 0.0.0.0：`bind(lan_ip)` 更安全；如果用户切换 WiFi 则 server 失效需要重启
+- sessionId 落 settings.json 是**用户可清除的**：删 settings 即重置，无任何隐藏副作用
+
+**v2 → v3 砍掉的能力**：
+- OTP（6 位数字 + 60s 轮换 + 5 次错误锁定 + sha256 hash 存储） → **整体移除**
+- "OTP 已过期" 错误态 → **不复存在**
+- 多手机同 sessionId 绑定 → **拒绝**（改为"重置二维码 → 新会话"的显式流程）
 
 ### 35.9 已解决的历史痛点
 
