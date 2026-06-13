@@ -36,6 +36,21 @@ fn default_true() -> bool {
     true
 }
 
+/// 单条快捷输入条目（snippet）。trigger 只存裸 key（不含 `/` 或 `$` 前缀），
+/// `/key` 与 `$key` 两种语法共用同一份 content。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Snippet {
+    /// uuid v4，前端增删定位用。
+    pub id: String,
+    /// 触发词 key，匹配 `[A-Za-z0-9_]+`，不含前缀。
+    pub trigger: String,
+    /// 展开文本，可多行。
+    pub content: String,
+    /// 单条启用开关。
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default)]
@@ -65,6 +80,15 @@ pub struct Settings {
     /// 取值：`""` / `"zh"` / `"en"`。
     #[serde(default)]
     pub language: String,
+    /// 快捷输入功能总开关。默认开启。
+    #[serde(default = "default_true")]
+    pub quick_input_enabled: bool,
+    /// 快捷输入 key 匹配是否区分大小写。默认不区分。
+    #[serde(default)]
+    pub quick_input_case_sensitive: bool,
+    /// 快捷输入条目列表。
+    #[serde(default)]
+    pub snippets: Vec<Snippet>,
 }
 
 impl Default for Settings {
@@ -79,6 +103,9 @@ impl Default for Settings {
             auto_submit: true,
             submit_key: SubmitKey::default(),
             language: String::new(),
+            quick_input_enabled: true,
+            quick_input_case_sensitive: false,
+            snippets: Vec::new(),
         }
     }
 }
@@ -128,6 +155,18 @@ pub fn get_settings(app: tauri::AppHandle<Wry>) -> Settings {
             .get("language")
             .and_then(|v| v.as_str().map(String::from))
             .unwrap_or_default(),
+        quick_input_enabled: store
+            .get("quick_input_enabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true),
+        quick_input_case_sensitive: store
+            .get("quick_input_case_sensitive")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        snippets: store
+            .get("snippets")
+            .and_then(|v| serde_json::from_value::<Vec<Snippet>>(v).ok())
+            .unwrap_or_default(),
     }
 }
 
@@ -146,10 +185,24 @@ pub fn save_settings(app: tauri::AppHandle<Wry>, settings: Settings) -> Result<(
         serde_json::to_value(&settings.submit_key).map_err(|e| e.to_string())?,
     );
     store.set("language", settings.language.clone());
+    store.set("quick_input_enabled", settings.quick_input_enabled);
+    store.set(
+        "quick_input_case_sensitive",
+        settings.quick_input_case_sensitive,
+    );
+    store.set(
+        "snippets",
+        serde_json::to_value(&settings.snippets).map_err(|e| e.to_string())?,
+    );
     store.save().map_err(|e| e.to_string())?;
 
     if let Some(ctx) = app.try_state::<Arc<AppContext>>() {
         ctx.set_submit_config(settings.auto_submit, settings.submit_key);
+        ctx.set_quick_input_config(
+            settings.quick_input_enabled,
+            settings.quick_input_case_sensitive,
+            settings.snippets.clone(),
+        );
 
         // 语言改了的话，正在跑的 WebChat 会话需要把 QR URL 里的 &lang= 同步刷新，
         // 否则手机扫到的还是旧 QR（embed 了切换前的语言）。snapshot 现在会读最新的

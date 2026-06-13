@@ -78,7 +78,34 @@ pub fn run() {
                     None => sidecar::SubmitConfig::default(),
                 }
             };
-            let ctx = AppContext::new(app.handle().clone(), submit_config);
+            let quick_input_config = {
+                use tauri_plugin_store::StoreExt;
+                match app.store("config.json").ok() {
+                    Some(s) => {
+                        let enabled = s
+                            .get("quick_input_enabled")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true);
+                        let case_sensitive = s
+                            .get("quick_input_case_sensitive")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        let snippets = s
+                            .get("snippets")
+                            .and_then(|v| {
+                                serde_json::from_value::<Vec<store::Snippet>>(v).ok()
+                            })
+                            .unwrap_or_default();
+                        sidecar::QuickInputConfig {
+                            enabled,
+                            case_sensitive,
+                            snippets,
+                        }
+                    }
+                    None => sidecar::QuickInputConfig::default(),
+                }
+            };
+            let ctx = AppContext::new(app.handle().clone(), submit_config, quick_input_config);
             app.manage(ctx);
 
             // 注册全局 ack 桥接：injection queue 的 message-status → WebChat Socket.IO ack

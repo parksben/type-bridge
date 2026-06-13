@@ -218,6 +218,8 @@ pub struct ChannelImagePayload {
 /// 应用共享上下文 — 用 tauri::Manager::manage 注入，每个 field 自行并发控制
 pub struct AppContext {
     pub submit_config: Arc<Mutex<SubmitConfig>>,
+    /// 快捷输入运行时配置（开关 + 大小写敏感 + 条目）。worker 注入文本前读它做展开。
+    pub quick_input: Arc<Mutex<QuickInputConfig>>,
     pub history: Arc<HistoryStore>,
     pub injector: Arc<Injector>,
     pub bridges: Arc<SidecarBridges>,
@@ -243,23 +245,44 @@ impl Default for SubmitConfig {
     }
 }
 
+/// 快捷输入运行时配置。从 Settings 镜像而来，注入文本前用于 `/key` / `$key` 展开。
+pub struct QuickInputConfig {
+    pub enabled: bool,
+    pub case_sensitive: bool,
+    pub snippets: Vec<crate::store::Snippet>,
+}
+
+impl Default for QuickInputConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            case_sensitive: false,
+            snippets: Vec::new(),
+        }
+    }
+}
+
 impl AppContext {
     pub fn new<R: Runtime>(
         app: AppHandle<R>,
         initial_submit: SubmitConfig,
+        initial_quick_input: QuickInputConfig,
     ) -> Arc<Self> {
         let history = HistoryStore::open();
         let submit_config = Arc::new(Mutex::new(initial_submit));
+        let quick_input = Arc::new(Mutex::new(initial_quick_input));
         let bridges: Arc<SidecarBridges> = Arc::new(SidecarBridges::new());
         let injector = Injector::spawn(
             app.clone(),
             history.clone(),
             submit_config.clone(),
+            quick_input.clone(),
             bridges.clone(),
         );
 
         Arc::new(Self {
             submit_config,
+            quick_input,
             history,
             injector,
             bridges,
@@ -272,6 +295,19 @@ impl AppContext {
         let mut g = self.submit_config.lock().unwrap();
         g.auto_submit = auto_submit;
         g.submit_key = submit_key;
+    }
+
+    /// 刷新快捷输入运行时配置。`save_settings` 写盘后调用，使 worker 立即生效。
+    pub fn set_quick_input_config(
+        &self,
+        enabled: bool,
+        case_sensitive: bool,
+        snippets: Vec<crate::store::Snippet>,
+    ) {
+        let mut g = self.quick_input.lock().unwrap();
+        g.enabled = enabled;
+        g.case_sensitive = case_sensitive;
+        g.snippets = snippets;
     }
 }
 

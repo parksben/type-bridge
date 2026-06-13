@@ -15,7 +15,9 @@
 
 use crate::channel::{composite_id, ChannelId};
 use crate::history::{HistoryMessage, HistoryStore, MessageStatus};
-use crate::sidecar::{SidecarBridge, SidecarBridges, SidecarCommand, SubmitConfig};
+use crate::sidecar::{
+    QuickInputConfig, SidecarBridge, SidecarBridges, SidecarCommand, SubmitConfig,
+};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -74,6 +76,7 @@ impl Injector {
         app: AppHandle<R>,
         history: Arc<HistoryStore>,
         submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
+        quick_input: Arc<std::sync::Mutex<QuickInputConfig>>,
         bridges: Arc<SidecarBridges>,
     ) -> Arc<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
@@ -89,6 +92,7 @@ impl Injector {
             app,
             history,
             submit_config,
+            quick_input,
             bridges,
             cancelled,
         ));
@@ -123,6 +127,7 @@ async fn worker_loop<R: Runtime>(
     app: AppHandle<R>,
     history: Arc<HistoryStore>,
     submit_config: Arc<std::sync::Mutex<SubmitConfig>>,
+    quick_input: Arc<std::sync::Mutex<QuickInputConfig>>,
     bridges: Arc<SidecarBridges>,
     cancelled: Arc<Mutex<HashSet<String>>>,
 ) {
@@ -142,7 +147,7 @@ async fn worker_loop<R: Runtime>(
         }
         // 按消息渠道选 bridge 发反馈命令
         let bridge = bridges.get(msg.channel);
-        process_one(&app, &history, &submit_config, &bridge, msg).await;
+        process_one(&app, &history, &submit_config, &quick_input, &bridge, msg).await;
     }
     tracing::info!("[queue] worker loop exited");
 }
@@ -151,6 +156,7 @@ async fn process_one<R: Runtime>(
     app: &AppHandle<R>,
     history: &Arc<HistoryStore>,
     submit_config: &Arc<std::sync::Mutex<SubmitConfig>>,
+    quick_input: &Arc<std::sync::Mutex<QuickInputConfig>>,
     bridge: &Arc<SidecarBridge>,
     msg: QueuedMessage,
 ) {
@@ -165,11 +171,18 @@ async fn process_one<R: Runtime>(
     history.update_status(&msg.id, MessageStatus::Processing, None);
     emit_status(app, &msg.id, "processing", None);
 
-    // 2. 注入文本 + 图片
-    let text_ok = if msg.text.is_empty() {
+    // 2. 快捷输入展开：注入前把 `/key` 整条替换 / `$key` 内联拼接成对应文本。
+    //    历史记录保存的仍是用户原始输入（msg.text），这里只改注入路径的文本。
+    let inject_text_value = {
+        let cfg = quick_input.lock().unwrap();
+        expand_quick_input(&msg.text, &cfg)
+    };
+
+    // 3. 注入文本 + 图片
+    let text_ok = if inject_text_value.is_empty() {
         Ok(())
     } else {
-        inject_text_blocking(msg.text.clone()).await
+        inject_text_blocking(inject_text_value).await
     };
 
     if let Err(reason) = text_ok {
@@ -437,4 +450,174 @@ fn now_secs() -> i64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0)
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 快捷输入展开
+// ─────────────────────────────────────────────────────────────────────────
+
+/// 判断字符是否为合法 key 字符：`[A-Za-z0-9_]`。
+fn is_key_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+/// 在 snippets 中查找 trigger 对应的展开文本。
+/// `case_sensitive == false` 时按小写归一比较。仅 enabled 条目参与。
+fn lookup_snippet<'a>(
+    key: &str,
+    cfg: &'a QuickInputConfig,
+) -> Option<&'a str> {
+    let needle = if cfg.case_sensitive {
+        key.to_string()
+    } else {
+        key.to_lowercase()
+    };
+    cfg.snippets.iter().find_map(|s| {
+        if !s.enabled {
+            return None;
+        }
+        let trig = if cfg.case_sensitive {
+            s.trigger.clone()
+        } else {
+            s.trigger.to_lowercase()
+        };
+        if trig == needle {
+            Some(s.content.as_str())
+        } else {
+            None
+        }
+    })
+}
+
+/// 快捷输入展开。两种模式：
+///   1. 整条替换：raw.trim() 形如 `/key` 且 key 命中 → 返回展开文本
+///   2. 内联拼接：否则把全文中每个 `$key` 命中处替换为展开文本，未命中保持原样
+///
+/// 功能关闭 / 无条目 / 未命中任何 key → 原样返回。
+fn expand_quick_input(raw: &str, cfg: &QuickInputConfig) -> String {
+    if !cfg.enabled || cfg.snippets.is_empty() {
+        return raw.to_string();
+    }
+
+    // 模式 1：整条替换。trim 后必须是 `/` + 纯 key（无空格 / 其他字符）。
+    let trimmed = raw.trim();
+    if let Some(rest) = trimmed.strip_prefix('/') {
+        if !rest.is_empty() && rest.chars().all(is_key_char) {
+            if let Some(content) = lookup_snippet(rest, cfg) {
+                return content.to_string();
+            }
+            // `/key` 形态但未命中：按需求原样发出用户原文
+            return raw.to_string();
+        }
+    }
+
+    // 模式 2：内联拼接。扫描全文，遇到 `$key` 命中则替换，否则保持字面。
+    if !raw.contains('$') {
+        return raw.to_string();
+    }
+    let mut out = String::with_capacity(raw.len());
+    let chars: Vec<char> = raw.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '$' {
+            // 收集紧随其后的 key 字符
+            let mut j = i + 1;
+            while j < chars.len() && is_key_char(chars[j]) {
+                j += 1;
+            }
+            let key: String = chars[(i + 1)..j].iter().collect();
+            if !key.is_empty() {
+                if let Some(content) = lookup_snippet(&key, cfg) {
+                    out.push_str(content);
+                    i = j;
+                    continue;
+                }
+            }
+            // 未命中（或 `$` 后无 key）：保留字面 `$`，继续
+            out.push('$');
+            i += 1;
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::store::Snippet;
+
+    fn cfg(enabled: bool, case_sensitive: bool, pairs: &[(&str, &str)]) -> QuickInputConfig {
+        QuickInputConfig {
+            enabled,
+            case_sensitive,
+            snippets: pairs
+                .iter()
+                .map(|(t, c)| Snippet {
+                    id: t.to_string(),
+                    trigger: t.to_string(),
+                    content: c.to_string(),
+                    enabled: true,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn whole_replace_hit() {
+        let c = cfg(true, false, &[("addr", "北京中关村1号")]);
+        assert_eq!(expand_quick_input("/addr", &c), "北京中关村1号");
+        assert_eq!(expand_quick_input("  /addr  ", &c), "北京中关村1号");
+    }
+
+    #[test]
+    fn whole_replace_miss_keeps_original() {
+        let c = cfg(true, false, &[("addr", "x")]);
+        assert_eq!(expand_quick_input("/unknown", &c), "/unknown");
+    }
+
+    #[test]
+    fn case_insensitive_default() {
+        let c = cfg(true, false, &[("addr", "X")]);
+        assert_eq!(expand_quick_input("/Addr", &c), "X");
+        assert_eq!(expand_quick_input("你好 $ADDR", &c), "你好 X");
+    }
+
+    #[test]
+    fn case_sensitive_on() {
+        let c = cfg(true, true, &[("addr", "X")]);
+        assert_eq!(expand_quick_input("/Addr", &c), "/Addr");
+        assert_eq!(expand_quick_input("/addr", &c), "X");
+    }
+
+    #[test]
+    fn inline_expand() {
+        let c = cfg(true, false, &[("addr", "中关村"), ("name", "小明")]);
+        assert_eq!(
+            expand_quick_input("我是 $name，在 $addr 上班", &c),
+            "我是 小明，在 中关村 上班"
+        );
+    }
+
+    #[test]
+    fn inline_miss_keeps_literal() {
+        let c = cfg(true, false, &[("addr", "X")]);
+        assert_eq!(expand_quick_input("价格是 $100 元", &c), "价格是 $100 元");
+        assert_eq!(expand_quick_input("$ 空", &c), "$ 空");
+    }
+
+    #[test]
+    fn disabled_returns_raw() {
+        let c = cfg(false, false, &[("addr", "X")]);
+        assert_eq!(expand_quick_input("/addr", &c), "/addr");
+    }
+
+    #[test]
+    fn slash_with_space_falls_to_inline() {
+        // "/addr now" 不是整条 key 形态，走内联（无 $ → 原样）
+        let c = cfg(true, false, &[("addr", "X")]);
+        assert_eq!(expand_quick_input("/addr now", &c), "/addr now");
+    }
 }

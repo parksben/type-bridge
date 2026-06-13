@@ -139,6 +139,55 @@ enum MessageStatus {
 3. 重新入队（不改变 `id`，同一条消息的历史只有一条记录，每次重发覆盖之前的状态）
 4. 触发整条状态机流水
 
+### 9.5 快捷输入展开（v0.8）
+
+**唯一切入点**：所有渠道（飞书 / 钉钉 / 企微 sidecar + WebChat）的消息最终都汇聚到 `queue.rs::process_one`，并在那里执行 `inject_text_blocking(msg.text)`。快捷输入展开就发生在**这一步之前**——一处改动，四渠道全覆盖、零重复逻辑。
+
+```
+process_one
+  ├── 控制键事件 → process_key_press（Enter/Backspace…），不展开
+  ├── text = expand_quick_input(&msg.text)   ← v0.8 新增
+  ├── inject_text_blocking(text)              ← 注入展开后的文本
+  └── 自动提交（不变）
+```
+
+**展开算法 `expand_quick_input`**：
+
+```
+输入: 原始文本 raw
+1. trimmed = raw.trim()
+2. 整条替换：若 trimmed 形如 "/key"（key 匹配 [A-Za-z0-9_]+）
+     - 查表命中 → 返回展开文本（整条替换）
+     - 未命中    → 返回 raw 原样（不拦截）
+3. 内联拼接：否则对 raw 做正则替换 `\$([A-Za-z0-9_]+)`
+     - 每个 $key 命中 → 替换为展开文本
+     - 未命中          → 该 $key 保持字面原样
+4. 全局开关关闭，或无任何条目 → 直接返回 raw
+```
+
+- 大小写：默认不敏感，查表时按 `snippet_case_sensitive` 决定是否对 key 做 `to_lowercase()` 归一。
+- 仅 `enabled == true` 的条目参与展开。
+- 历史记录保存的是 `msg.text` 原始值（展开只作用于注入路径），便于追溯。
+
+**运行时配置**：与 auto-submit 同构，`AppContext` 持有 `Arc<Mutex<QuickInputConfig>>`（`enabled` + `case_sensitive` + `Vec<Snippet>`）。`save_settings` 写盘后调 `ctx.set_quick_input_config(...)` 刷新内存快照，`process_one` 读快照做展开（不在临界区里做注入）。
+
+**数据结构**（持久化进 `config.json`，详见 §七）：
+
+```rust
+pub struct Snippet {
+    pub id: String,       // uuid，前端增删定位
+    pub trigger: String,  // 触发词 key，不含 / 或 $ 前缀，如 "addr"
+    pub content: String,  // 展开文本，可多行
+    pub enabled: bool,
+}
+// Settings 新增：
+pub quick_input_enabled: bool,         // 默认 true
+pub quick_input_case_sensitive: bool,  // 默认 false
+pub snippets: Vec<Snippet>,
+```
+
+> 设计取舍：`trigger` 只存裸 key（`addr`），不存前缀。`/` 与 `$` 只是两种**使用语法**，同一个 key 两种语法共用同一份内容，避免重复维护。
+
 ---
 
 ## 十、飞书双向回复
