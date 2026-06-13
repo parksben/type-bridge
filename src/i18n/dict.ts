@@ -312,6 +312,7 @@ export const ZH = {
     cancel: "取消",
     errInvalidKey: "触发词仅允许字母、数字和下划线",
     errDuplicateKey: "该触发词已存在",
+    errReservedKey: "help 是内置帮助指令，不能用作触发词",
   },
 
   keybind: {
@@ -689,6 +690,7 @@ export const EN: Dict = {
     cancel: "Cancel",
     errInvalidKey: "Trigger may only contain letters, digits and underscore",
     errDuplicateKey: "This trigger already exists",
+    errReservedKey: "\"help\" is a built-in command and cannot be used as a trigger",
   },
 
   keybind: {

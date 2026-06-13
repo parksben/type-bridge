@@ -10,6 +10,8 @@ export interface ChatMessage {
   imagePreviewUrl?: string; // 本地预览 blob url
   status: MessageStatus;
   reason?: string;
+  /** true = 服务端下行消息（如 /help 帮助文本），左对齐 bot 气泡，无投递状态 */
+  incoming?: boolean;
 }
 
 type Props = {
@@ -17,6 +19,27 @@ type Props = {
 };
 
 export default function MessageBubble({ msg }: Props) {
+  // 服务端下行消息：左对齐、surface 底色、不显示投递状态
+  if (msg.incoming) {
+    return (
+      <div className="flex flex-col items-start mb-3">
+        <div
+          className="px-3.5 py-2 rounded-2xl text-[15px] leading-[1.4] whitespace-pre-wrap break-words"
+          style={{
+            maxWidth: "85%",
+            background: "var(--tb-surface)",
+            color: "var(--tb-text)",
+            border: "1px solid var(--tb-border)",
+            borderTopLeftRadius: 6,
+          }}
+          data-allow-select
+        >
+          {msg.text}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-end mb-3">
       {msg.kind === "image" && msg.imagePreviewUrl && (

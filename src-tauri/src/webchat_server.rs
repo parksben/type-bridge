@@ -105,6 +105,7 @@ impl WebChatServer {
         session_id: String,
         spa_dir: PathBuf,
         notify_bind_change: Arc<dyn Fn() + Send + Sync + 'static>,
+        help_text_provider: Arc<dyn Fn() -> String + Send + Sync + 'static>,
     ) -> Result<Self, String> {
         let lan_ip = crate::webchat_net::primary_lan_ip()
             .ok_or_else(|| "未检测到可用的局域网 IP（请先连接 WiFi 或以太网）".to_string())?;
@@ -129,6 +130,7 @@ impl WebChatServer {
             history: ctx.history.clone(),
             pending_acks: SyncMutex::new(HashMap::new()),
             notify_bind_change,
+            help_text_provider,
         });
 
         // 构建 Socket.IO layer
@@ -380,6 +382,8 @@ struct ServerState {
     pending_acks: SyncMutex<HashMap<String, AckSender>>,
     /// binding 数量变化时（绑定 / 断开）通知上层 bridge 刷新快照并 emit 前端事件。
     notify_bind_change: Arc<dyn Fn() + Send + Sync + 'static>,
+    /// 生成 /help 帮助文本的闭包（读 lang + quick_input 配置）。由上层注入。
+    help_text_provider: Arc<dyn Fn() -> String + Send + Sync + 'static>,
 }
 
 #[derive(Clone, Debug)]
@@ -568,6 +572,14 @@ struct GenericAck {
     reason: Option<String>,
 }
 
+/// server → 手机端主动推送的 bot 消息（目前仅 /help 回执）。
+/// 手机端 SPA 监听 `server_message` 事件渲染为 bot 气泡。
+#[derive(Debug, Serialize)]
+struct ServerMessage {
+    text: String,
+    ts: i64,
+}
+
 // ──────────────────────────────────────────────────────────────
 // Socket.IO handlers
 // ──────────────────────────────────────────────────────────────
@@ -634,10 +646,34 @@ async fn on_connect(socket: SocketRef) {
     // 错），立即 ack 失败。
     socket.on(
         "text",
-        |_socket: SocketRef,
+        |socket: SocketRef,
          Data::<TextMsg>(msg),
          ack: AckSender,
          State(state): State<Arc<ServerState>>| async move {
+            // /help 拦截：不入注入队列，直接回一条 bot 帮助消息给手机端
+            if crate::help::is_help_command(&msg.text) {
+                if verify_user_token(&msg.user_token, &state).is_ok() {
+                    touch_active(&msg.user_token, &state);
+                    let help_text = (state.help_text_provider)();
+                    let _ = socket.emit(
+                        "server_message",
+                        &ServerMessage {
+                            text: help_text,
+                            ts: now_ms(),
+                        },
+                    );
+                    let _ = ack.send(&GenericAck {
+                        success: true,
+                        reason: None,
+                    });
+                } else {
+                    let _ = ack.send(&GenericAck {
+                        success: false,
+                        reason: Some("未认证或 token 已失效".into()),
+                    });
+                }
+                return;
+            }
             match handle_text(&msg, state.clone()).await {
                 Ok(composite_id) => {
                     park_ack(&state, composite_id, ack);

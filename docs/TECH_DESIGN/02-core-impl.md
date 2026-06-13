@@ -188,6 +188,28 @@ pub snippets: Vec<Snippet>,
 
 > 设计取舍：`trigger` 只存裸 key（`addr`），不存前缀。`/` 与 `$` 只是两种**使用语法**，同一个 key 两种语法共用同一份内容，避免重复维护。
 
+### 9.6 `/help` 帮助指令（v0.8）
+
+帮助指令的逻辑集中在新模块 **`src-tauri/src/help.rs`**：
+
+```rust
+pub fn is_help_command(text: &str) -> bool;           // trim → 去掉前导 /  → eq_ignore_ascii_case("help")
+pub fn build_help_text(lang: &str, cfg: &QuickInputConfig) -> String;  // zh / en 帮助文本 + 列出已启用触发词
+```
+
+- `build_help_text` 根据 `lang`（"en" → 英文，否则中文）生成帮助文本，遍历 `cfg.snippets` 中 `enabled` 的条目，最多列 20 条，每条内容预览截断 40 字；快捷输入全局关闭时隐藏触发词清单段落。
+
+**拦截点（两处，互不复用但语义一致）**：
+
+1. **IM 渠道**：`sidecar.rs::dispatch_event` 的 `SidecarEvent::Message` 分支，在 `emit` / `ingest_message` **之前**判断 `is_help_command`。命中且有 `message_id` 时：
+   - 读 `config.json` 的 `language`（`read_settings_lang`）+ `ctx.quick_input` 锁内快照 → `build_help_text`。
+   - 按渠道 `capability()` 选回复命令：`streaming_reply == true`（企微）走 `SidecarCommand::StreamingReply{finish:true}`，否则（飞书 / 钉钉）走 `SidecarCommand::Reply`。
+   - `return`，不注入、不写历史。
+   - `message_id` 为 `None` 时不拦截，按普通消息处理（无法 reply）。
+2. **WebChat 渠道**：`webchat_server.rs` 的 `socket.on("text", ...)` 闭包内，校验 token 后判断 `is_help_command`。命中则用 `state.help_text_provider`（在 `webchat.rs::start` 注入的闭包，内部读 `language` + `ctx.quick_input`）取文本，`socket.emit("server_message", ServerMessage{text, ts})`，ack 成功并 `return`（不入注入队列）。手机端 SPA `ChatPage` 订阅 `server_message` 渲染左对齐 bot 气泡。
+
+**保留词**：前端 `QuickInputTab` 的 `draftKeyError` 校验拒绝 `help`（大小写不敏感），i18n key `quickInput.errReservedKey`，防止用户创建与内置指令冲突的触发词。
+
 ---
 
 ## 十、飞书双向回复

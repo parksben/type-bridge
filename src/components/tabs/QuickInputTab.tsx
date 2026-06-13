@@ -71,6 +71,8 @@ export default function QuickInputTab() {
     const k = draftTrigger.trim();
     if (k === "") return null;
     if (!isValidKey(k)) return t("quickInput.errInvalidKey");
+    // help 是内置帮助指令，不能被快捷输入覆盖
+    if (k.toLowerCase() === "help") return t("quickInput.errReservedKey");
     const norm = (s: string) => (caseSensitive ? s : s.toLowerCase());
     const dup = snippets.some(
       (s) => s.id !== editingId && norm(s.trigger) === norm(k)

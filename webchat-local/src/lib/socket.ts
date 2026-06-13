@@ -35,6 +35,11 @@ export interface ConnectOptions {
    * 这是单向通知，无 ack。
    */
   onKicked?: () => void;
+  /**
+   * 服务端下行消息（如 /help 帮助文本）。server emit `server_message`
+   * 携带 {text, ts}，单向通知无 ack。调用方据此渲染一条 bot 气泡。
+   */
+  onServerMessage?: (msg: { text: string; ts: number }) => void;
 }
 
 export class WebChatClient {
@@ -63,6 +68,10 @@ export class WebChatClient {
 
     if (opts.onKicked) {
       this.socket.on("kicked", opts.onKicked);
+    }
+
+    if (opts.onServerMessage) {
+      this.socket.on("server_message", opts.onServerMessage);
     }
   }
 
@@ -297,5 +306,17 @@ export class WebChatClient {
           },
         );
     });
+  }
+
+  /**
+   * 订阅服务端下行消息（`server_message`，如 /help 帮助文本）。
+   * 返回取消订阅函数。供 ChatPage 在 mount 时注册、unmount 时清理。
+   * 与构造时传入的 onServerMessage 并存（两者都会被触发）。
+   */
+  onServerMessage(handler: (msg: { text: string; ts: number }) => void): () => void {
+    this.socket.on("server_message", handler);
+    return () => {
+      this.socket.off("server_message", handler);
+    };
   }
 }

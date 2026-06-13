@@ -1,6 +1,7 @@
 pub mod about;
 pub mod channel;
 pub mod history;
+pub mod help;
 pub mod injector;
 pub mod logger;
 pub mod queue;

@@ -65,6 +65,23 @@ export default function ChatPage({
     setWifi("connected");
   }, []);
 
+  // 订阅服务端下行消息（如 /help 帮助文本），渲染为左对齐 bot 气泡
+  useEffect(() => {
+    const off = client.onServerMessage(({ text, ts }) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          clientMessageId: `srv-${ts}-${Math.random().toString(36).slice(2, 8)}`,
+          kind: "text",
+          text,
+          status: "delivered",
+          incoming: true,
+        },
+      ]);
+    });
+    return off;
+  }, [client]);
+
   async function sendTextMsg(text: string, submit = false) {
     const cmId = newClientMessageId();
     const msg: ChatMessage = {

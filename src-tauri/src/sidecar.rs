@@ -398,6 +398,18 @@ async fn start_sidecar<R: Runtime>(
     Ok(())
 }
 
+/// 从 store 读取当前界面语言（用于 /help 文本本地化）。
+/// 读不到时默认 "zh"。
+fn read_settings_lang<R: Runtime>(app: &AppHandle<R>) -> String {
+    use tauri_plugin_store::StoreExt;
+    app.store("config.json")
+        .ok()
+        .and_then(|store| store.get("language"))
+        .and_then(|v| v.as_str().map(String::from))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "zh".to_string())
+}
+
 fn dispatch_event<R: Runtime>(
     app: &AppHandle<R>,
     channel: ChannelId,
@@ -405,7 +417,6 @@ fn dispatch_event<R: Runtime>(
     retry_delay: &mut u64,
 ) {
     let ctx: Arc<AppContext> = app.state::<Arc<AppContext>>().inner().clone();
-
     match evt {
         SidecarEvent::Status { connected } => {
             if *connected {
@@ -423,6 +434,36 @@ fn dispatch_event<R: Runtime>(
             let source_id = message_id
                 .clone()
                 .unwrap_or_else(|| format!("local-{}", uuid::Uuid::new_v4()));
+
+            // /help 拦截：不注入、不写历史，由 bot 回一条帮助文本。
+            // 需要原始 message_id 做 reply；local-* 占位 id 无法回复，跳过拦截照常处理。
+            if crate::help::is_help_command(text) {
+                if let Some(mid) = message_id.clone() {
+                    let lang = read_settings_lang(app);
+                    let help_text = {
+                        let cfg = ctx.quick_input.lock().unwrap();
+                        crate::help::build_help_text(&lang, &cfg)
+                    };
+                    let bridge = ctx.bridges.get(channel);
+                    let cap = channel.capability();
+                    if cap.streaming_reply {
+                        bridge.send(&SidecarCommand::StreamingReply {
+                            message_id: mid,
+                            content: help_text,
+                            finish: true,
+                        });
+                    } else {
+                        // 飞书 / 钉钉：一次性文字回复
+                        bridge.send(&SidecarCommand::Reply {
+                            message_id: mid,
+                            text: help_text,
+                        });
+                    }
+                    tracing::info!("[{}] /help replied", channel.key());
+                    return;
+                }
+            }
+
             let _ = app.emit(
                 "typebridge://message",
                 ChannelMessagePayload {

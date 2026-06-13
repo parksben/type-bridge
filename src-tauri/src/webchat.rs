@@ -188,8 +188,20 @@ impl WebChatBridge {
             let _ = app_handle.emit("typebridge://webchat-session-update", &snap);
         });
 
+        // /help 文本生成回调：读当前 lang + quick_input 配置实时生成（保证列出最新快捷输入）
+        let app_for_help = app.clone();
+        let ctx_for_help = ctx.clone();
+        let help_text_provider: Arc<dyn Fn() -> String + Send + Sync + 'static> =
+            Arc::new(move || {
+                let lang = current_lang(&app_for_help).unwrap_or_default();
+                let cfg = ctx_for_help.quick_input.lock().unwrap();
+                crate::help::build_help_text(&lang, &cfg)
+            });
+
         // 启新的
-        match WebChatServer::start(ctx, session_id, spa_dir, on_bind_change).await {
+        match WebChatServer::start(ctx, session_id, spa_dir, on_bind_change, help_text_provider)
+            .await
+        {
             Ok(server) => {
                 *self.server.lock().unwrap() = Some(Arc::new(server));
                 Ok(())
