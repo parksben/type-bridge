@@ -64,7 +64,8 @@ export interface HistoryMessage {
 export type TabId =
   | "connection"  // 连接 TypeBridge（纯 WebChat 页，无子 tab）
   | "link"        // 连接应用（飞书/钉钉/企微 IM 渠道，顶部横向子 tab）
-  | "input"       // 输入设置
+  | "input"       // 自动提交
+  | "snippets"    // 快捷输入（v0.8 起）
   | "history"     // 历史消息
   | "logs"        // 系统日志
   | "about";      // 关于 TypeBridge（v0.7.x 起）
@@ -94,6 +95,14 @@ export const DEFAULT_SUBMIT_KEY: SubmitKey = {
   ctrl: false,
 };
 
+/// 单条快捷输入。与 Rust `store::Snippet` 对齐。trigger 只存裸 key（不含 / 或 $ 前缀）。
+export interface Snippet {
+  id: string;
+  trigger: string;
+  content: string;
+  enabled: boolean;
+}
+
 /// Settings 是 Rust `store::Settings` 的 TS 镜像。包含所有渠道凭据 + 输入设置。
 /// 任一 tab 修改自己关心的字段时必须先 `get_settings` 再 merge 回写，避免
 /// 清空其他渠道 / 其他 tab 拥有的字段。
@@ -108,6 +117,12 @@ export interface Settings {
   submit_key: SubmitKey;
   /// UI 语言。空字符串 = 未选择。新增字段，老配置升级后该值缺省为空。
   language: string;
+  /// 快捷输入总开关。默认开启。
+  quick_input_enabled: boolean;
+  /// 快捷输入 key 匹配是否区分大小写。默认否。
+  quick_input_case_sensitive: boolean;
+  /// 快捷输入条目列表。
+  snippets: Snippet[];
 }
 
 interface AppStore {

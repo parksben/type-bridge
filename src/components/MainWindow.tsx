@@ -16,6 +16,7 @@ import LinkAppsHub from "./LinkAppsHub";
 import HistoryTab from "./tabs/HistoryTab";
 import SystemLogTab from "./tabs/SystemLogTab";
 import InputSettingsTab from "./tabs/InputSettingsTab";
+import QuickInputTab from "./tabs/QuickInputTab";
 import AboutTab from "./tabs/AboutTab";
 
 interface UpdateCheckResult {
@@ -175,6 +176,11 @@ export default function MainWindow() {
         {activeTab === "input" && (
           <ErrorBoundary label={t("sidebar.input")}>
             <InputSettingsTab />
+          </ErrorBoundary>
+        )}
+        {activeTab === "snippets" && (
+          <ErrorBoundary label={t("sidebar.snippets")}>
+            <QuickInputTab />
           </ErrorBoundary>
         )}
         {activeTab === "about" && (

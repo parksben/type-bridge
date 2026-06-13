@@ -1,4 +1,4 @@
-import { History, Info, MessageCircle, Smartphone, Terminal, Zap, LucideIcon } from "lucide-react";
+import { Command, History, Info, MessageCircle, Smartphone, Terminal, Zap, LucideIcon } from "lucide-react";
 import { useAppStore, TabId } from "../store";
 import { useI18n, type TKey } from "../i18n";
 interface TabDef {
@@ -13,6 +13,7 @@ const TABS: TabDef[] = [
   { id: "connection", labelKey: "sidebar.connection", icon: Smartphone },
   { id: "link", labelKey: "sidebar.link", icon: MessageCircle },
   { id: "input", labelKey: "sidebar.input", icon: Zap },
+  { id: "snippets", labelKey: "sidebar.snippets", icon: Command },
   { id: "history", labelKey: "sidebar.history", icon: History },
   { id: "logs", labelKey: "sidebar.logs", icon: Terminal },
 ];

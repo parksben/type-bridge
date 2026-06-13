@@ -47,6 +47,7 @@ TypeBridge does one thing well: **turn your phone into a wireless keyboard and t
 | **Works by pasting** | TypeBridge writes to the clipboard and simulates `Cmd+V`, keeping it compatible with VS Code, Terminal, browsers, Obsidian, Slack, and more. |
 | **Image support** | Images sent through IM channels are injected via the system clipboard. |
 | **Optional auto-submit** | After pasting, TypeBridge can press `Enter` or a custom key. Handy for chat windows, terminals, and AI assistants. |
+| **Quick inputs** | Save frequent text as short triggers. Send `/key` to replace the whole message with its content, or use `$key` inline within a sentence — expanded before injection across every channel (WebChat, Feishu, DingTalk, WeCom). |
 | **Tactile mobile keyboard** | Five focused tabs (Direction · Edit · Clipboard · Navigation · Screenshot). Arrows and Backspace support long-press auto-repeat at iOS-keyboard cadence (16Hz). Every key has crisp pressed feedback with optional haptics on Android. |
 | **Smoother in-app updates** | The About panel embeds a status bar that shows download progress live, with cancel and retry on failure — and never blocks you from keeping using the app. |
 

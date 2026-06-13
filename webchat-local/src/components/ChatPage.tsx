@@ -225,6 +225,12 @@ export default function ChatPage({
                 >
                   {t("chat.emptyHint")}
                 </p>
+                <p
+                  className="text-[11px] text-center leading-relaxed px-10 mt-1"
+                  style={{ color: "var(--tb-muted)", opacity: 0.75 }}
+                >
+                  {t("chat.emptyHintQuick")}
+                </p>
               </div>
             )}
 
